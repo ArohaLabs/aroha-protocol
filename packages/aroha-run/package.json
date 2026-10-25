@@ -1,0 +1,46 @@
+{
+  "name": "@aroha-sdk/run",
+  "version": "2.0.0",
+  "description": "Aroha /v1/run server and client — the fastest path to a Hub-registered agent",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "src",
+    "NOTICE",
+    "!**/*.test.*",
+    "!**/test-utils/**",
+    "!**/*.tsbuildinfo"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.typecheck.json",
+    "prepack": "node ../../scripts/clean-dist.mjs && tsc -p tsconfig.json"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "license": "Apache-2.0",
+  "keywords": [
+    "aroha",
+    "agent",
+    "llm",
+    "v1/run",
+    "ai"
+  ],
+  "dependencies": {
+    "@aroha-sdk/core": "^2.0.0"
+  },
+  "devDependencies": {
+    "vitest": "^5.0.3"
+  }
+}

@@ -1,0 +1,25 @@
+# Copyright (c) 2026 Aroha Labs
+# SPDX-License-Identifier: Apache-2.0
+
+name = "aroha-ipfs-gateway"
+main = "src/index.ts"
+compatibility_date = "2024-09-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Service binding — direct internal call to the registry Worker (no HTTP round-trip,
+# no header stripping, guaranteed header passthrough for Authorization)
+[[services]]
+binding = "REGISTRY"
+service = "aroha-registry"
+
+# Deployed at https://aroha-ipfs-gateway.aroha-labs.workers.dev — the
+# AROHA_DEFAULT_IPFS_GATEWAY in @aroha-sdk/core/endpoints (plus the /ipfs path).
+# No custom domain is attached.
+
+[vars]
+# Upstream this Worker proxies reads to (it is a Pinata front-end: content
+# pinned through POST /pin is only readable from Pinata with the JWT).
+PINATA_GATEWAY = "https://gateway.pinata.cloud/ipfs"
+
+# Secrets (set via `wrangler secret put <NAME> --name aroha-ipfs-gateway`):
+#   PINATA_JWT — Pinata API JWT (from https://app.pinata.cloud/developers/api-keys)

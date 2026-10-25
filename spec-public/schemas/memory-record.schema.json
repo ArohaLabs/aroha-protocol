@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aroha-labs.com/schemas/memory-record-v1.json",
+  "title": "Aroha memory record / MemoryFact (aroha-1.0 §12.5)",
+  "description": "Not signed by itself: its authority comes from `origin`, the hash of the signed turn or envelope it was extracted from. speakerKind is resolved from the speaker's Key Event Log at write time.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["v", "factId", "text", "speakerDid", "speakerKind", "subjectDid", "scope", "audience", "epoch", "origin", "derivedFrom", "status", "createdAt"],
+  "properties": {
+    "v": { "const": 1 },
+    "factId": { "type": "string", "minLength": 1 },
+    "text": { "type": "string" },
+    "speakerDid": { "type": "string", "pattern": "^did:" },
+    "speakerKind": { "enum": ["person", "agent"] },
+    "subjectDid": { "anyOf": [{ "enum": ["self", "room"] }, { "type": "string", "pattern": "^did:" }] },
+    "scope": { "anyOf": [{ "const": "private" }, { "type": "string", "pattern": "^room:.+" }] },
+    "audience": { "enum": ["host", "persons", "members"] },
+    "epoch": { "type": "integer", "minimum": 0 },
+    "origin": { "type": "string", "minLength": 1 },
+    "derivedFrom": { "type": "array", "items": { "type": "string" } },
+    "status": { "enum": ["fact", "claim"] },
+    "consentRef": { "type": "string", "minLength": 1 },
+    "createdAt": { "type": "string", "format": "date-time" }
+  }
+}

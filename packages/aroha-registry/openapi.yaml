@@ -1,0 +1,2313 @@
+openapi: "3.1.0"
+
+info:
+  title: Aroha Registry API
+  version: "1.1"
+  description: |
+    REST API for the Aroha Agent Registry — the managed service at
+    `https://aroha-registry.aroha-labs.workers.dev` (the Cloudflare Worker in
+    `apps/registry-server`) and, for the core agent paths only, any
+    self-hosted instance created with `createArohaRegistryServer()` from
+    `@aroha-sdk/registry/server`. Where the two differ, the operation says so.
+    Every route the managed Worker serves is listed here; a test walks its
+    router and fails on any route missing from this file.
+
+    ## Authentication
+    Three kinds of caller:
+
+    - **API key** (`bearerAuth`): `Authorization: Bearer <api-key>`, issued by
+      the operator (`POST /v1/auth/keys`). Required for every write on a
+      resource the caller owns.
+    - **Admin secret** (`adminAuth`): `Authorization: Bearer <ADMIN_SECRET>`.
+      Operator tooling only. A deployment whose secret is unset or shorter
+      than 32 characters answers **503** on every admin route.
+    - **Self-authenticating**: KEL, linkage, SAR publication and mandate
+      revocation need no key — a signature in the body is the authority.
+
+    Read routes that take an optional API key show private resources to their
+    owner and grantees; everyone else gets **404** (never 403), so a route
+    cannot be used to learn that a private resource exists. Viewer-dependent
+    responses carry `Cache-Control: no-store` and `Vary: Authorization`.
+
+    ## Encodings
+    `publicKeyB64` and Ed25519 signatures are **base64url (RFC 4648 §5,
+    unpadded)** — the canonical form, and what `@aroha-sdk/registry` sends.
+    Standard base64 (padded or not) is also accepted. A stored key is kept as
+    submitted, so a response echoes the encoding the key was registered with;
+    decode with a decoder that accepts both.
+
+    ## Limits
+    Write bodies are capped at 64 KiB (**413** beyond); `/v1/kel`,
+    `/v1/linkage` and `/v1/sar` allow 256 KiB because they carry Key Event
+    Logs. List routes take `limit` (1–100, default 50) and `offset` (≥ 0);
+    out-of-range values are clamped. Rate limits (**429**) are per Worker
+    isolate and approximate; the shared control is the operator's edge rate
+    limiting.
+
+  contact:
+    name: Aroha Labs
+    email: contact@aroha-labs.com
+  license:
+    name: Apache-2.0
+
+servers:
+  - url: https://aroha-registry.aroha-labs.workers.dev
+    description: Aroha managed registry
+  - url: http://localhost:3001
+    description: Local self-hosted instance (default port; core agent paths only)
+
+paths:
+  /health:
+    get:
+      operationId: health
+      summary: Health and schema check (managed registry)
+      description: |
+        `200 { status: "ok", db: "ok", schema: "ok", activeAgents }` when the database
+        answers and holds every column this build reads. `503 { status: "degraded" }`
+        otherwise — `db: "unavailable"` (no driver detail), or `schema: "drift"`. The
+        named schema gaps are included only for a caller presenting the admin secret.
+      tags: [Health]
+      responses:
+        "200":
+          description: Healthy.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, enum: [ok] }
+                  ts: { type: string, format: date-time }
+                  db: { type: string, enum: [ok] }
+                  schema: { type: string, enum: [ok] }
+                  activeAgents: { type: integer }
+                  version: { type: string }
+                required: [status, db, schema]
+        "503":
+          description: Degraded.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, enum: [degraded] }
+                  db: { type: string, enum: [ok, unavailable] }
+                  schema: { type: string, enum: [drift] }
+                  gaps: { type: array, items: { type: object }, description: Admin callers only. }
+                required: [status]
+
+  /healthz:
+    get:
+      operationId: healthCheck
+      summary: Health check (self-hosted server only)
+      description: "`createArohaRegistryServer()` instances answer `{ status: ok }`. The managed registry uses `/health`."
+      tags: [Health]
+      responses:
+        "200":
+          description: Server is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, enum: [ok] }
+                required: [status]
+
+  # ─── Agents ────────────────────────────────────────────────────────────────
+
+  /v1/agents/challenge:
+    post:
+      operationId: registrationChallenge
+      summary: Get a one-time nonce to prove key possession at registration
+      description: |
+        Step one of registering any non-E-DID agent. Sign the UTF-8 bytes of
+        `{"action":"prove-ownership","did":"<did>","nonce":"<nonce>"}` with the agent's
+        Ed25519 key and send the nonce and signature to `POST /v1/agents` within five
+        minutes, with the SAME API key. Single use.
+      tags: [Agents]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties: { did: { type: string } }
+              required: [did]
+      responses:
+        "200":
+          description: Nonce issued.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  nonce: { type: string }
+                  expiresAt: { type: integer, description: Unix ms. }
+                required: [nonce, expiresAt]
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /v1/agents:
+    post:
+      operationId: registerAgent
+      summary: Register an agent
+      description: |
+        **Not idempotent**: an active DID answers **409**. A deactivated DID may be
+        re-registered only by the API key that owned it (403 otherwise).
+
+        Key binding:
+        - every DID except a rotatable `did:aroha:E…` must carry `challengeNonce` +
+          `challengeSignature` from `POST /v1/agents/challenge` (400 without them, 403
+          if they do not verify against `publicKeyB64`);
+        - a content-addressed `did:aroha:z…` must be registered with exactly the key it
+          encodes (400 otherwise);
+        - an E-DID's key comes from its verified Key Event Log (`kel`, or one already
+          posted to `/v1/kel/{did}`); `publicKeyB64` is optional and must match it.
+
+        `publicKeyB64` must decode to a 32-byte Ed25519 key. Capabilities are NOT taken
+        from the request: they are read from the manifest at `manifestCID`, and only
+        from a raw IPLD block whose hash matches the CID. A client-sent
+        `capabilityIds` field is ignored.
+
+        Self-hosted `createArohaRegistryServer()` differs: no challenge, upserts an
+        existing DID, indexes `capabilityIds` from the body, answers `{ didHash, did }`.
+      tags: [Agents]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RegisterAgentRequest" }
+      responses:
+        "201":
+          description: Registered.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RegisterAgentResponse" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "413": { $ref: "#/components/responses/PayloadTooLarge" }
+
+    get:
+      operationId: listAgents
+      summary: List agents, or discover them by capability
+      description: |
+        Without `capabilities`: a page of public agents (plus, for a caller with an API
+        key, the agents it owns or holds a grant for). Agents are withheld from listings
+        for 48 h after registration. Unlisted agents never appear in lists.
+        With `capabilities=a,b`: active agents declaring the capabilities.
+      tags: [Agents]
+      security: [{}, { bearerAuth: [] }]
+      parameters:
+        - { name: capabilities, in: query, required: false, schema: { type: string }, description: Comma-separated capability IDs. }
+        - { $ref: "#/components/parameters/Limit" }
+        - { $ref: "#/components/parameters/Offset" }
+      responses:
+        "200":
+          description: Agent records.
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/AgentRecord" } }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+
+  /v1/agents/{didHash}:
+    parameters:
+      - name: didHash
+        in: path
+        required: true
+        description: |
+          keccak-256 hex hash of the agent DID (`0x…`). GET also accepts the
+          URL-encoded DID itself.
+        schema: { type: string }
+    get:
+      operationId: resolveAgent
+      summary: Resolve an agent
+      description: |
+        public and unlisted → anyone; private → the owner's key or a grantee's key.
+        404 for unknown, deactivated, or hidden agents alike.
+      tags: [Agents]
+      security: [{}, { bearerAuth: [] }]
+      responses:
+        "200":
+          description: Agent record.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AgentRecord" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      operationId: deactivateAgent
+      summary: Deactivate an agent (owner)
+      description: "Managed registry answers `{ ok: true }`; self-hosted answers `{ deactivated: true }`."
+      tags: [Agents]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Deactivated.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Ok" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/agents/{didHash}/manifest:
+    parameters: [{ $ref: "#/components/parameters/DidHash" }]
+    put:
+      operationId: updateManifest
+      summary: Replace the manifest CID (owner)
+      description: |
+        Capabilities are re-derived from the verified manifest block.
+        Managed registry answers `{ ok: true }`; self-hosted answers `{ updated: true }`.
+      tags: [Agents]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties: { manifestCID: { type: string } }
+              required: [manifestCID]
+      responses:
+        "200":
+          description: Updated.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Ok" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/agents/{didHash}/visibility:
+    parameters: [{ $ref: "#/components/parameters/DidHash" }]
+    patch:
+      operationId: setAgentVisibility
+      summary: Set public | unlisted | private (owner)
+      tags: [Agents]
+      security: [{ bearerAuth: [] }]
+      requestBody: { $ref: "#/components/requestBodies/Visibility" }
+      responses:
+        "200": { $ref: "#/components/responses/VisibilitySet" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+
+  /v1/agents/{didHash}/admin:
+    parameters: [{ $ref: "#/components/parameters/DidHash" }]
+    delete:
+      operationId: adminDeactivateAgent
+      summary: Deactivate on behalf of a Studio org (admin)
+      description: "Body `{ orgName }`; the agent must belong to that org."
+      tags: [Agents, Admin]
+      security: [{ adminAuth: [] }]
+      responses:
+        "200": { description: Deactivated, content: { application/json: { schema: { $ref: "#/components/schemas/Ok" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "503": { $ref: "#/components/responses/AdminUnconfigured" }
+
+  /v1/agents/{didHash}/manifest/admin:
+    parameters: [{ $ref: "#/components/parameters/DidHash" }]
+    put:
+      operationId: adminUpdateManifest
+      summary: Replace the manifest CID on behalf of a Studio org (admin)
+      description: "Body `{ manifestCID, orgName }`."
+      tags: [Agents, Admin]
+      security: [{ adminAuth: [] }]
+      responses:
+        "200": { description: Updated, content: { application/json: { schema: { $ref: "#/components/schemas/Ok" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "503": { $ref: "#/components/responses/AdminUnconfigured" }
+
+  /v1/agents/{didHash}/rotate-key:
+    parameters: [{ $ref: "#/components/parameters/DidHash" }]
+    put:
+      operationId: rotateKey
+      summary: Rotate a non-E-DID agent's key (owner + current key)
+      description: |
+        Body `{ newPublicKeyB64, signature, nonce, issuedAt }`. The signature is by the
+        CURRENT key over the UTF-8 JSON
+        `{"action":"rotate-key","didHash":…,"issuedAt":…,"newPublicKeyB64":…,"nonce":…}`
+        (keys in that order). `issuedAt` (ISO 8601) must be within ±5 minutes of the
+        server clock; each nonce is single-use. Rotatable E-DIDs answer 409 — rotate the
+        Key Event Log instead. A concurrent rotation of the same key answers 409.
+      tags: [Agents]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Rotated.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { ok: { type: boolean }, keyVersion: { type: integer } }
+                required: [ok, keyVersion]
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+
+  /v1/agents/{didHash}/revoked-keys:
+    parameters: [{ $ref: "#/components/parameters/DidHash" }]
+    get:
+      operationId: revokedKeys
+      summary: Keys rotated out of an agent (audit)
+      description: Same visibility rule as resolve; 404 for unknown or hidden agents.
+      tags: [Agents]
+      security: [{}, { bearerAuth: [] }]
+      responses:
+        "200":
+          description: Newest first.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    publicKeyB64: { type: string }
+                    keyVersion: { type: integer }
+                    rotatedAt: { type: integer }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/agents/{didHash}/verify-domain:
+    parameters: [{ $ref: "#/components/parameters/DidHash" }]
+    post:
+      operationId: verifyDomain
+      summary: Elevate to the 'domain' tier via /.well-known/aroha-did.json (owner)
+      description: "Body `{ domain }`. The registry fetches `https://<domain>/.well-known/aroha-did.json` and expects `{ did }`."
+      tags: [Agents]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: "`{ ok, verificationTier: domain, domain }`" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+
+  /v1/agents/{didHash}/client-metadata.json:
+    parameters: [{ $ref: "#/components/parameters/DidHash" }]
+    get:
+      operationId: getAgentClientMetadata
+      summary: OAuth Client ID Metadata Document for the agent
+      description: |
+        A Client ID Metadata Document (draft-ietf-oauth-client-id-metadata-document-02): this URL
+        is usable as the agent's OAuth `client_id`. `client_id` equals the URL the document was
+        fetched from; `token_endpoint_auth_method` is `private_key_jwt` (EdDSA) and no shared
+        secret is ever present; `jwks_uri` is `/v1/agents/{didHash}/jwks.json`, which follows key
+        rotation (an E-DID's key comes from its verified Key Event Log). `redirect_uris` is
+        `<endpointUrl>/oauth/callback` when the agent registered an https endpoint (an Aroha
+        convention); otherwise only `client_credentials` is offered. Aroha extensions:
+        `aroha_did`, `aroha_certification_tier`. Public; private agents, inactive agents and agents
+        with no key the registry vouches for (revoked, controller-revoked, forked) answer 404.
+        `Cache-Control: public, max-age=300`; errors `no-store`.
+      tags: [Agents]
+      responses:
+        "200":
+          description: Client metadata.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  client_id: { type: string, format: uri }
+                  client_name: { type: string }
+                  jwks_uri: { type: string, format: uri }
+                  token_endpoint_auth_method: { type: string, enum: [private_key_jwt] }
+                  token_endpoint_auth_signing_alg: { type: string, enum: [EdDSA] }
+                  grant_types: { type: array, items: { type: string } }
+                  response_types: { type: array, items: { type: string } }
+                  redirect_uris: { type: array, items: { type: string, format: uri } }
+                  software_id: { type: string }
+                  aroha_did: { type: string }
+                  aroha_certification_tier: { $ref: "#/components/schemas/CertificationTier" }
+                required: [client_id, jwks_uri, token_endpoint_auth_method, grant_types]
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+
+  /v1/agents/{didHash}/jwks.json:
+    parameters: [{ $ref: "#/components/parameters/DidHash" }]
+    get:
+      operationId: getAgentJwks
+      summary: The agent's current signing key as a JWK Set
+      description: |
+        One Ed25519 OKP key (`kid` is its RFC 7638 thumbprint, so it changes when the key
+        rotates). Same availability rules as the client metadata document.
+        `Cache-Control: public, max-age=300`.
+      tags: [Agents]
+      responses:
+        "200":
+          description: JWK Set.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/JwkSet" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+
+  /v1/agents/{didHash}/monitoring:
+    parameters: [{ $ref: "#/components/parameters/DidHash" }]
+    get:
+      operationId: getAgentMonitoring
+      summary: Signed monitoring summary and certification tier
+      description: |
+        Counts of facts this registry recorded about the agent — mandate revocations, rotated keys,
+        KEL events, duplicity alarms, linkage conflicts, caller attestations — the certification
+        tier with the facts behind it, and `lastSeenAt` (latest registry write from or about the
+        agent). Not a reputation score, safety rating or endorsement.
+
+        Tier (highest whose fact holds; `unverified` when inactive): `unverified` <
+        `domain_verified` (domain proof) < `kel_person_rooted` (E-DID whose verified KEL names a
+        person controller; neither revoked nor forked) < `audited` (operator-recorded audit).
+
+        `signature` is a base64url Ed25519 signature by registry key `keyId`
+        (`/.well-known/aroha-registry-keys.json`) over RFC 8785 JCS of
+        `{ purpose: "aroha.agent-monitoring/v1", ...summary }`. Includes inactive agents; the
+        visibility rule of `GET /v1/agents/{did}` applies. `Cache-Control: no-store`.
+      tags: [Agents]
+      security: [{}, { bearerAuth: [] }]
+      responses:
+        "200":
+          description: Signed summary.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  summary:
+                    type: object
+                    properties:
+                      did: { type: string }
+                      didHash: { type: string }
+                      generatedAt: { type: string, format: date-time }
+                      certificationTier: { $ref: "#/components/schemas/CertificationTier" }
+                      facts:
+                        type: object
+                        properties:
+                          active: { type: boolean }
+                          domainVerified: { type: boolean }
+                          domain: { type: string, nullable: true }
+                          kelPersonRooted: { type: boolean }
+                          controller: { type: string, nullable: true }
+                          audited: { type: boolean }
+                          auditedAt: { type: string, format: date-time, nullable: true }
+                          auditReference: { type: string, nullable: true }
+                      counts:
+                        type: object
+                        properties:
+                          mandatesRevoked: { type: integer }
+                          revocationsIssued: { type: integer }
+                          rotatedKeys: { type: integer }
+                          kelEvents: { type: integer }
+                          kelRevoked: { type: boolean }
+                          duplicityAlarms: { type: integer }
+                          linkageConflicts: { type: integer }
+                          attestations: { type: integer }
+                          attestationsSuccessful: { type: integer }
+                      lastSeenAt: { type: string, format: date-time, nullable: true }
+                      notice: { type: string }
+                  signature: { type: string }
+                  keyId: { type: string }
+                required: [summary, signature, keyId]
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+        "503": { $ref: "#/components/responses/SigningUnconfigured" }
+
+  /v1/agents/{didHash}/audited:
+    parameters: [{ $ref: "#/components/parameters/DidHash" }]
+    post:
+      operationId: setAgentAudited
+      summary: Record or clear an independent audit (operator)
+      description: |
+        Body `{ audited: true, reference }` (the audit report's URL or identifier, ≤ 512 chars)
+        or `{ audited: false }`. Feeds the `audited` certification tier. The registry records the
+        reference; it does not assess the audit. Written to the admin audit log.
+      tags: [Agents]
+      security: [{ adminAuth: [] }]
+      responses:
+        "200": { description: "`{ didHash, audited, auditedAt, reference }`" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # ─── MCP servers and skills ────────────────────────────────────────────────
+
+  /v1/mcps:
+    post:
+      operationId: registerMcp
+      summary: Register an MCP server
+      description: "Body `{ did, name, endpointUrl, description?, toolIds?, manifestCid? }`. 409 if the DID is registered."
+      tags: [MCP]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "201": { $ref: "#/components/responses/DidHashCreated" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "409": { $ref: "#/components/responses/Conflict" }
+    get:
+      operationId: listMcps
+      summary: List MCP servers
+      tags: [MCP]
+      security: [{}, { bearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/Limit" }, { $ref: "#/components/parameters/Offset" }]
+      responses:
+        "200": { description: MCP records., content: { application/json: { schema: { type: array, items: { type: object } } } } }
+
+  /v1/mcps/{didHash}:
+    parameters: [{ $ref: "#/components/parameters/DidHash" }]
+    get:
+      operationId: resolveMcp
+      summary: Resolve an MCP server (private → owner/grantee only)
+      tags: [MCP]
+      security: [{}, { bearerAuth: [] }]
+      responses:
+        "200": { description: MCP record., content: { application/json: { schema: { type: object } } } }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/mcps/{didHash}/visibility:
+    parameters: [{ $ref: "#/components/parameters/DidHash" }]
+    patch:
+      operationId: setMcpVisibility
+      summary: Set MCP visibility (owner)
+      tags: [MCP]
+      security: [{ bearerAuth: [] }]
+      requestBody: { $ref: "#/components/requestBodies/Visibility" }
+      responses:
+        "200": { $ref: "#/components/responses/VisibilitySet" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+
+  /v1/mcps/{didHash}/admin:
+    parameters: [{ $ref: "#/components/parameters/DidHash" }]
+    delete:
+      operationId: adminDeactivateMcp
+      summary: Deactivate an MCP server on behalf of a Studio org (admin)
+      tags: [MCP, Admin]
+      security: [{ adminAuth: [] }]
+      responses:
+        "200": { description: Deactivated, content: { application/json: { schema: { $ref: "#/components/schemas/Ok" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "503": { $ref: "#/components/responses/AdminUnconfigured" }
+
+  /v1/skills:
+    post:
+      operationId: registerSkill
+      summary: Register a skill
+      description: "Body `{ did, name, skillType?, description?, endpointUrl?, manifestCid? }`. 409 if the DID is registered."
+      tags: [Skills]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "201": { $ref: "#/components/responses/DidHashCreated" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "409": { $ref: "#/components/responses/Conflict" }
+    get:
+      operationId: listSkills
+      summary: List skills (optional ?type=)
+      tags: [Skills]
+      security: [{}, { bearerAuth: [] }]
+      parameters:
+        - { name: type, in: query, required: false, schema: { type: string } }
+        - { $ref: "#/components/parameters/Limit" }
+        - { $ref: "#/components/parameters/Offset" }
+      responses:
+        "200": { description: Skill records., content: { application/json: { schema: { type: array, items: { type: object } } } } }
+
+  /v1/skills/{didHash}:
+    parameters: [{ $ref: "#/components/parameters/DidHash" }]
+    get:
+      operationId: resolveSkill
+      summary: Resolve a skill (private → owner/grantee only)
+      tags: [Skills]
+      security: [{}, { bearerAuth: [] }]
+      responses:
+        "200": { description: Skill record., content: { application/json: { schema: { type: object } } } }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/skills/{didHash}/visibility:
+    parameters: [{ $ref: "#/components/parameters/DidHash" }]
+    patch:
+      operationId: setSkillVisibility
+      summary: Set skill visibility (owner)
+      tags: [Skills]
+      security: [{ bearerAuth: [] }]
+      requestBody: { $ref: "#/components/requestBodies/Visibility" }
+      responses:
+        "200": { $ref: "#/components/responses/VisibilitySet" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+
+  /v1/skills/{didHash}/admin:
+    parameters: [{ $ref: "#/components/parameters/DidHash" }]
+    delete:
+      operationId: adminDeactivateSkill
+      summary: Deactivate a skill on behalf of a Studio org (admin)
+      tags: [Skills, Admin]
+      security: [{ adminAuth: [] }]
+      responses:
+        "200": { description: Deactivated, content: { application/json: { schema: { $ref: "#/components/schemas/Ok" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "503": { $ref: "#/components/responses/AdminUnconfigured" }
+
+  # ─── API keys and org signing keys ─────────────────────────────────────────
+
+  /v1/auth/ping:
+    get:
+      operationId: ping
+      summary: Validate an API key
+      tags: [Auth]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: "`{ ok: true, orgName }`" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /v1/auth/keys:
+    post:
+      operationId: issueKey
+      summary: Issue an org API key (admin)
+      description: "Body `{ orgName, ownerId, label? }`. The raw key is returned once and never stored."
+      tags: [Auth, Admin]
+      security: [{ adminAuth: [] }]
+      responses:
+        "201": { description: "`{ key, orgName, note }`" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "503": { $ref: "#/components/responses/AdminUnconfigured" }
+
+  /v1/auth/keys/list:
+    get:
+      operationId: listKeys
+      summary: List active keys for an owner id (admin)
+      tags: [Auth, Admin]
+      security: [{ adminAuth: [] }]
+      parameters: [{ name: ownerId, in: query, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: Key metadata (never raw keys). }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "503": { $ref: "#/components/responses/AdminUnconfigured" }
+
+  /v1/auth/keys/{hash}:
+    parameters: [{ name: hash, in: path, required: true, schema: { type: string } }]
+    delete:
+      operationId: revokeKey
+      summary: Revoke a key, scoped to its owner id (admin)
+      tags: [Auth, Admin]
+      security: [{ adminAuth: [] }]
+      responses:
+        "200": { description: Revoked, content: { application/json: { schema: { $ref: "#/components/schemas/Ok" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "503": { $ref: "#/components/responses/AdminUnconfigured" }
+
+  /v1/auth/org-key:
+    put:
+      operationId: setOrgKey
+      summary: Register the org's Ed25519 signing key, proven via /.well-known/aroha-org.json
+      description: "Body `{ orgPublicKeyB64, domain }`."
+      tags: [Auth]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: "`{ ok: true, domain }`" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+
+  # ─── Access grants ─────────────────────────────────────────────────────────
+
+  /v1/grants:
+    post:
+      operationId: createGrant
+      summary: Grant access to a private resource (owner)
+      description: |
+        Body `{ resourceDidHash, resourceType: agent|mcp|skill, granteeDid?, granteeApiKey?,
+        granteeKeyHash?, capabilities?, note?, ttlMs? | expiresAt? }`. Expiry is capped at one
+        year from now whichever form is used.
+      tags: [Grants]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "201": { description: The grant (grantee key hashes are never echoed). }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+    get:
+      operationId: listGrants
+      summary: Live grants the caller issued on a resource
+      tags: [Grants]
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: resource, in: query, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: Grants. }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+
+  /v1/grants/{id}:
+    parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+    delete:
+      operationId: revokeGrant
+      summary: Revoke a grant (issuer)
+      tags: [Grants]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: "`{ ok: true, id }`" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+
+  /v1/grants/check:
+    get:
+      operationId: checkGrant
+      summary: Does a live grant exist for (resource, grantee DID)?
+      description: |
+        Answered only for a party to the grant: the API key that owns the resource, or
+        the key that owns the grantee agent `did`. Anyone else gets 404.
+      tags: [Grants]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: resource, in: query, required: true, schema: { type: string } }
+        - { name: did, in: query, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: Answer.
+          content: { application/json: { schema: { type: object, properties: { granted: { type: boolean } }, required: [granted] } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+
+  /v1/grants/admin:
+    post:
+      operationId: adminCreateGrant
+      summary: Create a grant on a Studio-owned resource (admin)
+      tags: [Grants, Admin]
+      security: [{ adminAuth: [] }]
+      responses:
+        "201": { description: The grant. }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+        "503": { $ref: "#/components/responses/AdminUnconfigured" }
+    get:
+      operationId: adminListGrants
+      summary: List grants on a Studio-owned resource (admin)
+      tags: [Grants, Admin]
+      security: [{ adminAuth: [] }]
+      responses:
+        "200": { description: Grants. }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "503": { $ref: "#/components/responses/AdminUnconfigured" }
+
+  /v1/grants/{id}/admin:
+    parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+    delete:
+      operationId: adminRevokeGrant
+      summary: Revoke a grant on a Studio-owned resource (admin)
+      tags: [Grants, Admin]
+      security: [{ adminAuth: [] }]
+      responses:
+        "200": { description: "`{ ok: true, id }`" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "503": { $ref: "#/components/responses/AdminUnconfigured" }
+
+  /v1/grants/visibility/admin:
+    patch:
+      operationId: adminSetVisibility
+      summary: Set visibility on a Studio-owned resource (admin)
+      tags: [Grants, Admin]
+      security: [{ adminAuth: [] }]
+      responses:
+        "200": { $ref: "#/components/responses/VisibilitySet" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+        "503": { $ref: "#/components/responses/AdminUnconfigured" }
+
+  # ─── Spaces ────────────────────────────────────────────────────────────────
+
+  /v1/spaces:
+    post:
+      operationId: createSpace
+      summary: Create a space owned by the calling org
+      tags: [Spaces]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "201": { description: "`{ space }`" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+    get:
+      operationId: listSpaces
+      summary: Spaces the caller owns and has joined
+      tags: [Spaces]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: "`{ owned, joined }`" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /v1/spaces/join:
+    post:
+      operationId: joinSpace
+      summary: Redeem a one-time invitation code
+      description: "Every unusable code (unknown, expired, revoked, already used — including losing a race for it) answers the same 404."
+      tags: [Spaces]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: "`{ space, grantsCreated }`" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+
+  /v1/spaces/{id}:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+    get:
+      operationId: getSpace
+      summary: A space the caller owns or belongs to (404 otherwise)
+      tags: [Spaces]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: "`{ space, resources, members? }`" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      operationId: archiveSpace
+      summary: Archive a space and revoke the grants it created (owner)
+      tags: [Spaces]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: "`{ archived: true, grantsRevoked }`" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/spaces/{id}/invites:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+    post:
+      operationId: createSpaceInvite
+      summary: Create a one-time invitation code (owner)
+      tags: [Spaces]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "201": { description: "`{ invite: { …, code } }` — the code is shown once." }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/spaces/{id}/resources:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+    post:
+      operationId: addSpaceResource
+      summary: Share a resource the owner holds into the space
+      tags: [Spaces]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "201": { description: "`{ added: true, grantsCreated }`" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+
+  /v1/spaces/{id}/resources/{hash}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+      - { name: hash, in: path, required: true, schema: { type: string } }
+    delete:
+      operationId: removeSpaceResource
+      summary: Remove a resource from the space (owner)
+      tags: [Spaces]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: "`{ removed, grantsRevoked }`" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/spaces/{id}/members/{hash}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+      - { name: hash, in: path, required: true, schema: { type: string } }
+    delete:
+      operationId: removeSpaceMember
+      summary: Remove a member (owner) or leave (the member)
+      tags: [Spaces]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: "`{ removed, grantsRevoked }`" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # ─── Spending ledger ───────────────────────────────────────────────────────
+
+  /v1/spending/budgets:
+    post:
+      operationId: initBudget
+      summary: Initialise a mandate's spending pool from a verified mandate token
+      description: |
+        The token is verified exactly as `/v1/mandates` verifies it (`verifyMandateChain`,
+        this registry's key resolver, KELs and revocations). The pool's limit is
+        min(spendLimitUsd, sessionLimitUsd) of the VERIFIED leaf and its expiry the earliest
+        `expiresAt` in the chain — a caller-supplied `limitUsd` is not accepted. The budget is
+        keyed by `<grantor>#<mandateId>`; the calling API key becomes its owner. Budgets
+        created before migration 018 (caller-supplied limit) are not served and are replaced
+        by a create with the token.
+      tags: [Spending]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                token: { type: string, description: The mandate token the pool is for (its leaf). }
+                expiresAt: { type: integer, description: "Optional Unix ms; may only shorten the chain's expiry." }
+              required: [token]
+      responses:
+        "201":
+          description: "Created (or `existing: true` when the caller already owns it)."
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean, enum: [true] }
+                  mandateId: { type: string }
+                  grantor: { type: string }
+                  budgetKey: { type: string, description: "`<grantor>#<mandateId>`" }
+                  limitUsd: { type: number }
+                  expiresAt: { type: integer }
+                  existing: { type: boolean }
+                required: [ok, mandateId, grantor, budgetKey, limitUsd, expiresAt]
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+
+  /v1/spending/allocate:
+    post:
+      operationId: allocate
+      summary: Atomically allocate from a parent mandate's pool
+      description: |
+        Refused once the pool is exhausted (409), past its expiry, or when any link of the
+        mandate chain it was created from has been revoked at this registry (410).
+      tags: [Spending]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                parentMandateId: { type: string }
+                grantor: { type: string, description: The parent mandate's own grantor DID. }
+                amountUsd: { type: number, exclusiveMinimum: 0 }
+              required: [parentMandateId, grantor, amountUsd]
+      responses:
+        "200":
+          description: "`{ allocationId, parentMandateId, grantor, allocatedUsd, remainingUsd }`"
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: "Would exceed the pool (`BUDGET_EXHAUSTED`)." }
+        "410": { description: "`BUDGET_EXPIRED` or `MANDATE_REVOKED`." }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+
+  /v1/spending/release/{allocationId}:
+    parameters: [{ name: allocationId, in: path, required: true, schema: { type: string } }]
+    post:
+      operationId: release
+      summary: Release an unused allocation back to its pool
+      tags: [Spending]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                parentMandateId: { type: string }
+                grantor: { type: string, description: The parent mandate's own grantor DID. }
+              required: [parentMandateId, grantor]
+      responses:
+        "200": { description: "Released (`released: false` when already released — idempotent)." }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /v1/spending/status/{mandateId}:
+    parameters:
+      - { name: mandateId, in: path, required: true, schema: { type: string } }
+      - { name: grantor, in: query, required: true, description: "The mandate's own grantor DID.", schema: { type: string } }
+    get:
+      operationId: spendingStatus
+      summary: Pool status for a mandate the caller initialised
+      tags: [Spending]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: "`{ mandateId, grantor, limitUsd, allocatedUsd, remainingUsd, allocationCount, createdAt, expiresAt }`" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # ─── Credentials, analytics, routing, models ───────────────────────────────
+
+  /v1/credential/{didHash}:
+    parameters: [{ $ref: "#/components/parameters/DidHash" }]
+    get:
+      operationId: issueCredential
+      summary: 24-hour HMAC-signed JWT attesting an agent's registry state
+      description: |
+        Same visibility rule as resolve (404 for hidden private agents). 503 when the
+        deployment has no usable credential secret. The signing key is derived from
+        CREDENTIAL_SECRET (or ADMIN_SECRET); rotating it invalidates outstanding tokens.
+      tags: [Credentials]
+      security: [{}, { bearerAuth: [] }]
+      responses:
+        "200":
+          description: Token.
+          content: { application/json: { schema: { type: object, properties: { token: { type: string }, expiresAt: { type: integer } }, required: [token, expiresAt] } } }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "503": { $ref: "#/components/responses/AdminUnconfigured" }
+
+  /v1/credential/verify:
+    post:
+      operationId: verifyCredential
+      summary: Verify and decode a credential issued by this registry
+      tags: [Credentials]
+      responses:
+        "200": { description: "`{ valid: true, payload }`" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { description: Invalid or expired. }
+        "503": { $ref: "#/components/responses/AdminUnconfigured" }
+
+  /v1/analytics/agents/{didHash}:
+    parameters: [{ $ref: "#/components/parameters/DidHash" }]
+    get:
+      operationId: agentAnalytics
+      summary: Discovery counts for an agent the caller can see
+      tags: [Analytics]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: Stats. }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/analytics/summary:
+    get:
+      operationId: analyticsSummary
+      summary: Platform-wide summary (admin)
+      tags: [Analytics, Admin]
+      security: [{ adminAuth: [] }]
+      responses:
+        "200": { description: Summary. }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "503": { $ref: "#/components/responses/AdminUnconfigured" }
+
+  /v1/models:
+    get:
+      operationId: listModels
+      summary: Model catalogue
+      tags: [Routing]
+      responses:
+        "200": { description: "`{ models, count }`" }
+    post:
+      operationId: upsertModel
+      summary: Add or update a catalogue entry (admin)
+      tags: [Routing, Admin]
+      security: [{ adminAuth: [] }]
+      responses:
+        "201": { description: "`{ ok, modelId }`" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "503": { $ref: "#/components/responses/AdminUnconfigured" }
+
+  /v1/routing/feedback:
+    post:
+      operationId: routingFeedback
+      summary: Report observed model quality
+      tags: [Routing]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: "`{ ok, recorded }`" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /v1/routing/priors:
+    get:
+      operationId: routingPriors
+      summary: Aggregated routing priors
+      tags: [Routing]
+      responses:
+        "200": { description: "`{ priors, count }`" }
+
+  # ─── Reputation and caller trust ───────────────────────────────────────────
+
+  /v1/signals:
+    post:
+      operationId: submitSignal
+      summary: Ingest an external quality signal into an agent's reputation (admin)
+      description: |
+        Admin secret only — org API keys are refused (401). Body
+        `{ agentDID, successRate, qualityScore?, sampleSize?, source?, reportedAt? }`.
+        Per-org outcome feedback goes through `POST /v1/signals/attest` instead.
+      tags: [Reputation, Admin]
+      security: [{ adminAuth: [] }]
+      responses:
+        "200": { description: "`{ ok, didHash, source, compositeScore }`" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "503": { $ref: "#/components/responses/AdminUnconfigured" }
+
+  /v1/signals/attest:
+    post:
+      operationId: attestOutcome
+      summary: Attest a saga outcome, signed by the calling agent's DID
+      description: Signature by an active registered agent over the canonical payload; rate limited per IP.
+      tags: [Reputation]
+      responses:
+        "201": { description: Recorded. }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+
+  /v1/verify-caller:
+    post:
+      operationId: verifyCaller
+      summary: Submit a KYC certificate and uniqueness proof to become a verified caller
+      description: Signed by an active registered agent's key; rate limited per IP.
+      tags: [Reputation]
+      responses:
+        "201": { description: "`{ callerDid, tier: kyc-verified }`" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+
+  /v1/kyc-issuers:
+    post:
+      operationId: registerKycIssuer
+      summary: Register a KYC issuer, proven via its domain
+      tags: [Reputation]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "201": { description: Registered. }
+        "200": { description: Already registered. }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+
+  # ─── Admin ─────────────────────────────────────────────────────────────────
+
+  /v1/admin/audit:
+    get:
+      operationId: auditLog
+      summary: Admin audit log (admin; limit 1–200)
+      tags: [Admin]
+      security: [{ adminAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/Limit" }, { $ref: "#/components/parameters/Offset" }]
+      responses:
+        "200": { description: "`{ entries, limit, offset }`" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "503": { $ref: "#/components/responses/AdminUnconfigured" }
+
+  /v1/admin/firm-licenses:
+    post:
+      operationId: licenseFirm
+      summary: License a firm for vanity subdomain provisioning (admin)
+      tags: [Admin]
+      security: [{ adminAuth: [] }]
+      responses:
+        "200": { description: Licensed, content: { application/json: { schema: { $ref: "#/components/schemas/Ok" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "503": { $ref: "#/components/responses/AdminUnconfigured" }
+
+  /v1/admin/firm-licenses/{firmDid}:
+    parameters: [{ name: firmDid, in: path, required: true, schema: { type: string } }]
+    delete:
+      operationId: unlicenseFirm
+      summary: Revoke a firm licence (admin)
+      tags: [Admin]
+      security: [{ adminAuth: [] }]
+      responses:
+        "200": { description: Revoked, content: { application/json: { schema: { $ref: "#/components/schemas/Ok" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "503": { $ref: "#/components/responses/AdminUnconfigured" }
+
+  # ─── Federated discovery and naming ────────────────────────────────────────
+
+  /v1/sar:
+    post:
+      operationId: publishSar
+      summary: Publish (or replace) a Signed Agent Record
+      description: No API key — the record's self-signature is the access control. Body ≤ 256 KiB; rate limited per IP.
+      tags: [Discovery]
+      responses:
+        "201": { description: "`{ ok: true, did }`" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "413": { $ref: "#/components/responses/PayloadTooLarge" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+    get:
+      operationId: querySar
+      summary: Live Signed Agent Records, optionally by capability or DID (paged)
+      tags: [Discovery]
+      parameters:
+        - { name: capability, in: query, required: false, schema: { type: string } }
+        - { name: did, in: query, required: false, schema: { type: string } }
+        - { $ref: "#/components/parameters/Limit" }
+        - { $ref: "#/components/parameters/Offset" }
+      responses:
+        "200": { description: "`{ records }` — E-DID records carry the stored KEL." }
+
+  /v1/personal-names:
+    post:
+      operationId: claimPersonalName
+      summary: Record the key-derived personal label for an agent the caller owns
+      tags: [Discovery]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "201": { description: "`{ ok, label, did }`" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /v1/personal-names/{label}:
+    parameters: [{ name: label, in: path, required: true, schema: { type: string } }]
+    get:
+      operationId: resolvePersonalName
+      summary: Look up the DID behind a personal label
+      tags: [Discovery]
+      responses:
+        "200": { description: "`{ label, did }`" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # ─── Relay ─────────────────────────────────────────────────────────────────
+
+  /v1/relay/connect:
+    post:
+      operationId: relayConnect
+      summary: Prove key possession and get a one-time WebSocket token
+      description: |
+        Body `{ did, timestamp, signatureHex }`: hex Ed25519 signature by the DID's
+        registered key over `{"action":"relay-connect","did":…,"timestamp":…}`.
+        `timestamp` must be within ±5 minutes; each signed proof is accepted once
+        (409 on reuse — sign a new timestamp).
+      tags: [Relay]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: "`{ token, expiresInMs, socketUrl }`" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /v1/relay/{didHash}/socket:
+    parameters:
+      - { $ref: "#/components/parameters/DidHash" }
+      - { name: token, in: query, required: true, schema: { type: string } }
+    get:
+      operationId: relaySocket
+      summary: Upgrade to the agent's relay WebSocket (single-use token from /connect)
+      tags: [Relay]
+      responses:
+        "101": { description: Switching protocols. }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { description: An agent is already connected. }
+
+  /v1/relay/{didHash}/send:
+    parameters: [{ $ref: "#/components/parameters/DidHash" }]
+    post:
+      operationId: relaySend
+      summary: Deliver an envelope to an agent's durable relay inbox
+      description: |
+        Body is the signed envelope (≤ 64 KiB; `from` required). The per-sender rate
+        limit is charged to the caller's API key, not to `envelope.from`.
+      tags: [Relay]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "202": { description: "`{ ok, seq, delivered }`" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "413": { $ref: "#/components/responses/PayloadTooLarge" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+        "507": { description: The inbox is full. }
+
+  /v1/relay/{didHash}/status:
+    parameters: [{ $ref: "#/components/parameters/DidHash" }]
+    get:
+      operationId: relayStatus
+      summary: Connected flag and queue depth (same visibility rule as resolve)
+      tags: [Relay]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: "`{ connected, queuedMessages }`" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # ─── Key Event Logs (managed registry; rotatable did:aroha:E… identities) ───
+  # Self-hosted createArohaRegistryServer() instances do not serve these yet.
+
+  /v1/kel/{did}:
+    parameters:
+      - name: did
+        in: path
+        required: true
+        description: URL-encoded rotatable `did:aroha:E…` DID.
+        schema:
+          type: string
+    get:
+      operationId: getKel
+      summary: Get the stored Key Event Log
+      description: |
+        The longest verified log the registry holds for the DID. Clients MUST
+        re-verify it (`resolveKelState` in `@aroha-sdk/core`); the registry can
+        withhold events but cannot forge them. `@aroha-sdk/registry`
+        `httpKelSource(registryUrl)` wraps this endpoint as a core `KelSource`.
+        No authentication.
+      tags: [KEL]
+      responses:
+        "200":
+          description: The stored log.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KelLogResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: |
+            `code: "duplicity"` — a fork was recorded for this DID and the registry will
+            not vouch for either branch; or `code: "stale"` — the controller's stored log
+            seals an event beyond the stored agent log (serving it could hide a revocation).
+            Verifiers MUST treat this as a failure, not as "no log".
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KelErrorResponse"
+    post:
+      operationId: submitKel
+      summary: Submit a Key Event Log
+      description: |
+        Self-authenticating: no API key. Rate limited per IP; body ≤ 256 KiB,
+        ≤ 256 events. Include `controllerKel` for a controlled agent whose
+        controller's log the registry does not have yet.
+      tags: [KEL]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                events: { type: array, items: { type: object } }
+                controllerKel: { type: array, items: { type: object } }
+              required: [events]
+      responses:
+        "200":
+          description: Accepted (or identical to what is stored).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  did: { type: string }
+                  sequence: { type: integer }
+                  revoked: { type: boolean }
+                required: [did, sequence, revoked]
+        "400":
+          description: "Malformed, mis-signed or mis-chained (`code: \"invalid\"`)."
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/KelErrorResponse" }
+        "409":
+          description: Shorter than the stored log (`stale`) or forked (`duplicity`, recorded permanently).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/KelErrorResponse" }
+        "422":
+          description: The log names a controller whose KEL the registry does not have (`controller-unavailable`).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/KelErrorResponse" }
+        "429":
+          description: Rate limited.
+
+  /v1/kel/{did}/duplicity:
+    parameters:
+      - name: did
+        in: path
+        required: true
+        schema: { type: string }
+    get:
+      operationId: getKelDuplicity
+      summary: Recorded fork evidence for a DID
+      tags: [KEL]
+      responses:
+        "200":
+          description: "`duplicity` is null when no fork has been recorded."
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  did: { type: string }
+                  duplicity:
+                    type: [object, "null"]
+                required: [did, duplicity]
+
+  /v1/linkage:
+    post:
+      operationId: submitLinkage
+      summary: Link a legacy DID to its rotatable successor
+      description: |
+        Body `{ linkage, toKel, controllerKel? }`. First linkage per `from` DID wins and is
+        never overwritten; a different, validly signed linkage is recorded as a conflict.
+        No API key; rate limited.
+      tags: [KEL]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                linkage: { type: object, description: Signed IdentityLinkage (`@aroha-sdk/core`). }
+                toKel: { type: array, items: { type: object } }
+                controllerKel: { type: array, items: { type: object } }
+              required: [linkage, toKel]
+      responses:
+        "201":
+          description: Stored (first linkage for `from`).
+        "200":
+          description: "A linkage to the same successor already existed (`existing: true`)."
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "409":
+          description: A linkage to a DIFFERENT successor exists; this one was filed as a conflict.
+
+  /v1/linkage/{fromDid}:
+    parameters:
+      - name: fromDid
+        in: path
+        required: true
+        schema: { type: string }
+    get:
+      operationId: getLinkage
+      summary: The first linkage recorded for a legacy DID
+      tags: [KEL]
+      responses:
+        "200":
+          description: |
+            `conflict: true` means two validly signed linkages exist for the old DID — show it
+            to a person rather than following `to` automatically.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  from: { type: string }
+                  to: { type: string }
+                  linkage: { type: object }
+                  createdAt: { type: integer }
+                  conflict: { type: boolean }
+                  conflictCount: { type: integer }
+                required: [from, to, linkage, createdAt, conflict, conflictCount]
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # ─── Spending mandates (managed registry) ──────────────────────────────────
+
+  /v1/mandates/{mandateId}/revoke:
+    parameters:
+      - $ref: "#/components/parameters/MandateId"
+    post:
+      operationId: revokeMandate
+      summary: Revoke a spending mandate
+      description: |
+        Accepted only when signed by the grantor of the token's leaf mandate or of any
+        ancestor link. The token's chain must verify (`verifyMandateChain`); the signature
+        covers RFC 8785 JCS of `{ mandateId, purpose: "aroha.mandate.revoke/v1", revokedAt }`.
+        Revocations are permanent; the first one wins. No API key (the signature is the
+        authority); rate limited per IP. Client: `revokeMandate()` in `@aroha-sdk/credentials`.
+      tags: [Mandates]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                token: { type: string, description: Mandate token whose leaf is `mandateId`. }
+                revokedAt: { type: string, format: date-time }
+                revoker: { type: string, description: DID of the signing grantor (leaf or ancestor). }
+                signature: { type: string, description: base64url Ed25519 signature. }
+              required: [token, revokedAt, revoker, signature]
+      responses:
+        "200":
+          description: "Revoked (or already revoked — `existing: true`, original record returned)."
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  mandateId: { type: string }
+                  revoked: { type: boolean, enum: [true] }
+                  revokedAt: { type: string, format: date-time }
+                  revokedBy: { type: string }
+                  existing: { type: boolean }
+                required: [mandateId, revoked, revokedAt, revokedBy]
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          description: Revoker is not a grantor in the chain, or the signature does not verify.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+
+  /v1/mandates/{mandateId}/revoked:
+    parameters:
+      - $ref: "#/components/parameters/MandateId"
+      - name: grantor
+        in: query
+        required: true
+        description: |
+          DID of the mandate's own grantor. A mandateId is chosen by whoever mints the
+          mandate, so the registry keys revocations and redemption totals by
+          (grantor, mandateId); a bare id is ambiguous and answers 400.
+        schema: { type: string }
+    get:
+      operationId: getMandateRevocation
+      summary: Revocation status of a mandate
+      description: |
+        Public, `Cache-Control: no-store`. Verifiers consult it for every link of a chain
+        (`httpRevocationCheck()` in `@aroha-sdk/credentials`, which fails closed when this
+        endpoint cannot be reached).
+
+        Signed: `statusSignature` is a base64url Ed25519 signature, by the registry key
+        `statusKeyId` (`/.well-known/aroha-registry-keys.json`), over RFC 8785 JCS of
+        `{ purpose: "aroha.revocation-status/v1", mandateId, grantor, revoked, revokedAt?, checkedAt }`
+        (`revokedBy` is informational and not signed). Verifiers should pin the key and refuse
+        a `checkedAt` older than their freshness window (`httpRevocationCheck({ registryKeys })`).
+        503 when the deployment has no signing key.
+      tags: [Mandates]
+      responses:
+        "200":
+          description: Signed status.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  mandateId: { type: string }
+                  grantor: { type: string }
+                  revoked: { type: boolean }
+                  revokedAt: { type: string, format: date-time }
+                  revokedBy: { type: string }
+                  checkedAt: { type: string, format: date-time }
+                  statusSignature: { type: string }
+                  statusKeyId: { type: string }
+                required: [mandateId, grantor, revoked, checkedAt, statusSignature, statusKeyId]
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "503":
+          $ref: "#/components/responses/SigningUnconfigured"
+
+  /v1/mandates/{mandateId}/redeem:
+    parameters:
+      - $ref: "#/components/parameters/MandateId"
+    post:
+      operationId: redeemMandate
+      summary: Atomically redeem against a payment mandate's cumulative limit
+      description: |
+        Re-verifies the token (chain, this registry's revocations, expiry), requires a
+        payment-tier leaf and a merchant in `allowedMerchants` (when set), derives the limit
+        as min(spendLimitUsd, sessionLimitUsd) of the verified leaf — the caller's limit is
+        never used — and adds `amountMicros` in one transaction. Client:
+        `httpRedemptionStore()` in `@aroha-sdk/credentials`.
+      tags: [Mandates]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                token: { type: string }
+                amountMicros: { type: integer, minimum: 1, description: Amount in micro-USD (USD × 1e6). }
+                merchant: { type: string, description: Merchant DID. }
+                redemptionId: { type: string, pattern: "^[A-Za-z0-9._:-]{1,128}$", description: "Optional client id (audit / idempotency handle), unique per mandate." }
+              required: [token, amountMicros, merchant]
+      responses:
+        "200":
+          description: Accepted.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RedemptionResult" }
+        "409":
+          description: |
+            Would exceed the cumulative limit (`RedemptionResult`, nothing recorded), or
+            `redemptionId` was already used for this mandate (`ErrorResponse`). Redemption
+            ids are scoped per mandate.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - { $ref: "#/components/schemas/RedemptionResult" }
+                  - { $ref: "#/components/schemas/ErrorResponse" }
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Merchant not in the mandate's allowed merchant list.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+
+  /v1/mandates/{mandateId}/redemptions:
+    parameters:
+      - $ref: "#/components/parameters/MandateId"
+      - name: grantor
+        in: query
+        required: true
+        description: |
+          DID of the mandate's own grantor. A mandateId is chosen by whoever mints the
+          mandate, so the registry keys revocations and redemption totals by
+          (grantor, mandateId); a bare id is ambiguous and answers 400.
+        schema: { type: string }
+    get:
+      operationId: getMandateRedemptions
+      summary: Running redeemed total for a mandate
+      tags: [Mandates]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Total (0 when nothing has been redeemed).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  mandateId: { type: string }
+                  redeemedMicros: { type: integer }
+                required: [mandateId, redeemedMicros]
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  # ─── Registry signing keys and audit anchors ──────────────────────────────
+
+  /.well-known/aroha-registry-keys.json:
+    get:
+      operationId: getRegistryKeys
+      summary: The registry's Ed25519 signing keys
+      description: |
+        Keys that sign audit anchors, revocation status, Shared Signals SETs and agent
+        monitoring summaries (`purpose` lists which). `keyId` is the first 16 hex
+        characters of SHA-256(publicKey). A key marked `retired: true` no longer signs; it is
+        published so signatures made before a rotation (audit anchors are permanent) still
+        verify. Verifiers should accept only non-retired keys for revocation status.
+        `Cache-Control: public, max-age=300`. 503 when no signing key is configured.
+      tags: [Witness]
+      responses:
+        "200":
+          description: Key document.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  keys:
+                    type: array
+                    items: { $ref: "#/components/schemas/RegistryKey" }
+                required: [keys]
+        "503":
+          $ref: "#/components/responses/SigningUnconfigured"
+
+  /v1/audit-anchors:
+    post:
+      operationId: appendAuditAnchor
+      summary: Witness a runtime's signed audit-log head
+      description: |
+        `signature` is the install key's Ed25519 signature (hex as the runtime writes it, or
+        base64url) over the runtime's live-head checkpoint bytes:
+        `"aroha-audit-head/v1\n" + JSON.stringify([seq, hash, signedAt])`
+        (apps/aroha-runtime/src/host/audit-rotate.ts). `installDid` must be a content-addressed
+        `did:aroha:z…` — its key comes from the DID itself. Append-only: `seq` must be greater
+        than the install's last anchored seq. The registry timestamps the anchor, chains it to
+        the previous one (`prevAnchorHash` = SHA-256 hex of JCS of the previous anchor, `""` for
+        the first) and signs JCS(anchor). No API key; rate limited per IP and per installDid;
+        body limit 4 KiB.
+      tags: [Witness]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                installDid: { type: string, description: "Content-addressed did:aroha:z… install DID." }
+                seq: { type: integer, minimum: 0 }
+                hash: { type: string, pattern: "^[0-9a-f]{64}$" }
+                signedAt: { type: string, format: date-time, description: Exactly the string the install signed. }
+                signature: { type: string, description: Ed25519 signature, hex or base64url. }
+              required: [installDid, seq, hash, signedAt, signature]
+      responses:
+        "200":
+          description: Anchored.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AuditAnchorRecord" }
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          description: The signature does not verify under the install DID's key.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+        "409":
+          description: "`seq` is not greater than the last anchored seq (`lastSeq` included), or a concurrent anchor won."
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "503":
+          $ref: "#/components/responses/SigningUnconfigured"
+
+  /v1/audit-anchors/{installDid}:
+    parameters:
+      - { name: installDid, in: path, required: true, schema: { type: string } }
+      - { name: after, in: query, required: false, description: "Return anchors with seq greater than this.", schema: { type: integer } }
+      - { name: limit, in: query, required: false, description: "Page size, clamped to 1–100. Default 100.", schema: { type: integer, minimum: 1, maximum: 100, default: 100 } }
+    get:
+      operationId: listAuditAnchors
+      summary: An install's anchors, ascending by seq
+      description: "Public, `Cache-Control: no-store`. Page with `after=<last seq seen>`."
+      tags: [Witness]
+      responses:
+        "200":
+          description: Anchors.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  anchors:
+                    type: array
+                    items: { $ref: "#/components/schemas/AuditAnchorRecord" }
+                required: [anchors]
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  # ─── Shared Signals (SSF 1.0 transmitter) ─────────────────────────────────
+
+  /.well-known/ssf-configuration:
+    get:
+      operationId: getSsfConfiguration
+      summary: Shared Signals transmitter configuration
+      description: |
+        SSF 1.0 transmitter metadata. `issuer` is this deployment's origin; SETs are compact JWS
+        (`alg: EdDSA`, `typ: secevent+jwt`) verifiable with `jwks_uri`. Delivery: push
+        (`urn:ietf:rfc:8935`) and poll (`urn:ietf:rfc:8936`). `default_subjects: ALL` — every
+        stream receives every event type it requested, except that an event about a registered agent
+        reaches a stream only when the stream's API key could see that agent (public, owned, or
+        granted; unlisted counts as private), checked at queueing and again at every push retry and
+        poll. Events: CAEP `session-revoked` and Aroha
+        `mandate-revoked` on a new `POST /v1/mandates/{mandateId}/revoke`; CAEP
+        `credential-change` (`credential_type: aroha-did-key`, `change_type: revoke`) and Aroha
+        `did-revoked` when `POST /v1/kel/{did}` newly accepts a revocation (cascading to agents
+        that person controls). `Cache-Control: public, max-age=300`. 503 without a signing key.
+      tags: [SharedSignals]
+      responses:
+        "200":
+          description: Transmitter configuration.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  spec_version: { type: string }
+                  issuer: { type: string, format: uri }
+                  jwks_uri: { type: string, format: uri }
+                  delivery_methods_supported: { type: array, items: { type: string } }
+                  configuration_endpoint: { type: string, format: uri }
+                  status_endpoint: { type: string, format: uri }
+                  verification_endpoint: { type: string, format: uri }
+                  authorization_schemes: { type: array, items: { type: object } }
+                  default_subjects: { type: string }
+                  events_supported: { type: array, items: { type: string } }
+                required: [spec_version, issuer, jwks_uri, delivery_methods_supported]
+        "503": { $ref: "#/components/responses/SigningUnconfigured" }
+
+  /.well-known/jwks.json:
+    get:
+      operationId: getRegistryJwks
+      summary: The registry's signing keys as a JWK Set
+      description: |
+        The keys of `/.well-known/aroha-registry-keys.json` as Ed25519 OKP JWKs (`kid` = registry
+        `keyId`). Verifies Shared Signals SETs. A retired key is still listed so queued SETs
+        signed before a rotation verify. `Cache-Control: public, max-age=300`.
+      tags: [SharedSignals]
+      responses:
+        "200":
+          description: JWK Set.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/JwkSet" }
+        "503": { $ref: "#/components/responses/SigningUnconfigured" }
+
+  /v1/ssf/streams:
+    post:
+      operationId: createSsfStream
+      summary: Create a Shared Signals stream
+      description: |
+        Body `{ delivery: { method, endpoint_url?, authorization_header? }, events_requested,
+        description?, aud? }`. Push endpoints must be https without credentials in the URL;
+        `authorization_header` is presented on each push and never returned. Poll streams get
+        `endpoint_url` = `/v1/ssf/poll/{streamId}` on this registry. `aud` is an Aroha extension
+        (default `urn:aroha:ssf:stream:<stream_id>`). At most 10 streams per API key. Every SET
+        is queued durably; push is attempted within the request that produced it (5 s timeout)
+        and retried by the hourly cron with backoff (10 attempts).
+      tags: [SharedSignals]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                delivery:
+                  type: object
+                  properties:
+                    method: { type: string, enum: ["urn:ietf:rfc:8935", "urn:ietf:rfc:8936"] }
+                    endpoint_url: { type: string, format: uri }
+                    authorization_header: { type: string }
+                events_requested: { type: array, items: { type: string } }
+                description: { type: string, maxLength: 256 }
+                aud: { type: string }
+      responses:
+        "201":
+          description: Stream configuration.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SsfStream" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "409": { description: Stream limit reached. }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+        "503": { $ref: "#/components/responses/SigningUnconfigured" }
+    get:
+      operationId: getSsfStreams
+      summary: Read one stream (?stream_id=) or list the caller's streams
+      tags: [SharedSignals]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: stream_id, in: query, required: false, schema: { type: string } }
+      responses:
+        "200":
+          description: A stream configuration, or an array of them when `stream_id` is omitted.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - { $ref: "#/components/schemas/SsfStream" }
+                  - { type: array, items: { $ref: "#/components/schemas/SsfStream" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      operationId: deleteSsfStream
+      summary: Delete a stream and its queued SETs
+      tags: [SharedSignals]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: stream_id, in: query, required: true, schema: { type: string } }
+      responses:
+        "204": { description: Deleted. }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/ssf/status:
+    get:
+      operationId: getSsfStreamStatus
+      summary: Stream status
+      tags: [SharedSignals]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: stream_id, in: query, required: true, schema: { type: string } }
+      responses:
+        "200": { description: "`{ stream_id, status, reason? }`" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      operationId: setSsfStreamStatus
+      summary: Set stream status
+      description: |
+        Body `{ stream_id, status: enabled | paused | disabled, reason? }`. Paused streams queue
+        SETs without pushing (poll returns none); disabled streams record nothing.
+      tags: [SharedSignals]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: "`{ stream_id, status, reason? }`" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/ssf/verify:
+    post:
+      operationId: verifySsfStream
+      summary: Request a verification SET
+      description: "Body `{ stream_id, state? }`. Queues (and, for push, sends) an SSF verification event echoing `state`."
+      tags: [SharedSignals]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "204": { description: Queued. }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: The stream is disabled. }
+        "503": { $ref: "#/components/responses/SigningUnconfigured" }
+
+  /v1/ssf/poll/{streamId}:
+    parameters:
+      - { name: streamId, in: path, required: true, schema: { type: string } }
+    post:
+      operationId: pollSsfStream
+      summary: RFC 8936 poll and acknowledge
+      description: |
+        Body `{ maxEvents?, returnImmediately?, ack?: [jti], setErrs?: { jti: error } }`. Acknowledged
+        (and errored) jtis are never returned again; unacknowledged SETs are returned on every
+        poll. Answers at once (no long polling). `maxEvents` is clamped to 0–100.
+      tags: [SharedSignals]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: SETs keyed by jti.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sets: { type: object, additionalProperties: { type: string } }
+                  moreAvailable: { type: boolean }
+                required: [sets, moreAvailable]
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: Org API key issued by the operator (`POST /v1/auth/keys`), or `REGISTRY_API_KEY` on self-hosted instances.
+    adminAuth:
+      type: http
+      scheme: bearer
+      description: The deployment's ADMIN_SECRET (≥ 32 characters). Operator tooling only.
+
+  parameters:
+    DidHash:
+      name: didHash
+      in: path
+      required: true
+      description: keccak-256 hex hash of the DID (`0x…`).
+      schema: { type: string }
+    Limit:
+      name: limit
+      in: query
+      required: false
+      description: Page size, clamped to 1–100 (admin audit 1–200). Default 50.
+      schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+    Offset:
+      name: offset
+      in: query
+      required: false
+      description: Rows to skip, clamped to ≥ 0.
+      schema: { type: integer, minimum: 0, default: 0 }
+    MandateId:
+      name: mandateId
+      in: path
+      required: true
+      description: The mandate's `mandateId` (UUID).
+      schema:
+        type: string
+
+  requestBodies:
+    Visibility:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties: { visibility: { type: string, enum: [public, unlisted, private] } }
+            required: [visibility]
+
+  schemas:
+    KelLogResponse:
+      type: object
+      properties:
+        did: { type: string }
+        events: { type: array, items: { type: object }, description: "KEL events (inception first)." }
+        sequence: { type: integer }
+        controller: { type: string, description: Controlled agents only. }
+        controllerRevoked: { type: boolean, description: Controlled agents only — the controlling person revoked itself. }
+      required: [did, events, sequence]
+
+    KelErrorResponse:
+      type: object
+      properties:
+        error: { type: string }
+        code: { type: string, enum: [invalid, stale, duplicity, controller-unavailable] }
+      required: [error]
+
+    RedemptionResult:
+      type: object
+      properties:
+        accepted: { type: boolean }
+        redeemedMicros: { type: integer }
+        limitMicros: { type: integer }
+        redemptionId: { type: string }
+      required: [accepted, redeemedMicros, limitMicros]
+
+    RegisterAgentRequest:
+      type: object
+      description: Payload for registering an agent (managed registry).
+      properties:
+        did:
+          type: string
+          description: The agent's `did:aroha:` DID.
+          example: "did:aroha:my-travel-agent"
+        manifestCID:
+          type: string
+          description: IPFS CID of the agent's manifest. Capabilities are read from it.
+          example: "QmXyZ123abc..."
+        publicKeyB64:
+          type: string
+          description: |
+            Ed25519 public key (32 bytes), base64url (canonical) or standard base64.
+            Required except for E-DIDs, where it is optional and must match the KEL.
+        challengeNonce:
+          type: string
+          description: From `POST /v1/agents/challenge`. Required except for E-DIDs.
+        challengeSignature:
+          type: string
+          description: |
+            Ed25519 signature (base64url or base64) by `publicKeyB64`'s key over the UTF-8
+            JSON `{"action":"prove-ownership","did":…,"nonce":…}`. Required except for E-DIDs.
+        endpointUrl: { type: string, format: uri, description: Optional http(s) endpoint. }
+        visibility: { type: string, enum: [public, unlisted, private], default: public }
+        registeredAt: { type: integer, description: Unix ms; required with orgSignature (±5 min). }
+        orgSignature:
+          type: string
+          description: |
+            Optional org Ed25519 signature over
+            `{"action":"register-agent","did":…,"manifestCID":…,"publicKeyB64":…,"registeredAt":…}`,
+            verified against the key set with `PUT /v1/auth/org-key`; upgrades the tier to `org-signed`.
+        kel: { type: array, items: { type: object }, description: E-DIDs only — the agent's Key Event Log. }
+        controllerKel: { type: array, items: { type: object }, description: E-DIDs only — the controller's log. }
+      required: [did, manifestCID]
+
+    RegisterAgentResponse:
+      type: object
+      properties:
+        didHash:
+          type: string
+          description: keccak-256 hex hash of the DID — the path parameter for later calls.
+          example: "0xabc123def456..."
+      required: [didHash]
+
+    AgentRecord:
+      type: object
+      description: An agent record as the managed registry returns it.
+      properties:
+        did: { type: string }
+        didHash: { type: string }
+        publishedBy: { type: [string, "null"], description: Publishing org name. }
+        ownerAddress: { type: string, description: Always the zero address until staking is live. }
+        manifestCID: { type: string }
+        publicKeyB64: { type: string, description: As registered (base64url or base64). }
+        stakedWei: { type: string }
+        reputationScore: { type: integer, description: 0–10000. }
+        active: { type: boolean }
+        registeredAt: { type: integer }
+        lastUpdatedAt: { type: integer }
+        capabilityIds: { type: array, items: { type: string } }
+        endpointUrl: { type: [string, "null"] }
+        keyVersion: { type: integer }
+        keyRotatedAt: { type: [integer, "null"] }
+        verified: { type: boolean }
+        verificationTier: { type: string, enum: [community, domain, org-signed] }
+        domain: { type: [string, "null"] }
+        orgSigned: { type: boolean }
+        visibility: { type: string, enum: [public, unlisted, private] }
+      required: [did, didHash, manifestCID, publicKeyB64, active, registeredAt, lastUpdatedAt]
+
+    Ok:
+      type: object
+      properties: { ok: { type: boolean, enum: [true] } }
+      required: [ok]
+
+    CertificationTier:
+      type: string
+      enum: [unverified, domain_verified, kel_person_rooted, audited]
+      description: Agent certification tier derived from registry-checkable facts; not a reputation claim.
+    JwkSet:
+      type: object
+      properties:
+        keys:
+          type: array
+          items:
+            type: object
+            properties:
+              kty: { type: string, enum: [OKP] }
+              crv: { type: string, enum: [Ed25519] }
+              x: { type: string }
+              kid: { type: string }
+              use: { type: string }
+              alg: { type: string, enum: [EdDSA] }
+            required: [kty, crv, x, kid]
+      required: [keys]
+    SsfStream:
+      type: object
+      description: SSF 1.0 stream configuration (the authorization header is never returned).
+      properties:
+        stream_id: { type: string }
+        iss: { type: string }
+        aud: { type: string }
+        delivery:
+          type: object
+          properties:
+            method: { type: string }
+            endpoint_url: { type: string, format: uri }
+        events_supported: { type: array, items: { type: string } }
+        events_requested: { type: array, items: { type: string } }
+        events_delivered: { type: array, items: { type: string } }
+        description: { type: string }
+      required: [stream_id, iss, aud, delivery, events_delivered]
+    RegistryKey:
+      type: object
+      properties:
+        keyId: { type: string, description: First 16 hex chars of SHA-256(publicKey). }
+        publicKeyB64: { type: string, description: base64url Ed25519 public key. }
+        purpose:
+          type: array
+          items: { type: string, enum: [audit-anchor, revocation-status, ssf-set, agent-monitoring] }
+        retired: { type: boolean, enum: [true] }
+      required: [keyId, publicKeyB64, purpose]
+
+    AuditAnchor:
+      type: object
+      properties:
+        purpose: { type: string, enum: [aroha.audit-anchor/v1] }
+        installDid: { type: string }
+        seq: { type: integer }
+        hash: { type: string }
+        signedAt: { type: string }
+        anchoredAt: { type: string, format: date-time, description: Server time. }
+        logIndex: { type: integer, description: Per-install counter starting at 0. }
+        prevAnchorHash: { type: string, description: "SHA-256 hex of JCS of the previous anchor; \"\" for the first." }
+      required: [purpose, installDid, seq, hash, signedAt, anchoredAt, logIndex, prevAnchorHash]
+
+    AuditAnchorRecord:
+      type: object
+      properties:
+        anchor: { $ref: "#/components/schemas/AuditAnchor" }
+        witnessSignature: { type: string, description: base64url Ed25519 over JCS(anchor). }
+        witnessKeyId: { type: string }
+      required: [anchor, witnessSignature, witnessKeyId]
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Human-readable error message.
+      required: [error]
+
+  responses:
+    BadRequest:
+      description: Malformed JSON, missing or invalid fields.
+      content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+    Unauthorized:
+      description: Missing or invalid Bearer token.
+      content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+    Forbidden:
+      description: Authenticated but not permitted (wrong owner, bad signature, wrong admin secret).
+      content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+    NotFound:
+      description: Unknown, inactive, or not visible to this caller.
+      content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+    Conflict:
+      description: Already exists, already used, or changed concurrently.
+      content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+    Unprocessable:
+      description: Well-formed but semantically invalid.
+      content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+    PayloadTooLarge:
+      description: Body over the route's limit (64 KiB; 256 KiB for KEL, linkage, SAR).
+      content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+    TooManyRequests:
+      description: Rate limited; see `Retry-After`.
+      content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+    AdminUnconfigured:
+      description: The deployment has no usable ADMIN_SECRET / credential secret (fixed message).
+      content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+    SigningUnconfigured:
+      description: The deployment has no usable REGISTRY_SIGNING_KEY (fixed message).
+      content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+    InternalError:
+      description: Unexpected server error.
+      content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+    DidHashCreated:
+      description: Registered.
+      content: { application/json: { schema: { $ref: "#/components/schemas/RegisterAgentResponse" } } }
+    VisibilitySet:
+      description: "`{ didHash, visibility }`"
+      content:
+        application/json:
+          schema:
+            type: object
+            properties: { didHash: { type: string }, visibility: { type: string } }
+
+tags:
+  - { name: Health, description: Service health. }
+  - { name: Agents, description: Agent registration, resolution, and discovery. }
+  - { name: MCP, description: MCP server registry. }
+  - { name: Skills, description: Skill registry. }
+  - { name: Auth, description: API keys and org signing keys. }
+  - { name: Grants, description: Access grants for private resources. }
+  - { name: Spaces, description: Shared spaces built from grants. }
+  - { name: Spending, description: Spending-pool ledger for mandate attenuation. }
+  - { name: Credentials, description: Registry-signed agent credentials. }
+  - { name: Analytics, description: Discovery statistics. }
+  - { name: Routing, description: Model catalogue and routing priors. }
+  - { name: Reputation, description: Reputation signals and verified callers. }
+  - { name: Discovery, description: Signed Agent Records and personal names. }
+  - { name: Relay, description: Store-and-forward relay for agents behind NAT. }
+  - { name: KEL, description: Key Event Logs and legacy-DID linkages for rotatable `did:aroha:E…` identities. }
+  - { name: Mandates, description: Spending-mandate revocation and shared cumulative redemption. }
+  - { name: Witness, description: Registry signing keys and the audit-anchor witness log. }
+  - { name: SharedSignals, description: OpenID Shared Signals transmitter — revocation events as signed SETs. }
+  - { name: Admin, description: Operator-only routes (admin secret). }

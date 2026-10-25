@@ -1,0 +1,8 @@
+{
+  // Typechecks everything including tests. The build config deliberately
+  // excludes tests so they stay out of the published package; this keeps them
+  // under the compiler's eye anyway.
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "noEmit": true },
+  "exclude": ["node_modules", "dist"]
+}

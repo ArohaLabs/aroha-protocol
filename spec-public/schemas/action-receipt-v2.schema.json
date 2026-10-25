@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aroha-labs.com/schemas/action-receipt-v2.json",
+  "title": "Aroha signed action receipt v2 (aroha-1.0 §12.6)",
+  "description": "signature is Ed25519 by agentDid's key over UTF-8(JCS(receipt without signature)), base64url. A v1 receipt (v:1, purpose 'aroha.action-receipt/v1') has only the fields marked v1 in §12.6 and no outcome.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["v", "purpose", "agentDid", "action", "argsSha256", "at", "tainted", "outcome", "signature"],
+  "properties": {
+    "v": { "const": 2 },
+    "purpose": { "const": "aroha.action-receipt/v2" },
+    "agentDid": { "type": "string", "minLength": 1 },
+    "action": { "type": "string", "minLength": 1 },
+    "argsSha256": { "type": "string", "minLength": 1 },
+    "at": { "type": "string", "minLength": 1 },
+    "tainted": { "type": "boolean" },
+    "provenance": { "type": "array", "items": { "type": "string" } },
+    "approval": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["approverDid", "approvedAt", "approvalId"],
+      "properties": {
+        "approverDid": { "type": "string" },
+        "approvedAt": { "type": "string" },
+        "approvalId": { "type": "string" },
+        "presentedHash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "approverSignature": { "type": "string" }
+      }
+    },
+    "mandateId": { "type": "string" },
+    "mandateGrantor": { "type": "string" },
+    "correlationId": { "type": "string" },
+    "requesterDid": { "type": "string", "minLength": 1 },
+    "principalDid": { "type": "string", "minLength": 1 },
+    "executorDid": { "type": "string", "minLength": 1 },
+    "presentedHash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "traceparent": { "type": "string", "minLength": 1 },
+    "outcome": { "enum": ["executed", "denied"] },
+    "denialReason": { "type": "string", "minLength": 1 },
+    "roomId": { "type": "string", "minLength": 1 },
+    "onBehalfOf": { "type": "string", "minLength": 1 },
+    "signature": { "type": "string", "pattern": "^[A-Za-z0-9_-]+$" }
+  },
+  "allOf": [
+    { "if": { "properties": { "outcome": { "const": "denied" } } }, "then": { "required": ["denialReason"] } },
+    { "if": { "properties": { "outcome": { "const": "executed" } } }, "then": { "not": { "required": ["denialReason"] } } }
+  ]
+}

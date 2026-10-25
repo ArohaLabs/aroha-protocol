@@ -1,0 +1,15 @@
+{
+  "name": "aroha-example-invoice-api",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "A REST tool API that agents call to send invoices — only under a customer's signed, limited, expiring authorisation. Shows customer enrollment and key custody.",
+  "scripts": {
+    "test": "node --test"
+  },
+  "dependencies": {
+    "@aroha-sdk/core": "^2.0.0",
+    "@aroha-sdk/credentials": "^2.0.0"
+  },
+  "engines": { "node": ">=22" }
+}

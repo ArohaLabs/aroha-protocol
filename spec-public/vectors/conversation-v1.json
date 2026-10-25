@@ -1,0 +1,925 @@
+{
+  "description": "Aroha Conversation and Memory Profile vectors (spec aroha-1.0 §12). Every signature is Ed25519 over the UTF-8 bytes of the stated signing payload, base64url without padding. JCS is RFC 8785. Person keys resolve from the Key Event Logs under `kels` (verify the inception, then use keys[0]; the inception's `kind` is the speaker kind); the agent key resolves from its content-addressed did:aroha:z… DID. Keys are RFC 8032 §7.1 test keys — never use them for anything real.",
+  "generatedBy": "packages/aroha-core/scripts/gen-conversation-vectors.ts",
+  "keys": {
+    "host": {
+      "privateKeyHex": "9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60",
+      "nextPrivateKeyHex": "f5e5767cf153319517630f226876b86c8160cc583bc013744c6bf255f5cc0ee5",
+      "publicKeyHex": "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a",
+      "did": "did:aroha:EJ7fbQ1AmnFgT75YNmXR3inBGYoiq72N1c1FrNmNmYXVP",
+      "kind": "person"
+    },
+    "guest": {
+      "privateKeyHex": "4ccd089b28ff96da9db6c346ec114e0f5b8a319f35aba624da8cf6ed4fb8a6fb",
+      "nextPrivateKeyHex": "833fe62409237b9d62ec77587520911e9a759cec1d19755b7da901b96dca3d42",
+      "publicKeyHex": "3d4017c3e843895a92b70aa74d1b7ebc9c982ccf2ec4968cc0cd55f12af4660c",
+      "did": "did:aroha:E9744LWkXnSnpNrn3X1ghp7nTAQSZn6vmwavbKQWyAj8b",
+      "kind": "person"
+    },
+    "agent": {
+      "privateKeyHex": "c5aa8df43f9f837bedb7442f31dcb7b166d38535076f094b85ce3a2e0b4458f7",
+      "publicKeyHex": "fc51cd8e6218a1a38da47ed00230f0580816ed13ba3303ac5deb911548908025",
+      "did": "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr",
+      "kind": "agent"
+    }
+  },
+  "kels": {
+    "did:aroha:EJ7fbQ1AmnFgT75YNmXR3inBGYoiq72N1c1FrNmNmYXVP": [
+      {
+        "v": 1,
+        "type": "inception",
+        "kind": "person",
+        "keys": [
+          "zFVen3X669xLzsi6N2V91DoiyzHzg1uAgqiT8jZ9nS96Z"
+        ],
+        "nextKeyDigest": "EAmsuZnBifaBuNwA2XiLYL8KrXfDS5uSC7QjzKjYtYs5j",
+        "createdAt": "2026-10-01T09:00:00.000Z",
+        "sig": "c0yr0ZZ5ugI9REY2LxfP62BeqSGIoIqQ9Jhqe-8fgADDjC3_MR-GxnSCWZp2wKzLRFnLF4YJ301YmkPJvsWICA"
+      }
+    ],
+    "did:aroha:E9744LWkXnSnpNrn3X1ghp7nTAQSZn6vmwavbKQWyAj8b": [
+      {
+        "v": 1,
+        "type": "inception",
+        "kind": "person",
+        "keys": [
+          "z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5"
+        ],
+        "nextKeyDigest": "E7SCwXebeaeZVg5gtfbYALgVxyx1SG5e6U5x4VSP2MHfR",
+        "createdAt": "2026-10-01T09:05:00.000Z",
+        "sig": "-yKX7FKeRS7U83OgOJYK34ABImJB31Iw4a3cs1yIq-dVP1RbyaKekgK2-fqKFRx9JuR1yx2LZKTH3zRUDcpUCg"
+      }
+    ]
+  },
+  "disclosure": {
+    "value": {
+      "v": 1,
+      "agentDid": "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr",
+      "principalDid": "did:aroha:EJ7fbQ1AmnFgT75YNmXR3inBGYoiq72N1c1FrNmNmYXVP",
+      "principalKind": "person",
+      "purpose": "Personal assistant for the host; answers in this room when addressed",
+      "hop": 0,
+      "aiGenerated": true
+    },
+    "valid": true
+  },
+  "room": {
+    "value": {
+      "v": 1,
+      "purpose": "aroha.room/v1",
+      "roomId": "room-01J9ZK3Q7V",
+      "threadId": "thread-01J9ZK3Q7V",
+      "ownerDid": "did:aroha:EJ7fbQ1AmnFgT75YNmXR3inBGYoiq72N1c1FrNmNmYXVP",
+      "epoch": 2,
+      "members": [
+        {
+          "did": "did:aroha:EJ7fbQ1AmnFgT75YNmXR3inBGYoiq72N1c1FrNmNmYXVP",
+          "kind": "person",
+          "displayName": "Ana",
+          "role": "host",
+          "joinedEpoch": 0
+        },
+        {
+          "did": "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr",
+          "kind": "agent",
+          "displayName": "Ana's assistant",
+          "role": "own",
+          "joinedEpoch": 0
+        },
+        {
+          "did": "did:aroha:E9744LWkXnSnpNrn3X1ghp7nTAQSZn6vmwavbKQWyAj8b",
+          "kind": "person",
+          "displayName": "Ben",
+          "role": "guest",
+          "joinedEpoch": 1,
+          "consentRef": "consent-01J9ZK4A"
+        }
+      ],
+      "historyVisibility": "joined",
+      "invocation": "explicit",
+      "memoryPolicy": {
+        "personalRead": false,
+        "personalWrite": false,
+        "roomMemory": "consented",
+        "agentRead": "none"
+      },
+      "disclosure": {
+        "v": 1,
+        "agentDid": "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr",
+        "principalDid": "did:aroha:EJ7fbQ1AmnFgT75YNmXR3inBGYoiq72N1c1FrNmNmYXVP",
+        "principalKind": "person",
+        "purpose": "Personal assistant for the host; answers in this room when addressed",
+        "hop": 0,
+        "aiGenerated": true
+      },
+      "updatedAt": "2026-10-15T10:00:00.000Z",
+      "signature": "qgFYMMHeSB2hRlccs-R4m0JIEDIBKQD6LHHj3Y0R4k05yI4Xs-YbEBVc9IuBGbOIc5xBcloAG9AAV622HID_BA"
+    },
+    "expectedSigningPayload": "{\"disclosure\":{\"agentDid\":\"did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr\",\"aiGenerated\":true,\"hop\":0,\"principalDid\":\"did:aroha:EJ7fbQ1AmnFgT75YNmXR3inBGYoiq72N1c1FrNmNmYXVP\",\"principalKind\":\"person\",\"purpose\":\"Personal assistant for the host; answers in this room when addressed\",\"v\":1},\"epoch\":2,\"historyVisibility\":\"joined\",\"invocation\":\"explicit\",\"members\":[{\"did\":\"did:aroha:EJ7fbQ1AmnFgT75YNmXR3inBGYoiq72N1c1FrNmNmYXVP\",\"displayName\":\"Ana\",\"joinedEpoch\":0,\"kind\":\"person\",\"role\":\"host\"},{\"did\":\"did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr\",\"displayName\":\"Ana's assistant\",\"joinedEpoch\":0,\"kind\":\"agent\",\"role\":\"own\"},{\"consentRef\":\"consent-01J9ZK4A\",\"did\":\"did:aroha:E9744LWkXnSnpNrn3X1ghp7nTAQSZn6vmwavbKQWyAj8b\",\"displayName\":\"Ben\",\"joinedEpoch\":1,\"kind\":\"person\",\"role\":\"guest\"}],\"memoryPolicy\":{\"agentRead\":\"none\",\"personalRead\":false,\"personalWrite\":false,\"roomMemory\":\"consented\"},\"ownerDid\":\"did:aroha:EJ7fbQ1AmnFgT75YNmXR3inBGYoiq72N1c1FrNmNmYXVP\",\"purpose\":\"aroha.room/v1\",\"roomId\":\"room-01J9ZK3Q7V\",\"threadId\":\"thread-01J9ZK3Q7V\",\"updatedAt\":\"2026-10-15T10:00:00.000Z\",\"v\":1}",
+    "valid": true,
+    "invalid": [
+      {
+        "name": "tampered-member-role",
+        "value": {
+          "v": 1,
+          "purpose": "aroha.room/v1",
+          "roomId": "room-01J9ZK3Q7V",
+          "threadId": "thread-01J9ZK3Q7V",
+          "ownerDid": "did:aroha:EJ7fbQ1AmnFgT75YNmXR3inBGYoiq72N1c1FrNmNmYXVP",
+          "epoch": 2,
+          "members": [
+            {
+              "did": "did:aroha:EJ7fbQ1AmnFgT75YNmXR3inBGYoiq72N1c1FrNmNmYXVP",
+              "kind": "person",
+              "displayName": "Ana",
+              "role": "host",
+              "joinedEpoch": 0
+            },
+            {
+              "did": "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr",
+              "kind": "agent",
+              "displayName": "Ana's assistant",
+              "role": "own",
+              "joinedEpoch": 0
+            },
+            {
+              "did": "did:aroha:E9744LWkXnSnpNrn3X1ghp7nTAQSZn6vmwavbKQWyAj8b",
+              "kind": "person",
+              "displayName": "Ben",
+              "role": "host",
+              "joinedEpoch": 1,
+              "consentRef": "consent-01J9ZK4A"
+            }
+          ],
+          "historyVisibility": "joined",
+          "invocation": "explicit",
+          "memoryPolicy": {
+            "personalRead": false,
+            "personalWrite": false,
+            "roomMemory": "consented",
+            "agentRead": "none"
+          },
+          "disclosure": {
+            "v": 1,
+            "agentDid": "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr",
+            "principalDid": "did:aroha:EJ7fbQ1AmnFgT75YNmXR3inBGYoiq72N1c1FrNmNmYXVP",
+            "principalKind": "person",
+            "purpose": "Personal assistant for the host; answers in this room when addressed",
+            "hop": 0,
+            "aiGenerated": true
+          },
+          "updatedAt": "2026-10-15T10:00:00.000Z",
+          "signature": "qgFYMMHeSB2hRlccs-R4m0JIEDIBKQD6LHHj3Y0R4k05yI4Xs-YbEBVc9IuBGbOIc5xBcloAG9AAV622HID_BA"
+        },
+        "reason": "shape or signature"
+      },
+      {
+        "name": "tampered-epoch",
+        "value": {
+          "v": 1,
+          "purpose": "aroha.room/v1",
+          "roomId": "room-01J9ZK3Q7V",
+          "threadId": "thread-01J9ZK3Q7V",
+          "ownerDid": "did:aroha:EJ7fbQ1AmnFgT75YNmXR3inBGYoiq72N1c1FrNmNmYXVP",
+          "epoch": 3,
+          "members": [
+            {
+              "did": "did:aroha:EJ7fbQ1AmnFgT75YNmXR3inBGYoiq72N1c1FrNmNmYXVP",
+              "kind": "person",
+              "displayName": "Ana",
+              "role": "host",
+              "joinedEpoch": 0
+            },
+            {
+              "did": "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr",
+              "kind": "agent",
+              "displayName": "Ana's assistant",
+              "role": "own",
+              "joinedEpoch": 0
+            },
+            {
+              "did": "did:aroha:E9744LWkXnSnpNrn3X1ghp7nTAQSZn6vmwavbKQWyAj8b",
+              "kind": "person",
+              "displayName": "Ben",
+              "role": "guest",
+              "joinedEpoch": 1,
+              "consentRef": "consent-01J9ZK4A"
+            }
+          ],
+          "historyVisibility": "joined",
+          "invocation": "explicit",
+          "memoryPolicy": {
+            "personalRead": false,
+            "personalWrite": false,
+            "roomMemory": "consented",
+            "agentRead": "none"
+          },
+          "disclosure": {
+            "v": 1,
+            "agentDid": "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr",
+            "principalDid": "did:aroha:EJ7fbQ1AmnFgT75YNmXR3inBGYoiq72N1c1FrNmNmYXVP",
+            "principalKind": "person",
+            "purpose": "Personal assistant for the host; answers in this room when addressed",
+            "hop": 0,
+            "aiGenerated": true
+          },
+          "updatedAt": "2026-10-15T10:00:00.000Z",
+          "signature": "qgFYMMHeSB2hRlccs-R4m0JIEDIBKQD6LHHj3Y0R4k05yI4Xs-YbEBVc9IuBGbOIc5xBcloAG9AAV622HID_BA"
+        },
+        "reason": "signature"
+      },
+      {
+        "name": "signed-by-agent-key",
+        "value": {
+          "v": 1,
+          "purpose": "aroha.room/v1",
+          "roomId": "room-01J9ZK3Q7V",
+          "threadId": "thread-01J9ZK3Q7V",
+          "ownerDid": "did:aroha:EJ7fbQ1AmnFgT75YNmXR3inBGYoiq72N1c1FrNmNmYXVP",
+          "epoch": 2,
+          "members": [
+            {
+              "did": "did:aroha:EJ7fbQ1AmnFgT75YNmXR3inBGYoiq72N1c1FrNmNmYXVP",
+              "kind": "person",
+              "displayName": "Ana",
+              "role": "host",
+              "joinedEpoch": 0
+            },
+            {
+              "did": "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr",
+              "kind": "agent",
+              "displayName": "Ana's assistant",
+              "role": "own",
+              "joinedEpoch": 0
+            },
+            {
+              "did": "did:aroha:E9744LWkXnSnpNrn3X1ghp7nTAQSZn6vmwavbKQWyAj8b",
+              "kind": "person",
+              "displayName": "Ben",
+              "role": "guest",
+              "joinedEpoch": 1,
+              "consentRef": "consent-01J9ZK4A"
+            }
+          ],
+          "historyVisibility": "joined",
+          "invocation": "explicit",
+          "memoryPolicy": {
+            "personalRead": false,
+            "personalWrite": false,
+            "roomMemory": "consented",
+            "agentRead": "none"
+          },
+          "disclosure": {
+            "v": 1,
+            "agentDid": "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr",
+            "principalDid": "did:aroha:EJ7fbQ1AmnFgT75YNmXR3inBGYoiq72N1c1FrNmNmYXVP",
+            "principalKind": "person",
+            "purpose": "Personal assistant for the host; answers in this room when addressed",
+            "hop": 0,
+            "aiGenerated": true
+          },
+          "updatedAt": "2026-10-15T10:00:00.000Z",
+          "signature": "tF1ErSVeWm63hqWP4KRbbCjmr4osSd8gQ4cqqWOf4si7TZQFQebqEu1VJzuaNn2qd8dFu3lKtapVxX4tOuHvAg"
+        },
+        "reason": "signature (owner key is the host person's)"
+      }
+    ]
+  },
+  "consent": {
+    "given": {
+      "value": {
+        "v": 1,
+        "purpose": "aroha.consent/v1",
+        "recordId": "consent-01J9ZK4A",
+        "subjectDid": "did:aroha:E9744LWkXnSnpNrn3X1ghp7nTAQSZn6vmwavbKQWyAj8b",
+        "roomId": "room-01J9ZK3Q7V",
+        "purposes": [
+          "transcript_retention",
+          "agent_use_of_messages",
+          "memory_write"
+        ],
+        "withdrawalRoute": "Room settings > Privacy > Withdraw consent",
+        "events": [
+          {
+            "event": "given",
+            "purposes": [
+              "transcript_retention",
+              "agent_use_of_messages",
+              "memory_write"
+            ],
+            "at": "2026-10-15T10:00:00.000Z",
+            "epoch": 1,
+            "actorDid": "did:aroha:E9744LWkXnSnpNrn3X1ghp7nTAQSZn6vmwavbKQWyAj8b",
+            "sig": "ipImHip7KH2S-HlE-qXEdcOvUkrJw6ZlQjhSjpJrgjZgCWGCkXOjTG4ElDKyoymBeU7AFFmVNhb-Wk77LhLoCw"
+          }
+        ]
+      },
+      "effectivePurposes": [
+        "agent_use_of_messages",
+        "memory_write",
+        "transcript_retention"
+      ],
+      "valid": true,
+      "expectedEventSigningPayloads": [
+        "{\"entry\":{\"actorDid\":\"did:aroha:E9744LWkXnSnpNrn3X1ghp7nTAQSZn6vmwavbKQWyAj8b\",\"at\":\"2026-10-15T10:00:00.000Z\",\"epoch\":1,\"event\":\"given\",\"purposes\":[\"transcript_retention\",\"agent_use_of_messages\",\"memory_write\"]},\"index\":0,\"prevHash\":null,\"purpose\":\"aroha.consent-event/v1\",\"purposes\":[\"transcript_retention\",\"agent_use_of_messages\",\"memory_write\"],\"recordId\":\"consent-01J9ZK4A\",\"roomId\":\"room-01J9ZK3Q7V\",\"subjectDid\":\"did:aroha:E9744LWkXnSnpNrn3X1ghp7nTAQSZn6vmwavbKQWyAj8b\",\"withdrawalRoute\":\"Room settings > Privacy > Withdraw consent\"}"
+      ]
+    },
+    "withdrawn": {
+      "value": {
+        "v": 1,
+        "purpose": "aroha.consent/v1",
+        "recordId": "consent-01J9ZK4A",
+        "subjectDid": "did:aroha:E9744LWkXnSnpNrn3X1ghp7nTAQSZn6vmwavbKQWyAj8b",
+        "roomId": "room-01J9ZK3Q7V",
+        "purposes": [
+          "transcript_retention",
+          "agent_use_of_messages",
+          "memory_write"
+        ],
+        "withdrawalRoute": "Room settings > Privacy > Withdraw consent",
+        "events": [
+          {
+            "event": "given",
+            "purposes": [
+              "transcript_retention",
+              "agent_use_of_messages",
+              "memory_write"
+            ],
+            "at": "2026-10-15T10:00:00.000Z",
+            "epoch": 1,
+            "actorDid": "did:aroha:E9744LWkXnSnpNrn3X1ghp7nTAQSZn6vmwavbKQWyAj8b",
+            "sig": "ipImHip7KH2S-HlE-qXEdcOvUkrJw6ZlQjhSjpJrgjZgCWGCkXOjTG4ElDKyoymBeU7AFFmVNhb-Wk77LhLoCw"
+          },
+          {
+            "event": "withdrawn",
+            "purposes": [
+              "memory_write"
+            ],
+            "at": "2026-10-15T11:00:00.000Z",
+            "epoch": 2,
+            "actorDid": "did:aroha:EJ7fbQ1AmnFgT75YNmXR3inBGYoiq72N1c1FrNmNmYXVP",
+            "sig": "fMCcNFSpJNPiCAeW-e-fYC-Fl5Nb9nT3b1opwP1X6cB4K1lSh_7TN2LfEZ_qvHFQV_o5n08rd7tAHlQ4vl0EAg"
+          }
+        ]
+      },
+      "effectivePurposes": [
+        "agent_use_of_messages",
+        "transcript_retention"
+      ],
+      "valid": true,
+      "requiresRoom": true,
+      "expectedEventSigningPayloads": [
+        "{\"entry\":{\"actorDid\":\"did:aroha:E9744LWkXnSnpNrn3X1ghp7nTAQSZn6vmwavbKQWyAj8b\",\"at\":\"2026-10-15T10:00:00.000Z\",\"epoch\":1,\"event\":\"given\",\"purposes\":[\"transcript_retention\",\"agent_use_of_messages\",\"memory_write\"]},\"index\":0,\"prevHash\":null,\"purpose\":\"aroha.consent-event/v1\",\"purposes\":[\"transcript_retention\",\"agent_use_of_messages\",\"memory_write\"],\"recordId\":\"consent-01J9ZK4A\",\"roomId\":\"room-01J9ZK3Q7V\",\"subjectDid\":\"did:aroha:E9744LWkXnSnpNrn3X1ghp7nTAQSZn6vmwavbKQWyAj8b\",\"withdrawalRoute\":\"Room settings > Privacy > Withdraw consent\"}",
+        "{\"entry\":{\"actorDid\":\"did:aroha:EJ7fbQ1AmnFgT75YNmXR3inBGYoiq72N1c1FrNmNmYXVP\",\"at\":\"2026-10-15T11:00:00.000Z\",\"epoch\":2,\"event\":\"withdrawn\",\"purposes\":[\"memory_write\"]},\"index\":1,\"prevHash\":\"b54f136842367e7b2c564ce5ce127de5e62d59f850402b62054c95cb61a4081c\",\"purpose\":\"aroha.consent-event/v1\",\"purposes\":[\"transcript_retention\",\"agent_use_of_messages\",\"memory_write\"],\"recordId\":\"consent-01J9ZK4A\",\"roomId\":\"room-01J9ZK3Q7V\",\"subjectDid\":\"did:aroha:E9744LWkXnSnpNrn3X1ghp7nTAQSZn6vmwavbKQWyAj8b\",\"withdrawalRoute\":\"Room settings > Privacy > Withdraw consent\"}"
+      ]
+    },
+    "invalid": [
+      {
+        "name": "forged-earlier-given-event",
+        "value": {
+          "v": 1,
+          "purpose": "aroha.consent/v1",
+          "recordId": "consent-01J9ZK4A",
+          "subjectDid": "did:aroha:E9744LWkXnSnpNrn3X1ghp7nTAQSZn6vmwavbKQWyAj8b",
+          "roomId": "room-01J9ZK3Q7V",
+          "purposes": [
+            "transcript_retention",
+            "agent_use_of_messages",
+            "memory_write",
+            "provider_processing"
+          ],
+          "withdrawalRoute": "Room settings > Privacy > Withdraw consent",
+          "events": [
+            {
+              "event": "given",
+              "purposes": [
+                "transcript_retention",
+                "agent_use_of_messages",
+                "memory_write",
+                "provider_processing"
+              ],
+              "at": "2026-10-15T10:00:00.000Z",
+              "epoch": 1,
+              "actorDid": "did:aroha:E9744LWkXnSnpNrn3X1ghp7nTAQSZn6vmwavbKQWyAj8b",
+              "sig": "ipImHip7KH2S-HlE-qXEdcOvUkrJw6ZlQjhSjpJrgjZgCWGCkXOjTG4ElDKyoymBeU7AFFmVNhb-Wk77LhLoCw"
+            },
+            {
+              "event": "withdrawn",
+              "purposes": [
+                "memory_write"
+              ],
+              "at": "2026-10-15T11:00:00.000Z",
+              "epoch": 2,
+              "actorDid": "did:aroha:EJ7fbQ1AmnFgT75YNmXR3inBGYoiq72N1c1FrNmNmYXVP",
+              "sig": "Gx3j2zXyEfr9AGBHCaZ_LElvsTYAJRsgr9GRSpDt02mdnfg2pLucN_xcgOHB5Umj5Feav6nF-hklX0WffEauAg"
+            }
+          ]
+        },
+        "reason": "events[0] signature (the subject never signed the altered terms)"
+      },
+      {
+        "name": "purpose-added-after-signing",
+        "value": {
+          "v": 1,
+          "purpose": "aroha.consent/v1",
+          "recordId": "consent-01J9ZK4A",
+          "subjectDid": "did:aroha:E9744LWkXnSnpNrn3X1ghp7nTAQSZn6vmwavbKQWyAj8b",
+          "roomId": "room-01J9ZK3Q7V",
+          "purposes": [
+            "transcript_retention",
+            "agent_use_of_messages",
+            "memory_write",
+            "provider_processing"
+          ],
+          "withdrawalRoute": "Room settings > Privacy > Withdraw consent",
+          "events": [
+            {
+              "event": "given",
+              "purposes": [
+                "transcript_retention",
+                "agent_use_of_messages",
+                "memory_write"
+              ],
+              "at": "2026-10-15T10:00:00.000Z",
+              "epoch": 1,
+              "actorDid": "did:aroha:E9744LWkXnSnpNrn3X1ghp7nTAQSZn6vmwavbKQWyAj8b",
+              "sig": "ipImHip7KH2S-HlE-qXEdcOvUkrJw6ZlQjhSjpJrgjZgCWGCkXOjTG4ElDKyoymBeU7AFFmVNhb-Wk77LhLoCw"
+            }
+          ]
+        },
+        "reason": "signature"
+      },
+      {
+        "name": "given-by-non-subject",
+        "value": {
+          "v": 1,
+          "purpose": "aroha.consent/v1",
+          "recordId": "consent-01J9ZK4A",
+          "subjectDid": "did:aroha:E9744LWkXnSnpNrn3X1ghp7nTAQSZn6vmwavbKQWyAj8b",
+          "roomId": "room-01J9ZK3Q7V",
+          "purposes": [
+            "transcript_retention",
+            "agent_use_of_messages",
+            "memory_write"
+          ],
+          "withdrawalRoute": "Room settings > Privacy > Withdraw consent",
+          "events": [
+            {
+              "event": "given",
+              "purposes": [
+                "transcript_retention",
+                "agent_use_of_messages",
+                "memory_write"
+              ],
+              "at": "2026-10-15T10:00:00.000Z",
+              "epoch": 1,
+              "actorDid": "did:aroha:EJ7fbQ1AmnFgT75YNmXR3inBGYoiq72N1c1FrNmNmYXVP",
+              "sig": "ipImHip7KH2S-HlE-qXEdcOvUkrJw6ZlQjhSjpJrgjZgCWGCkXOjTG4ElDKyoymBeU7AFFmVNhb-Wk77LhLoCw"
+            }
+          ]
+        },
+        "reason": "shape (only the subject can give consent)"
+      },
+      {
+        "name": "withdrawal-at-epoch-beyond-room",
+        "value": {
+          "v": 1,
+          "purpose": "aroha.consent/v1",
+          "recordId": "consent-01J9ZK4A",
+          "subjectDid": "did:aroha:E9744LWkXnSnpNrn3X1ghp7nTAQSZn6vmwavbKQWyAj8b",
+          "roomId": "room-01J9ZK3Q7V",
+          "purposes": [
+            "transcript_retention",
+            "agent_use_of_messages",
+            "memory_write"
+          ],
+          "withdrawalRoute": "Room settings > Privacy > Withdraw consent",
+          "events": [
+            {
+              "event": "given",
+              "purposes": [
+                "transcript_retention",
+                "agent_use_of_messages",
+                "memory_write"
+              ],
+              "at": "2026-10-15T10:00:00.000Z",
+              "epoch": 1,
+              "actorDid": "did:aroha:E9744LWkXnSnpNrn3X1ghp7nTAQSZn6vmwavbKQWyAj8b",
+              "sig": "ipImHip7KH2S-HlE-qXEdcOvUkrJw6ZlQjhSjpJrgjZgCWGCkXOjTG4ElDKyoymBeU7AFFmVNhb-Wk77LhLoCw"
+            },
+            {
+              "event": "withdrawn",
+              "purposes": [
+                "memory_write"
+              ],
+              "at": "2026-10-15T11:00:00.000Z",
+              "epoch": 5,
+              "actorDid": "did:aroha:EJ7fbQ1AmnFgT75YNmXR3inBGYoiq72N1c1FrNmNmYXVP",
+              "sig": "vIyz6P86FII1HCyeM11q1aNFOUxxEvhkNab15MPDtno8NEaCXCenQNTC3-2jAliiQCiN0udh43ZjWpA2PV_mCQ"
+            }
+          ]
+        },
+        "reason": "actor not a room member at the event's epoch"
+      },
+      {
+        "name": "event-removed",
+        "value": {
+          "v": 1,
+          "purpose": "aroha.consent/v1",
+          "recordId": "consent-01J9ZK4A",
+          "subjectDid": "did:aroha:E9744LWkXnSnpNrn3X1ghp7nTAQSZn6vmwavbKQWyAj8b",
+          "roomId": "room-01J9ZK3Q7V",
+          "purposes": [
+            "transcript_retention",
+            "agent_use_of_messages",
+            "memory_write"
+          ],
+          "withdrawalRoute": "Room settings > Privacy > Withdraw consent",
+          "events": [
+            {
+              "event": "withdrawn",
+              "purposes": [
+                "memory_write"
+              ],
+              "at": "2026-10-15T11:00:00.000Z",
+              "epoch": 2,
+              "actorDid": "did:aroha:EJ7fbQ1AmnFgT75YNmXR3inBGYoiq72N1c1FrNmNmYXVP",
+              "sig": "fMCcNFSpJNPiCAeW-e-fYC-Fl5Nb9nT3b1opwP1X6cB4K1lSh_7TN2LfEZ_qvHFQV_o5n08rd7tAHlQ4vl0EAg"
+            }
+          ]
+        },
+        "reason": "first event must be given"
+      }
+    ]
+  },
+  "turn": {
+    "value": {
+      "threadId": "thread-01J9ZK3Q7V",
+      "roomId": "room-01J9ZK3Q7V",
+      "epoch": 2,
+      "at": "2026-10-15T10:05:00.000Z",
+      "addressedTo": [
+        "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr"
+      ],
+      "authorDid": "did:aroha:E9744LWkXnSnpNrn3X1ghp7nTAQSZn6vmwavbKQWyAj8b",
+      "content": "Could you suggest three restaurants near the station for Friday?",
+      "contentHash": "cc0f7158985fabe35f7fde15278085fa8c4d60b586aee5fc8f83d3609680577c",
+      "authorSignature": "Qddeg4RvBe2EvzqhCNYYD1eOeWMOMXYgntxXb9SHbYP-C77NoJpmMNOuwfrRClCZBgNrPTsArjvBEdQUKCjZDg"
+    },
+    "expectedContentHash": "cc0f7158985fabe35f7fde15278085fa8c4d60b586aee5fc8f83d3609680577c",
+    "expectedSigningPayload": "{\"addressedTo\":[\"did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr\"],\"at\":\"2026-10-15T10:05:00.000Z\",\"contentHash\":\"cc0f7158985fabe35f7fde15278085fa8c4d60b586aee5fc8f83d3609680577c\",\"epoch\":2,\"purpose\":\"aroha.turn/v1\",\"roomId\":\"room-01J9ZK3Q7V\",\"threadId\":\"thread-01J9ZK3Q7V\"}",
+    "expectedSpeakerKind": "person",
+    "valid": true,
+    "invalid": [
+      {
+        "name": "content-edited",
+        "value": {
+          "threadId": "thread-01J9ZK3Q7V",
+          "roomId": "room-01J9ZK3Q7V",
+          "epoch": 2,
+          "at": "2026-10-15T10:05:00.000Z",
+          "addressedTo": [
+            "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr"
+          ],
+          "authorDid": "did:aroha:E9744LWkXnSnpNrn3X1ghp7nTAQSZn6vmwavbKQWyAj8b",
+          "content": "Could you suggest five restaurants near the station for Friday?",
+          "contentHash": "cc0f7158985fabe35f7fde15278085fa8c4d60b586aee5fc8f83d3609680577c",
+          "authorSignature": "Qddeg4RvBe2EvzqhCNYYD1eOeWMOMXYgntxXb9SHbYP-C77NoJpmMNOuwfrRClCZBgNrPTsArjvBEdQUKCjZDg"
+        },
+        "reason": "contentHash"
+      },
+      {
+        "name": "readdressed",
+        "value": {
+          "threadId": "thread-01J9ZK3Q7V",
+          "roomId": "room-01J9ZK3Q7V",
+          "epoch": 2,
+          "at": "2026-10-15T10:05:00.000Z",
+          "addressedTo": [
+            "did:aroha:EJ7fbQ1AmnFgT75YNmXR3inBGYoiq72N1c1FrNmNmYXVP"
+          ],
+          "authorDid": "did:aroha:E9744LWkXnSnpNrn3X1ghp7nTAQSZn6vmwavbKQWyAj8b",
+          "content": "Could you suggest three restaurants near the station for Friday?",
+          "contentHash": "cc0f7158985fabe35f7fde15278085fa8c4d60b586aee5fc8f83d3609680577c",
+          "authorSignature": "Qddeg4RvBe2EvzqhCNYYD1eOeWMOMXYgntxXb9SHbYP-C77NoJpmMNOuwfrRClCZBgNrPTsArjvBEdQUKCjZDg"
+        },
+        "reason": "signature"
+      },
+      {
+        "name": "epoch-before-join",
+        "value": {
+          "threadId": "thread-01J9ZK3Q7V",
+          "roomId": "room-01J9ZK3Q7V",
+          "epoch": 0,
+          "at": "2026-10-15T10:05:00.000Z",
+          "addressedTo": [
+            "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr"
+          ],
+          "authorDid": "did:aroha:E9744LWkXnSnpNrn3X1ghp7nTAQSZn6vmwavbKQWyAj8b",
+          "content": "Could you suggest three restaurants near the station for Friday?",
+          "contentHash": "cc0f7158985fabe35f7fde15278085fa8c4d60b586aee5fc8f83d3609680577c",
+          "authorSignature": "Qddeg4RvBe2EvzqhCNYYD1eOeWMOMXYgntxXb9SHbYP-C77NoJpmMNOuwfrRClCZBgNrPTsArjvBEdQUKCjZDg"
+        },
+        "reason": "signature (and not a member at epoch 0)"
+      }
+    ]
+  },
+  "receipts": {
+    "v1": {
+      "value": {
+        "agentDid": "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr",
+        "action": "send-email",
+        "argsSha256": "e9cb61854ff91c9e64cb57e2f9b7e9105be6b30672f601fe2dd15abb138019ac",
+        "at": "2026-10-15T10:10:00.000Z",
+        "tainted": false,
+        "provenance": [
+          "user"
+        ],
+        "correlationId": "corr-01",
+        "v": 1,
+        "purpose": "aroha.action-receipt/v1",
+        "signature": "BQ-4aap9MwakKyJKNZZzukSezX_rqj4ce_o_4TTkOlTxlbmHF3dCUIjh-Npq-4-35PPm1n_22EfQ9lNbFmjqAQ"
+      },
+      "expectedSigningPayload": "{\"action\":\"send-email\",\"agentDid\":\"did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr\",\"argsSha256\":\"e9cb61854ff91c9e64cb57e2f9b7e9105be6b30672f601fe2dd15abb138019ac\",\"at\":\"2026-10-15T10:10:00.000Z\",\"correlationId\":\"corr-01\",\"provenance\":[\"user\"],\"purpose\":\"aroha.action-receipt/v1\",\"tainted\":false,\"v\":1}",
+      "valid": true
+    },
+    "v2Executed": {
+      "value": {
+        "agentDid": "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr",
+        "action": "send-email",
+        "argsSha256": "e9cb61854ff91c9e64cb57e2f9b7e9105be6b30672f601fe2dd15abb138019ac",
+        "at": "2026-10-15T10:10:00.000Z",
+        "tainted": true,
+        "provenance": [
+          "user",
+          "peer"
+        ],
+        "approval": {
+          "approverDid": "did:aroha:EJ7fbQ1AmnFgT75YNmXR3inBGYoiq72N1c1FrNmNmYXVP",
+          "approvedAt": "2026-10-15T10:09:30.000Z",
+          "approvalId": "approval-01",
+          "presentedHash": "0640765e1d759fada2c494385ee8954f7bc50218d765e8b92189e800e511396d"
+        },
+        "requesterDid": "did:aroha:E9744LWkXnSnpNrn3X1ghp7nTAQSZn6vmwavbKQWyAj8b",
+        "principalDid": "did:aroha:EJ7fbQ1AmnFgT75YNmXR3inBGYoiq72N1c1FrNmNmYXVP",
+        "executorDid": "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr",
+        "presentedHash": "0640765e1d759fada2c494385ee8954f7bc50218d765e8b92189e800e511396d",
+        "traceparent": "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+        "roomId": "room-01J9ZK3Q7V",
+        "onBehalfOf": "did:aroha:E9744LWkXnSnpNrn3X1ghp7nTAQSZn6vmwavbKQWyAj8b",
+        "mandateId": "task-01J9ZK5B",
+        "mandateGrantor": "did:aroha:EJ7fbQ1AmnFgT75YNmXR3inBGYoiq72N1c1FrNmNmYXVP",
+        "correlationId": "corr-02",
+        "outcome": "executed",
+        "v": 2,
+        "purpose": "aroha.action-receipt/v2",
+        "signature": "hZZb-vtdmgWRTDj6E34NQGaPgP6ByQ9pkPO-_gbY0h543vODDgAfQr_R7n-8M_TGJEACt0mk_Jdzhj5fov1aCQ"
+      },
+      "expectedSigningPayload": "{\"action\":\"send-email\",\"agentDid\":\"did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr\",\"approval\":{\"approvalId\":\"approval-01\",\"approvedAt\":\"2026-10-15T10:09:30.000Z\",\"approverDid\":\"did:aroha:EJ7fbQ1AmnFgT75YNmXR3inBGYoiq72N1c1FrNmNmYXVP\",\"presentedHash\":\"0640765e1d759fada2c494385ee8954f7bc50218d765e8b92189e800e511396d\"},\"argsSha256\":\"e9cb61854ff91c9e64cb57e2f9b7e9105be6b30672f601fe2dd15abb138019ac\",\"at\":\"2026-10-15T10:10:00.000Z\",\"correlationId\":\"corr-02\",\"executorDid\":\"did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr\",\"mandateGrantor\":\"did:aroha:EJ7fbQ1AmnFgT75YNmXR3inBGYoiq72N1c1FrNmNmYXVP\",\"mandateId\":\"task-01J9ZK5B\",\"onBehalfOf\":\"did:aroha:E9744LWkXnSnpNrn3X1ghp7nTAQSZn6vmwavbKQWyAj8b\",\"outcome\":\"executed\",\"presentedHash\":\"0640765e1d759fada2c494385ee8954f7bc50218d765e8b92189e800e511396d\",\"principalDid\":\"did:aroha:EJ7fbQ1AmnFgT75YNmXR3inBGYoiq72N1c1FrNmNmYXVP\",\"provenance\":[\"user\",\"peer\"],\"purpose\":\"aroha.action-receipt/v2\",\"requesterDid\":\"did:aroha:E9744LWkXnSnpNrn3X1ghp7nTAQSZn6vmwavbKQWyAj8b\",\"roomId\":\"room-01J9ZK3Q7V\",\"tainted\":true,\"traceparent\":\"00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01\",\"v\":2}",
+      "valid": true,
+      "presentedContent": {
+        "action": "send-email",
+        "to": "ben@example.com",
+        "subject": "Friday dinner",
+        "preview": "Three options attached."
+      },
+      "expectedPresentedHash": "0640765e1d759fada2c494385ee8954f7bc50218d765e8b92189e800e511396d",
+      "mismatchedPresentedContent": {
+        "action": "send-email",
+        "to": "someone-else@example.com",
+        "subject": "Friday dinner",
+        "preview": "Three options attached."
+      }
+    },
+    "v2Denied": {
+      "value": {
+        "agentDid": "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr",
+        "action": "pay",
+        "argsSha256": "6f8faa1738728742c7cbbf494f7eb553dc9fc1af96bf2e52794909d6c95e437a",
+        "at": "2026-10-15T10:12:00.000Z",
+        "tainted": true,
+        "provenance": [
+          "peer"
+        ],
+        "requesterDid": "did:aroha:E9744LWkXnSnpNrn3X1ghp7nTAQSZn6vmwavbKQWyAj8b",
+        "principalDid": "did:aroha:EJ7fbQ1AmnFgT75YNmXR3inBGYoiq72N1c1FrNmNmYXVP",
+        "executorDid": "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr",
+        "roomId": "room-01J9ZK3Q7V",
+        "outcome": "denied",
+        "denialReason": "guest-origin request for a host-only capability",
+        "v": 2,
+        "purpose": "aroha.action-receipt/v2",
+        "signature": "3AX7PGYGUfS7LLdMSe8v_F-sCcAcncwZj_O8NGWwWR72d4clcqUdpszAV6CuPAM__u1EgeEDvVqy82Ai8JMkDw"
+      },
+      "expectedSigningPayload": "{\"action\":\"pay\",\"agentDid\":\"did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr\",\"argsSha256\":\"6f8faa1738728742c7cbbf494f7eb553dc9fc1af96bf2e52794909d6c95e437a\",\"at\":\"2026-10-15T10:12:00.000Z\",\"denialReason\":\"guest-origin request for a host-only capability\",\"executorDid\":\"did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr\",\"outcome\":\"denied\",\"principalDid\":\"did:aroha:EJ7fbQ1AmnFgT75YNmXR3inBGYoiq72N1c1FrNmNmYXVP\",\"provenance\":[\"peer\"],\"purpose\":\"aroha.action-receipt/v2\",\"requesterDid\":\"did:aroha:E9744LWkXnSnpNrn3X1ghp7nTAQSZn6vmwavbKQWyAj8b\",\"roomId\":\"room-01J9ZK3Q7V\",\"tainted\":true,\"v\":2}",
+      "valid": true
+    },
+    "invalid": [
+      {
+        "name": "v2-denied-without-reason",
+        "value": {
+          "agentDid": "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr",
+          "action": "pay",
+          "argsSha256": "6f8faa1738728742c7cbbf494f7eb553dc9fc1af96bf2e52794909d6c95e437a",
+          "at": "2026-10-15T10:12:00.000Z",
+          "tainted": true,
+          "provenance": [
+            "peer"
+          ],
+          "requesterDid": "did:aroha:E9744LWkXnSnpNrn3X1ghp7nTAQSZn6vmwavbKQWyAj8b",
+          "principalDid": "did:aroha:EJ7fbQ1AmnFgT75YNmXR3inBGYoiq72N1c1FrNmNmYXVP",
+          "executorDid": "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr",
+          "roomId": "room-01J9ZK3Q7V",
+          "outcome": "denied",
+          "v": 2,
+          "purpose": "aroha.action-receipt/v2",
+          "signature": "3AX7PGYGUfS7LLdMSe8v_F-sCcAcncwZj_O8NGWwWR72d4clcqUdpszAV6CuPAM__u1EgeEDvVqy82Ai8JMkDw"
+        },
+        "reason": "shape"
+      },
+      {
+        "name": "v1-with-v2-field",
+        "value": {
+          "agentDid": "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr",
+          "action": "send-email",
+          "argsSha256": "e9cb61854ff91c9e64cb57e2f9b7e9105be6b30672f601fe2dd15abb138019ac",
+          "at": "2026-10-15T10:10:00.000Z",
+          "tainted": false,
+          "provenance": [
+            "user"
+          ],
+          "correlationId": "corr-01",
+          "v": 1,
+          "purpose": "aroha.action-receipt/v1",
+          "signature": "BQ-4aap9MwakKyJKNZZzukSezX_rqj4ce_o_4TTkOlTxlbmHF3dCUIjh-Npq-4-35PPm1n_22EfQ9lNbFmjqAQ",
+          "outcome": "executed"
+        },
+        "reason": "shape (unknown field for v1)"
+      },
+      {
+        "name": "v2-outcome-flipped",
+        "value": {
+          "agentDid": "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr",
+          "action": "pay",
+          "argsSha256": "6f8faa1738728742c7cbbf494f7eb553dc9fc1af96bf2e52794909d6c95e437a",
+          "at": "2026-10-15T10:12:00.000Z",
+          "tainted": true,
+          "provenance": [
+            "peer"
+          ],
+          "requesterDid": "did:aroha:E9744LWkXnSnpNrn3X1ghp7nTAQSZn6vmwavbKQWyAj8b",
+          "principalDid": "did:aroha:EJ7fbQ1AmnFgT75YNmXR3inBGYoiq72N1c1FrNmNmYXVP",
+          "executorDid": "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr",
+          "roomId": "room-01J9ZK3Q7V",
+          "outcome": "executed",
+          "v": 2,
+          "purpose": "aroha.action-receipt/v2",
+          "signature": "3AX7PGYGUfS7LLdMSe8v_F-sCcAcncwZj_O8NGWwWR72d4clcqUdpszAV6CuPAM__u1EgeEDvVqy82Ai8JMkDw"
+        },
+        "reason": "shape / signature"
+      },
+      {
+        "name": "v2-unknown-field",
+        "value": {
+          "agentDid": "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr",
+          "action": "send-email",
+          "argsSha256": "e9cb61854ff91c9e64cb57e2f9b7e9105be6b30672f601fe2dd15abb138019ac",
+          "at": "2026-10-15T10:10:00.000Z",
+          "tainted": true,
+          "provenance": [
+            "user",
+            "peer"
+          ],
+          "approval": {
+            "approverDid": "did:aroha:EJ7fbQ1AmnFgT75YNmXR3inBGYoiq72N1c1FrNmNmYXVP",
+            "approvedAt": "2026-10-15T10:09:30.000Z",
+            "approvalId": "approval-01",
+            "presentedHash": "0640765e1d759fada2c494385ee8954f7bc50218d765e8b92189e800e511396d"
+          },
+          "requesterDid": "did:aroha:E9744LWkXnSnpNrn3X1ghp7nTAQSZn6vmwavbKQWyAj8b",
+          "principalDid": "did:aroha:EJ7fbQ1AmnFgT75YNmXR3inBGYoiq72N1c1FrNmNmYXVP",
+          "executorDid": "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr",
+          "presentedHash": "0640765e1d759fada2c494385ee8954f7bc50218d765e8b92189e800e511396d",
+          "traceparent": "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+          "roomId": "room-01J9ZK3Q7V",
+          "onBehalfOf": "did:aroha:E9744LWkXnSnpNrn3X1ghp7nTAQSZn6vmwavbKQWyAj8b",
+          "mandateId": "task-01J9ZK5B",
+          "mandateGrantor": "did:aroha:EJ7fbQ1AmnFgT75YNmXR3inBGYoiq72N1c1FrNmNmYXVP",
+          "correlationId": "corr-02",
+          "outcome": "executed",
+          "v": 2,
+          "purpose": "aroha.action-receipt/v2",
+          "signature": "hZZb-vtdmgWRTDj6E34NQGaPgP6ByQ9pkPO-_gbY0h543vODDgAfQr_R7n-8M_TGJEACt0mk_Jdzhj5fov1aCQ",
+          "extra": true
+        },
+        "reason": "shape"
+      }
+    ]
+  },
+  "envelopeWithDisclosure": {
+    "value": {
+      "@context": [
+        "https://aroha-labs.com/contexts/v1",
+        "https://w3id.org/security/suites/ed25519-2020/v1"
+      ],
+      "id": "urn:uuid:0b6f1e9a-5d6c-4d55-8a0f-3f1b2c4d5e6f",
+      "type": "ArohaRequest",
+      "from": "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr",
+      "to": "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr",
+      "created": "2026-10-15T10:06:00.000Z",
+      "expires": "2026-10-15T10:11:00.000Z",
+      "nonce": "a3f1c2d4e5b6978877665544332211000ffeeddccbbaa99887766554433221100",
+      "correlationId": "corr-03",
+      "body": {
+        "capability": "search",
+        "params": {
+          "query": "restaurants near the station"
+        }
+      },
+      "disclosure": {
+        "v": 1,
+        "agentDid": "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr",
+        "principalDid": "did:aroha:EJ7fbQ1AmnFgT75YNmXR3inBGYoiq72N1c1FrNmNmYXVP",
+        "principalKind": "person",
+        "purpose": "Personal assistant for the host; answers in this room when addressed",
+        "hop": 0,
+        "aiGenerated": true
+      },
+      "proof": {
+        "type": "Ed25519Signature2020",
+        "created": "2026-10-15T10:06:00.000Z",
+        "verificationMethod": "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr#key-1",
+        "proofPurpose": "authentication",
+        "proofValue": "02zPdq50kTZxYV4G5fSZ0o8DxiARHoU-BKbpSlNmQReqbbwnjHaluOor91bS0K0L6RHvqPe_g18J-h_nXpopBw"
+      }
+    },
+    "expectedSigningPayload": "{\"@context\":[\"https://aroha-labs.com/contexts/v1\",\"https://w3id.org/security/suites/ed25519-2020/v1\"],\"body\":{\"capability\":\"search\",\"params\":{\"query\":\"restaurants near the station\"}},\"correlationId\":\"corr-03\",\"created\":\"2026-10-15T10:06:00.000Z\",\"disclosure\":{\"agentDid\":\"did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr\",\"aiGenerated\":true,\"hop\":0,\"principalDid\":\"did:aroha:EJ7fbQ1AmnFgT75YNmXR3inBGYoiq72N1c1FrNmNmYXVP\",\"principalKind\":\"person\",\"purpose\":\"Personal assistant for the host; answers in this room when addressed\",\"v\":1},\"expires\":\"2026-10-15T10:11:00.000Z\",\"from\":\"did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr\",\"id\":\"urn:uuid:0b6f1e9a-5d6c-4d55-8a0f-3f1b2c4d5e6f\",\"nonce\":\"a3f1c2d4e5b6978877665544332211000ffeeddccbbaa99887766554433221100\",\"to\":\"did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr\",\"type\":\"ArohaRequest\"}",
+    "valid": true
+  },
+  "taskMandateV2": {
+    "mandate": {
+      "mandateType": "task",
+      "mandateTier": "intent",
+      "allowed": [
+        "search",
+        "draft-email"
+      ],
+      "taskConstraints": {
+        "onBehalfOf": "did:aroha:E9744LWkXnSnpNrn3X1ghp7nTAQSZn6vmwavbKQWyAj8b",
+        "roomId": "room-01J9ZK3Q7V",
+        "reversibleOnly": true,
+        "humanGates": [
+          "draft-email"
+        ]
+      },
+      "grantee": "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr",
+      "grantor": "did:aroha:EJ7fbQ1AmnFgT75YNmXR3inBGYoiq72N1c1FrNmNmYXVP",
+      "issuedAt": "2026-10-15T10:00:00.000Z",
+      "expiresAt": "2026-10-15T22:00:00.000Z",
+      "parentMandateId": null,
+      "mandateId": "task-01J9ZK5B"
+    },
+    "expectedSigningPayload": "{\"mandate\":{\"allowed\":[\"search\",\"draft-email\"],\"expiresAt\":\"2026-10-15T22:00:00.000Z\",\"grantee\":\"did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr\",\"grantor\":\"did:aroha:EJ7fbQ1AmnFgT75YNmXR3inBGYoiq72N1c1FrNmNmYXVP\",\"issuedAt\":\"2026-10-15T10:00:00.000Z\",\"mandateId\":\"task-01J9ZK5B\",\"mandateTier\":\"intent\",\"mandateType\":\"task\",\"parentMandateId\":null,\"taskConstraints\":{\"humanGates\":[\"draft-email\"],\"onBehalfOf\":\"did:aroha:E9744LWkXnSnpNrn3X1ghp7nTAQSZn6vmwavbKQWyAj8b\",\"reversibleOnly\":true,\"roomId\":\"room-01J9ZK3Q7V\"}},\"purpose\":\"aroha.task-mandate/v2\",\"v\":2}",
+    "signature": "OvEyRwLEj2UwzLK8YAl2KzpNsbdC9A7znp-gsZOCTrn-jVyKVHhDR3WQO3QnroJy2NGqQakjE5zQ4p66jKVHAg",
+    "token": "eyJ2IjoyLCJtYW5kYXRlIjp7Im1hbmRhdGVUeXBlIjoidGFzayIsIm1hbmRhdGVUaWVyIjoiaW50ZW50IiwiYWxsb3dlZCI6WyJzZWFyY2giLCJkcmFmdC1lbWFpbCJdLCJ0YXNrQ29uc3RyYWludHMiOnsib25CZWhhbGZPZiI6ImRpZDphcm9oYTpFOTc0NExXa1huU25wTnJuM1gxZ2hwN25UQVFTWm42dm13YXZiS1FXeUFqOGIiLCJyb29tSWQiOiJyb29tLTAxSjlaSzNRN1YiLCJyZXZlcnNpYmxlT25seSI6dHJ1ZSwiaHVtYW5HYXRlcyI6WyJkcmFmdC1lbWFpbCJdfSwiZ3JhbnRlZSI6ImRpZDphcm9oYTp6SHl4NjJ3UFFHeXZYQ29paFpxMUJyYlVqQlJoMkx1TnhXaWlxTWtmQXVTWnIiLCJncmFudG9yIjoiZGlkOmFyb2hhOkVKN2ZiUTFBbW5GZ1Q3NVlObVhSM2luQkdZb2lxNzJOMWMxRnJObU5tWVhWUCIsImlzc3VlZEF0IjoiMjAyNi0xMC0xNVQxMDowMDowMC4wMDBaIiwiZXhwaXJlc0F0IjoiMjAyNi0xMC0xNVQyMjowMDowMC4wMDBaIiwicGFyZW50TWFuZGF0ZUlkIjpudWxsLCJtYW5kYXRlSWQiOiJ0YXNrLTAxSjlaSzVCIn0sInNpZ25hdHVyZSI6Ik92RXlSd0xFajJVd3pMSzhZQWwyS3pwTnNiZEM5QTd6bnAtZ3NaT0NUcm4talZ5S1ZIaERSM1dRTzNRbnJvSnkyTkdxUWFrakU1elE0cDY2aktWSEFnIn0",
+    "requests": [
+      {
+        "request": {
+          "requestedCapability": "search",
+          "capabilityReversibility": "full",
+          "roomId": "room-01J9ZK3Q7V",
+          "onBehalfOf": "did:aroha:E9744LWkXnSnpNrn3X1ghp7nTAQSZn6vmwavbKQWyAj8b"
+        },
+        "allowed": true
+      },
+      {
+        "request": {
+          "requestedCapability": "search",
+          "capabilityReversibility": "full",
+          "roomId": "room-other",
+          "onBehalfOf": "did:aroha:E9744LWkXnSnpNrn3X1ghp7nTAQSZn6vmwavbKQWyAj8b"
+        },
+        "allowed": false,
+        "code": "CONTEXT_MISMATCH"
+      },
+      {
+        "request": {
+          "requestedCapability": "search",
+          "capabilityReversibility": "full",
+          "roomId": "room-01J9ZK3Q7V",
+          "onBehalfOf": "did:aroha:EJ7fbQ1AmnFgT75YNmXR3inBGYoiq72N1c1FrNmNmYXVP"
+        },
+        "allowed": false,
+        "code": "CONTEXT_MISMATCH"
+      },
+      {
+        "request": {
+          "requestedCapability": "search",
+          "capabilityReversibility": "full"
+        },
+        "allowed": false,
+        "code": "CONTEXT_MISMATCH"
+      }
+    ]
+  }
+}

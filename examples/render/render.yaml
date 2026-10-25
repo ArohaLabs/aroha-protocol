@@ -1,0 +1,33 @@
+# Copyright (c) 2026 Aroha Labs
+# SPDX-License-Identifier: Apache-2.0
+#
+# Render Blueprint that deploys examples/quickstart (an @aroha-sdk/run agent).
+#
+# Render reads a Blueprint only from render.yaml at the ROOT of a repository,
+# so this file does nothing where it is. To use it, fork ArohaLabs/aroha-protocol and
+# copy this file to the root of your fork (rootDir below keeps the service
+# pointed at examples/quickstart).
+
+services:
+  - type: web
+    name: aroha-quickstart-agent
+    runtime: node
+    rootDir: examples/quickstart
+    buildCommand: npm install
+    startCommand: npx --yes tsx agent.ts
+    healthCheckPath: /health
+    envVars:
+      - key: ANTHROPIC_API_KEY
+        sync: false   # set in the Render dashboard
+      - key: NODE_VERSION
+        value: "22"
+      # The agent binds 127.0.0.1 by default; Render's proxy needs it on all
+      # interfaces inside the instance.
+      - key: HOST
+        value: "0.0.0.0"
+      # Off loopback the quickstart requires request auth; callers send
+      # Authorization: Bearer <this value>.
+      - key: AROHA_BEARER_TOKEN
+        generateValue: true
+    plan: starter
+    autoDeploy: true

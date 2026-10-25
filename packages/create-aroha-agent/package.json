@@ -1,0 +1,45 @@
+{
+  "name": "create-aroha-agent",
+  "version": "1.3.0",
+  "description": "Zero-config scaffolder for Aroha Protocol agents — run with npx create-aroha-agent",
+  "license": "Apache-2.0",
+  "type": "module",
+  "bin": {
+    "create-aroha-agent": "dist/index.js"
+  },
+  "main": "dist/index.js",
+  "files": [
+    "dist",
+    "NOTICE",
+    "!**/*.test.*",
+    "!**/test-utils/**",
+    "!**/*.tsbuildinfo"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "prepack": "node ../../scripts/clean-dist.mjs && tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@aroha-sdk/cli": "^1.3.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "keywords": [
+    "aroha",
+    "agent",
+    "mcp",
+    "ai-agent",
+    "scaffold",
+    "create"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ArohaLabs/aroha-protocol.git",
+    "directory": "packages/create-aroha-agent"
+  }
+}

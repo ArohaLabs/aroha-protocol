@@ -1,0 +1,61 @@
+# Copyright (c) 2026 Aroha Labs
+# SPDX-License-Identifier: Apache-2.0
+
+name: Feature Request
+description: Propose a new feature or enhancement
+labels: ["enhancement", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before submitting, check [open issues](https://github.com/ArohaLabs/aroha-protocol/issues) to see if this has already been proposed.
+        **Protocol spec changes** go through the 2-week comment process described in [docs/governance.md](https://github.com/ArohaLabs/aroha-protocol/blob/main/docs/governance.md).
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Protocol spec (Layer 0 — Identity)
+        - Protocol spec (Layer 1 — Envelopes)
+        - Protocol spec (Layer 2 — Registry)
+        - Protocol spec (Layer 3 — Saga)
+        - Protocol spec (Layer 4 — Commerce)
+        - SDK / packages
+        - CLI
+        - Bridges (MCP / A2A / LangChain)
+        - Developer experience / docs
+        - Ecosystem / tooling
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem statement
+      description: What problem does this solve? Who is affected?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: What should be built or changed?
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: What other approaches did you consider?
+
+  - type: checkboxes
+    id: spec-change
+    attributes:
+      label: Does this require a protocol spec change?
+      options:
+        - label: Yes — this changes the wire protocol or conformance requirements
+        - label: No — this is an implementation or tooling change only

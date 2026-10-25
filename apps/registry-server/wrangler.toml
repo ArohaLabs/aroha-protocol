@@ -1,0 +1,97 @@
+# Copyright (c) 2026 Aroha Labs
+# SPDX-License-Identifier: Apache-2.0
+
+name = "aroha-registry"
+main = "src/index.ts"
+# compatibility_date changes runtime behaviour (e.g. nodejs_compat_v2 from
+# 2024-09-23), and the vitest suite runs in Node, not workerd, so it cannot
+# show a bump is safe. Bump it only after a `wrangler dev --local` smoke test
+# (GET /health and a /v1 route). Last bumped 2026-10-10 from 2024-09-01, after
+# that smoke test passed under wrangler 4.149.
+compatibility_date = "2026-09-01"
+compatibility_flags = ["nodejs_compat"]
+
+# No `workers_dev = false` here: this file configures no route or custom
+# domain, so the *.workers.dev URL may be the only way the Worker is
+# reached — it is the canonical managed registry today
+# (https://aroha-registry.aroha-labs.workers.dev, AROHA_MANAGED_REGISTRY_URL in
+# @aroha-sdk/core/endpoints). If a custom domain is later attached (dashboard
+# or a [[routes]] block), set workers_dev = false so the registry is not ALSO served on an
+# origin that bypasses the zone's WAF rate rules (see rate-limit.ts).
+
+# ─── Scheduled retention ──────────────────────────────────────────────────────
+# Hourly: deletes expired single-use rows and trims accumulating tables.
+# Windows and their reasons: src/retention.ts.
+[triggers]
+crons = ["17 * * * *"]
+
+# ─── D1 Database ──────────────────────────────────────────────────────────────
+# Run to create: npm run db:create
+# Then paste the database_id printed by that command here.
+# database_id is intentionally committed: it is an identifier, not a
+# credential — every D1 operation still requires an authenticated
+# Cloudflare account with access to it.
+[[d1_databases]]
+binding = "DB"
+database_name = "aroha-registry"
+database_id = "68e2d12b-88ff-4921-9a8b-65475ea52b03"
+
+# ─── Durable Objects (M10 — relay broker, design spec §6.3) ───────────────────
+# One AgentRelay instance per agent DID (keyed by didHash), holding that
+# agent's persistent outbound WebSocket. See src/relay/agent-relay.ts.
+# Requires a Workers Paid plan to actually deploy (not the free tier) —
+# `wrangler dev` runs the real Durable Objects simulation locally regardless,
+# no paid plan needed for that.
+[[durable_objects.bindings]]
+name = "AGENT_RELAY"
+class_name = "AgentRelay"
+
+# Durable Object classes must be declared in a migration the first time
+# they're introduced — this tells Cloudflare AgentRelay is a new SQLite-backed
+# (the current, non-legacy storage backend) DO class as of this deploy.
+[[migrations]]
+tag = "v1-agent-relay"
+new_sqlite_classes = ["AgentRelay"]
+
+# ─── Environment variables ────────────────────────────────────────────────────
+[vars]
+# IPFS gateway used to fetch manifests at registration time: the
+# Aroha-operated gateway Worker (apps/ipfs-gateway). Same value as
+# AROHA_DEFAULT_IPFS_GATEWAY in @aroha-sdk/core/endpoints.
+IPFS_GATEWAY = "https://aroha-ipfs-gateway.aroha-labs.workers.dev/ipfs"
+# Explicit third-party fallback, tried after IPFS_GATEWAY (comma-separated,
+# https only). Only a block whose SHA-256 matches the CID is accepted, so a
+# fallback can withhold a manifest but not alter it. Remove to rely solely on
+# the Aroha gateway (and Pinata when PINATA_JWT is set).
+IPFS_FALLBACK_GATEWAYS = "https://dweb.link/ipfs"
+
+# ─── Secrets (set via `wrangler secret put <NAME>`) ──────────────────────────
+# ADMIN_SECRET — protects every admin route. Must be at least 32 characters;
+# shorter or unset, admin routes answer 503 (src/secrets.ts).
+# Set with: wrangler secret put ADMIN_SECRET
+#
+# CREDENTIAL_SECRET — optional, ≥ 32 characters. Key material for credential
+# JWTs (GET /v1/credential/:didHash). When unset they derive from
+# ADMIN_SECRET, so rotating that also invalidates every credential.
+# Set with: wrangler secret put CREDENTIAL_SECRET
+#
+# REGISTRY_SIGNING_KEY — REQUIRED for signed answers. The registry's Ed25519
+# signing seed: 32 random bytes as 64 hex characters (or 43 base64url). It
+# signs audit anchors (POST /v1/audit-anchors) and revocation status
+# (GET /v1/mandates/:id/revoked); its public half is published at
+# /.well-known/aroha-registry-keys.json. Unset or malformed, those routes and
+# the key document answer 503 — there is no fallback key (src/registry-signing.ts).
+# Generate offline, e.g.: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+# Set with: wrangler secret put REGISTRY_SIGNING_KEY
+#
+# REGISTRY_SIGNING_KEY_PREVIOUS — optional, only during/after a rotation: the
+# seed REGISTRY_SIGNING_KEY replaced. Never signs; published with
+# "retired": true so audit anchors signed before the rotation keep verifying.
+# Rotate: put the old value here, then a new REGISTRY_SIGNING_KEY.
+# Set with: wrangler secret put REGISTRY_SIGNING_KEY_PREVIOUS
+#
+# PINATA_JWT — Pinata JWT for authenticated manifest fetching at registration time.
+# Avoids Pinata public-gateway rate limits (429) and propagation delay.
+# Must be the same JWT used in aroha-ipfs-gateway.
+# Set with: wrangler secret put PINATA_JWT
+#

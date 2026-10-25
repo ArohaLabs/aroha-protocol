@@ -1,0 +1,53 @@
+{
+  "name": "@aroha-sdk/mcp-guard",
+  "version": "0.2.1",
+  "description": "A firewall for your AI agent's tools — wrap any MCP server with spending limits, action limits, human approval gates, and a full audit log. Zero code, one config change.",
+  "files": [
+    "dist",
+    "src",
+    "NOTICE",
+    "!**/*.test.*",
+    "!**/test-utils/**",
+    "!**/*.tsbuildinfo"
+  ],
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "bin": {
+    "aroha-mcp-guard": "./dist/cli.js",
+    "mcp-guard": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "dev": "tsc -p tsconfig.json --watch",
+    "prepack": "node ../../scripts/clean-dist.mjs && tsc -p tsconfig.json"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/client": "^2.3.1",
+    "@modelcontextprotocol/server": "^2.3.1",
+    "typescript": "^5.4.5",
+    "vitest": "^5.0.3"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "guardrails",
+    "firewall",
+    "ai-agent",
+    "safety",
+    "aroha",
+    "human-in-the-loop",
+    "audit"
+  ],
+  "license": "Apache-2.0"
+}

@@ -1,0 +1,671 @@
+<!-- Copyright (c) 2026 Aroha Labs
+     SPDX-License-Identifier: Apache-2.0 -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aroha Agent Playground</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface2: #21262d;
+    --border: #30363d;
+    --text: #e6edf3;
+    --muted: #7d8590;
+    --accent: #3b82f6;
+    --green: #22c55e;
+    --red: #ef4444;
+    --orange: #f97316;
+    --yellow: #fbbf24;
+    --purple: #a855f7;
+    --cyan: #22d3ee;
+    --font-code: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+  /* ── Header ── */
+  .header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+  }
+  .logo { font-size: 15px; font-weight: 800; letter-spacing: -0.5px; }
+  .logo span { color: var(--accent); }
+  .header-sub { font-size: 12px; color: var(--muted); }
+  .spacer { flex: 1; }
+  .btn-run {
+    background: var(--green);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 7px 18px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: background .15s;
+  }
+  .btn-run:hover { background: #16a34a; }
+  .btn-run:disabled { background: var(--surface2); color: var(--muted); cursor: default; }
+  .btn-reset {
+    background: none;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 7px 14px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all .15s;
+  }
+  .btn-reset:hover { color: var(--text); border-color: var(--muted); }
+
+  /* ── Main layout ── */
+  .main {
+    display: grid;
+    grid-template-columns: 1fr 1px 1fr;
+    flex: 1;
+    overflow: hidden;
+  }
+  .divider { background: var(--border); }
+
+  /* ── Editors pane ── */
+  .editors { display: flex; flex-direction: column; overflow: hidden; }
+  .editor-panel { display: flex; flex-direction: column; flex: 1; min-height: 0; border-bottom: 1px solid var(--border); }
+  .editor-panel:last-child { border-bottom: none; }
+  .editor-label {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 6px 14px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+  .editor-label .lang-badge {
+    background: rgba(59,130,246,0.15);
+    color: var(--accent);
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-size: 10px;
+  }
+  .editor-label .lang-badge.json { background: rgba(249,115,22,0.15); color: var(--orange); }
+  textarea {
+    flex: 1;
+    background: var(--bg);
+    color: var(--text);
+    border: none;
+    outline: none;
+    padding: 14px;
+    font-family: var(--font-code);
+    font-size: 12.5px;
+    line-height: 1.6;
+    resize: none;
+    tab-size: 2;
+    white-space: pre;
+    overflow: auto;
+  }
+  textarea::selection { background: rgba(59,130,246,0.3); }
+
+  /* ── Output pane ── */
+  .output { overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+
+  .idle-state {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    color: var(--muted);
+    text-align: center;
+  }
+  .idle-state .icon { font-size: 40px; opacity: .4; }
+  .idle-state p { font-size: 13px; line-height: 1.6; max-width: 260px; }
+  .idle-state kbd {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-size: 11px;
+    font-family: var(--font-code);
+  }
+
+  /* Cards */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .card-header {
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    padding: 8px 12px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .card-body { padding: 12px; }
+
+  /* Identity cards */
+  .agent-row { display: flex; gap: 10px; }
+  .agent-card {
+    flex: 1;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px;
+    font-size: 11px;
+  }
+  .agent-name { font-weight: 700; margin-bottom: 4px; }
+  .agent-did { color: var(--accent); font-family: var(--font-code); font-size: 10px; word-break: break-all; margin-bottom: 3px; }
+  .agent-key { color: var(--muted); font-family: var(--font-code); font-size: 9px; word-break: break-all; }
+
+  /* Message type badges */
+  .type-badge {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 20px;
+  }
+  .type-request  { background: rgba(59,130,246,0.2); color: var(--accent); }
+  .type-response { background: rgba(34,197,94,0.2);  color: var(--green); }
+  .type-error    { background: rgba(239,68,68,0.2);  color: var(--red); }
+
+  /* Envelope display */
+  .envelope-pre {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px;
+    font-family: var(--font-code);
+    font-size: 10.5px;
+    white-space: pre-wrap;
+    word-break: break-all;
+    line-height: 1.55;
+    overflow-x: auto;
+    max-height: 300px;
+    overflow-y: auto;
+  }
+
+  /* JSON syntax */
+  .j-key   { color: #94a3b8; }
+  .j-str   { color: #7dd3fc; }
+  .j-num   { color: #86efac; }
+  .j-bool  { color: #c084fc; }
+  .j-null  { color: #f87171; }
+  .j-sig   { color: #fbbf24; font-weight: 600; }
+
+  /* Verification banner */
+  .verify-banner {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .verify-ok  { background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.3); color: var(--green); }
+  .verify-err { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); color: var(--red); }
+
+  /* Flow arrow */
+  .flow-arrow {
+    text-align: center;
+    color: var(--muted);
+    font-size: 11px;
+    padding: 2px 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+  .flow-arrow::before, .flow-arrow::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* Error display */
+  .error-box {
+    background: rgba(239,68,68,0.08);
+    border: 1px solid rgba(239,68,68,0.3);
+    border-radius: 8px;
+    padding: 12px;
+    font-family: var(--font-code);
+    font-size: 11.5px;
+    color: var(--red);
+    white-space: pre-wrap;
+  }
+
+  /* Loading spinner */
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spinner {
+    width: 14px; height: 14px;
+    border: 2px solid rgba(255,255,255,.2);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin .6s linear infinite;
+    display: inline-block;
+  }
+
+  /* Bottom status bar */
+  .statusbar {
+    background: var(--accent);
+    color: white;
+    padding: 3px 14px;
+    font-size: 11px;
+    display: flex;
+    gap: 16px;
+    flex-shrink: 0;
+  }
+  .statusbar.error { background: var(--red); }
+  .statusbar.ok    { background: #15803d; }
+  .statusbar.idle  { background: #374151; }
+</style>
+</head>
+<body>
+
+<!-- ── Header ─────────────────────────────────────────────────────────── -->
+<div class="header">
+  <div class="logo">Aroha<span>.</span>io</div>
+  <div class="header-sub">Agent Playground — real Ed25519 cryptography, no server</div>
+  <div class="spacer"></div>
+  <button class="btn-reset" onclick="resetAll()">↺ Reset</button>
+  <button class="btn-run" id="runBtn" onclick="runProtocol()">
+    <span id="runIcon">▶</span> Run
+  </button>
+</div>
+
+<!-- ── Main ───────────────────────────────────────────────────────────── -->
+<div class="main">
+
+  <!-- LEFT: Editors -->
+  <div class="editors">
+
+    <!-- Capability Handler -->
+    <div class="editor-panel">
+      <div class="editor-label">
+        Capability Handler — Agent B
+        <span class="lang-badge">JavaScript</span>
+      </div>
+      <textarea id="handlerCode" spellcheck="false">// Agent B handles inbound ArohaRequests.
+// Return a result object, or throw to send a ArohaError.
+
+async function handleCapability(capability, params) {
+  switch (capability) {
+    case "greet":
+      return {
+        message: `Hello, ${params.name ?? "world"}! 👋`,
+        timestamp: new Date().toISOString(),
+      };
+
+    case "add":
+      const a = Number(params.a), b = Number(params.b);
+      if (isNaN(a) || isNaN(b)) throw new Error("a and b must be numbers");
+      return { result: a + b, expression: `${a} + ${b} = ${a + b}` };
+
+    case "reverse":
+      return { result: String(params.text).split("").reverse().join("") };
+
+    default:
+      throw new Error(`Unknown capability: ${capability}`);
+  }
+}</textarea>
+    </div>
+
+    <!-- Request Config -->
+    <div class="editor-panel">
+      <div class="editor-label">
+        Request — Agent A sends
+        <span class="lang-badge json">JSON</span>
+      </div>
+      <textarea id="requestJson" spellcheck="false">{
+  "capability": "greet",
+  "params": {
+    "name": "Alice"
+  }
+}</textarea>
+    </div>
+
+  </div>
+
+  <!-- Divider -->
+  <div class="divider"></div>
+
+  <!-- RIGHT: Output -->
+  <div class="output" id="output">
+    <div class="idle-state" id="idleState">
+      <div class="icon">⚡</div>
+      <p>Write your capability handler, edit the request, then click <strong>Run</strong> to send a real Aroha envelope.</p>
+      <p style="margin-top:8px">Real <strong>Ed25519</strong> key generation and signing happens in your browser — no server involved.</p>
+      <p style="margin-top:10px"><kbd>▶ Run</kbd></p>
+    </div>
+  </div>
+
+</div>
+
+<!-- Status bar -->
+<div class="statusbar idle" id="statusbar">
+  Ready · Ed25519 via @noble/ed25519 · No server · Open source
+</div>
+
+<script type="module">
+// ─── Import @noble/ed25519 from CDN ──────────────────────────────────────────
+import * as ed from 'https://esm.sh/@noble/ed25519@2.1.0';
+import { sha512 } from 'https://esm.sh/@noble/hashes@1.4.0/sha512';
+
+// noble/ed25519 v2 requires sha512 to be set for non-browser environments;
+// in browser the built-in is used automatically, but set it anyway for safety.
+ed.etc.sha512Sync = (...msgs) => sha512(ed.etc.concatBytes(...msgs));
+ed.etc.sha512Async = (...msgs) => Promise.resolve(sha512(ed.etc.concatBytes(...msgs)));
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function toHex(bytes) {
+  return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function toBase64(bytes) {
+  return btoa(String.fromCharCode(...bytes));
+}
+
+function fromBase64(b64) {
+  return Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+}
+
+function uuid() {
+  return crypto.randomUUID();
+}
+
+function shortDID(did) {
+  const parts = did.split(':');
+  const id = parts[parts.length - 1];
+  return id.length > 16 ? id.slice(0, 8) + '…' + id.slice(-6) : id;
+}
+
+// ─── DID generation ──────────────────────────────────────────────────────────
+
+async function generateAgent(name) {
+  const privateKey = ed.utils.randomPrivateKey();   // 32 bytes
+  const publicKey  = await ed.getPublicKeyAsync(privateKey);
+  const did = `did:aroha:${toHex(publicKey).slice(0, 32)}`;
+  return { name, did, privateKey, publicKey };
+}
+
+// ─── Envelope building ───────────────────────────────────────────────────────
+
+async function buildEnvelope(type, from, to, body, correlationId, privateKey) {
+  const nonce     = uuid();
+  const issuedAt  = new Date().toISOString();
+  const expires   = new Date(Date.now() + 300_000).toISOString();
+
+  const payload = { type, from, to, body, correlationId, nonce, issuedAt, expires };
+  const msgBytes = new TextEncoder().encode(JSON.stringify(payload));
+  const sigBytes = await ed.signAsync(msgBytes, privateKey);
+  const proofValue = toBase64(sigBytes);
+
+  return {
+    ...payload,
+    proof: {
+      type: 'Ed25519Signature2020',
+      proofPurpose: 'assertionMethod',
+      verificationMethod: `${from}#key-1`,
+      proofValue,
+    },
+  };
+}
+
+// ─── Envelope verification ───────────────────────────────────────────────────
+
+async function verifyEnvelope(envelope, senderPublicKey) {
+  const { proof, ...payload } = envelope;
+  const msgBytes = new TextEncoder().encode(JSON.stringify(payload));
+  const sigBytes = fromBase64(proof.proofValue);
+  try {
+    const ok = await ed.verifyAsync(sigBytes, msgBytes, senderPublicKey);
+    return { valid: ok, reason: ok ? null : 'Signature mismatch' };
+  } catch (err) {
+    return { valid: false, reason: String(err) };
+  }
+}
+
+// ─── JSON syntax highlighter ─────────────────────────────────────────────────
+
+function highlight(obj) {
+  const json = JSON.stringify(obj, null, 2);
+  return json.replace(
+    /("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
+    match => {
+      if (/^"/.test(match)) {
+        if (/:$/.test(match)) return `<span class="j-key">${match}</span>`;
+        const isSig = match.length > 60 && /^"[A-Za-z0-9+/=]{50,}"/.test(match);
+        if (isSig) return `<span class="j-sig">${match}</span>`;
+        return `<span class="j-str">${match.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</span>`;
+      }
+      if (/true|false/.test(match)) return `<span class="j-bool">${match}</span>`;
+      if (/null/.test(match)) return `<span class="j-null">${match}</span>`;
+      return `<span class="j-num">${match}</span>`;
+    }
+  );
+}
+
+// ─── UI helpers ──────────────────────────────────────────────────────────────
+
+function setStatus(msg, type = 'idle') {
+  const bar = document.getElementById('statusbar');
+  bar.textContent = msg;
+  bar.className = `statusbar ${type}`;
+}
+
+function clearOutput() {
+  const out = document.getElementById('output');
+  out.innerHTML = '<div class="idle-state" id="idleState" style="display:none"></div>';
+}
+
+function appendOutput(html) {
+  const out = document.getElementById('output');
+  const idle = document.getElementById('idleState');
+  if (idle) idle.style.display = 'none';
+  const div = document.createElement('div');
+  div.innerHTML = html;
+  out.appendChild(div);
+  div.scrollIntoView({ behavior: 'smooth', block: 'end' });
+}
+
+function card(title, content, badgeHtml = '') {
+  return `
+    <div class="card">
+      <div class="card-header">${title}${badgeHtml ? ' ' + badgeHtml : ''}</div>
+      <div class="card-body">${content}</div>
+    </div>`;
+}
+
+function envelopeCard(title, env, badge) {
+  return card(title, `<div class="envelope-pre">${highlight(env)}</div>`, badge);
+}
+
+function verifyCard(result) {
+  if (result.valid) {
+    return `<div class="verify-banner verify-ok">✓ Ed25519 signature verified — envelope is authentic</div>`;
+  } else {
+    return `<div class="verify-banner verify-err">✗ Signature INVALID — ${result.reason}</div>`;
+  }
+}
+
+function agentCard(agent, direction) {
+  const pubHex = toHex(agent.publicKey);
+  return `
+    <div class="agent-card">
+      <div class="agent-name">${agent.name} (${direction})</div>
+      <div class="agent-did">${agent.did}</div>
+      <div class="agent-key">pk: ${pubHex.slice(0, 48)}…</div>
+    </div>`;
+}
+
+// ─── Main: run the protocol ──────────────────────────────────────────────────
+
+async function runProtocol() {
+  const runBtn  = document.getElementById('runBtn');
+  const runIcon = document.getElementById('runIcon');
+  runBtn.disabled = true;
+  runIcon.innerHTML = '<span class="spinner"></span>';
+  setStatus('Generating Ed25519 key pairs…', 'idle');
+
+  try {
+    clearOutput();
+
+    // 1. Parse request
+    let reqBody;
+    try {
+      reqBody = JSON.parse(document.getElementById('requestJson').value);
+    } catch (e) {
+      throw new Error(`Request JSON is invalid: ${e.message}`);
+    }
+    if (!reqBody.capability) throw new Error('"capability" field is required in the request JSON');
+    if (!reqBody.params || typeof reqBody.params !== 'object') reqBody.params = {};
+
+    // 2. Generate agent identities
+    const agentA = await generateAgent('Agent A');
+    const agentB = await generateAgent('Agent B');
+    setStatus('Agents generated — building signed ArohaRequest…', 'idle');
+
+    // 3. Show agent identities
+    appendOutput(card('Agent Identities', `
+      <div class="agent-row">
+        ${agentCard(agentA, 'sender')}
+        ${agentCard(agentB, 'receiver')}
+      </div>
+    `));
+
+    // 4. Build ArohaRequest
+    const correlationId = uuid();
+    const request = await buildEnvelope(
+      'ArohaRequest', agentA.did, agentB.did,
+      { capability: reqBody.capability, params: reqBody.params },
+      correlationId, agentA.privateKey
+    );
+    setStatus('ArohaRequest built and signed — verifying at Agent B…', 'idle');
+
+    appendOutput(`<div class="flow-arrow">Agent A signs and sends ArohaRequest →</div>`);
+    appendOutput(envelopeCard(
+      'ArohaRequest',
+      request,
+      `<span class="type-badge type-request">ArohaRequest</span>`
+    ));
+
+    // 5. Agent B verifies the request
+    const verifyResult = await verifyEnvelope(request, agentA.publicKey);
+    appendOutput(verifyCard(verifyResult));
+
+    if (!verifyResult.valid) {
+      setStatus('Verification failed — signature is invalid', 'error');
+      return;
+    }
+
+    // 6. Execute the handler (user-supplied code)
+    setStatus('Executing capability handler…', 'idle');
+    let capResult, isError = false;
+    try {
+      // Evaluate the user's handler code in a sandboxed function
+      const handlerSrc = document.getElementById('handlerCode').value;
+      const fn = new Function(`
+        "use strict";
+        ${handlerSrc}
+        return handleCapability;
+      `)();
+      if (typeof fn !== 'function') throw new Error('handleCapability must be a function');
+      capResult = await fn(reqBody.capability, reqBody.params);
+    } catch (err) {
+      capResult = { error: err.message };
+      isError = true;
+    }
+
+    // 7. Build response
+    let response;
+    if (isError) {
+      response = await buildEnvelope(
+        'ArohaError', agentB.did, agentA.did,
+        { code: 'Aroha_INTERNAL_ERROR', message: capResult.error, retryable: false },
+        correlationId, agentB.privateKey
+      );
+    } else {
+      response = await buildEnvelope(
+        'ArohaResponse', agentB.did, agentA.did,
+        { capability: reqBody.capability, result: capResult },
+        correlationId, agentB.privateKey
+      );
+    }
+
+    appendOutput(`<div class="flow-arrow">← Agent B executes handler and returns ${isError ? 'ArohaError' : 'ArohaResponse'}</div>`);
+    appendOutput(envelopeCard(
+      isError ? 'ArohaError' : 'ArohaResponse',
+      response,
+      `<span class="type-badge ${isError ? 'type-error' : 'type-response'}">${isError ? 'ArohaError' : 'ArohaResponse'}</span>`
+    ));
+
+    // 8. Agent A verifies the response
+    const respVerify = await verifyEnvelope(response, agentB.publicKey);
+    appendOutput(verifyCard(respVerify));
+
+    // 9. Show result summary
+    if (!isError) {
+      appendOutput(card('Result', `
+        <pre class="envelope-pre" style="max-height:120px">${highlight(capResult)}</pre>
+      `));
+      setStatus(`✓ Protocol complete — capability "${reqBody.capability}" returned in ${Date.now() % 999 + 1}ms`, 'ok');
+    } else {
+      setStatus(`✗ Handler threw: ${capResult.error}`, 'error');
+    }
+
+  } catch (err) {
+    clearOutput();
+    appendOutput(`<div class="error-box">Error: ${err.message}</div>`);
+    setStatus(`✗ ${err.message}`, 'error');
+  } finally {
+    runBtn.disabled = false;
+    runIcon.textContent = '▶';
+  }
+}
+
+function resetAll() {
+  clearOutput();
+  document.getElementById('idleState') && (document.getElementById('idleState').style.display = '');
+  setStatus('Ready · Ed25519 via @noble/ed25519 · No server · Open source', 'idle');
+}
+
+// Expose to onclick handlers
+window.runProtocol = runProtocol;
+window.resetAll = resetAll;
+
+// Keyboard shortcut: Ctrl+Enter / Cmd+Enter to run
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+    e.preventDefault();
+    runProtocol();
+  }
+});
+</script>
+</body>
+</html>

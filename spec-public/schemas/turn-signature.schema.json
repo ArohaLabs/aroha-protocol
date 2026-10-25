@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aroha-labs.com/schemas/signed-turn-v1.json",
+  "title": "Aroha signed turn (aroha-1.0 §12.4)",
+  "description": "authorSignature is Ed25519 by authorDid's current key over UTF-8(JCS({purpose:'aroha.turn/v1', threadId, roomId, epoch, at, contentHash, addressedTo})), base64url. contentHash is SHA-256 hex of the UTF-8 bytes of content. The author's kind (person or agent) is resolved from its Key Event Log, never read from the turn.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["threadId", "roomId", "epoch", "at", "contentHash", "addressedTo", "authorDid", "content", "authorSignature"],
+  "properties": {
+    "threadId": { "type": "string", "minLength": 1 },
+    "roomId": { "type": "string", "minLength": 1 },
+    "epoch": { "type": "integer", "minimum": 0 },
+    "at": { "type": "string", "format": "date-time" },
+    "contentHash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "addressedTo": { "type": "array", "items": { "type": "string", "pattern": "^did:" } },
+    "authorDid": { "type": "string", "pattern": "^did:" },
+    "content": { "type": "string" },
+    "authorSignature": { "type": "string", "pattern": "^[A-Za-z0-9_-]+$" }
+  }
+}

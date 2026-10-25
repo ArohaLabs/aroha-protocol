@@ -1,0 +1,41 @@
+{
+  "name": "@aroha-sdk/preferences",
+  "version": "1.2.3",
+  "description": "Aroha user preference layer: profile, filter, scoring, satisfaction signals",
+  "files": [
+    "dist",
+    "src",
+    "NOTICE",
+    "!**/*.test.*",
+    "!**/test-utils/**",
+    "!**/*.tsbuildinfo"
+  ],
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "dev": "tsc -p tsconfig.json --watch",
+    "prepack": "node ../../scripts/clean-dist.mjs && tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@aroha-sdk/core": "^2.0.0",
+    "@aroha-sdk/registry": "^2.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5",
+    "vitest": "^5.0.3",
+    "@types/node": "^20.14.0"
+  },
+  "license": "Apache-2.0",
+  "engines": {
+    "node": ">=22"
+  }
+}

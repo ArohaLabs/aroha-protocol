@@ -1,0 +1,13 @@
+# URLs the link checker must not fetch (one regex per line).
+#
+# The ArohaLabs/aroha-protocol and ArohaLabs/aroha-spec repositories are PRIVATE for
+# now: every github.com link into them (issues, discussions, advisories,
+# Actions badges, tree/blob links, deploy-button clone URLs) returns 404 to an
+# anonymous checker. They are the canonical future URLs and stay in the docs;
+# remove these lines when the repositories go public so the links are checked.
+^https://github\.com/ArohaLabs/aroha-protocol(/|$)
+^https://github\.com/ArohaLabs/aroha-spec(/|$)
+^https://raw\.githubusercontent\.com/ArohaLabs/
+# Deploy buttons wrap the private repo URL in a query string.
+^https://vercel\.com/new/clone\?repository-url=https://github\.com/ArohaLabs/
+^https://deploy\.workers\.cloudflare\.com/\?url=https://github\.com/ArohaLabs/

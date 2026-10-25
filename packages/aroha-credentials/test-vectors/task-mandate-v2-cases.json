@@ -1,0 +1,2059 @@
+{
+  "description": "Aroha task-mandate v2 conformance vectors. A v2 signature is Ed25519(privateKey, UTF-8(JCS({\"mandate\": <body>, \"purpose\": \"aroha.task-mandate/v2\", \"v\": 2}))), base64url without padding; a token is base64url(JSON({v: 2, mandate, signature})). v1 tokens omit v and sign sortKeys/JSON.stringify of the body. tokens[].expected is verifyTaskMandate(token, keys[signer].publicKey, expectedGrantee, {now: verifyAt}); narrowing[].expectedReason is checkTaskNarrowing(parent, child); actions[].expected is checkTaskConstraints(mandates[mandate], request) (null = permitted). Keys are the RFC 8032 §7.1 test keys — never use them for anything real.",
+  "generatedBy": "packages/aroha-credentials/scripts/gen-task-test-vectors.ts",
+  "keys": {
+    "human": {
+      "privateKeyHex": "9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60",
+      "publicKeyHex": "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a",
+      "did": "did:aroha:zFVen3X669xLzsi6N2V91DoiyzHzg1uAgqiT8jZ9nS96Z"
+    },
+    "agent": {
+      "privateKeyHex": "4ccd089b28ff96da9db6c346ec114e0f5b8a319f35aba624da8cf6ed4fb8a6fb",
+      "publicKeyHex": "3d4017c3e843895a92b70aa74d1b7ebc9c982ccf2ec4968cc0cd55f12af4660c",
+      "did": "did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5"
+    },
+    "vendor": {
+      "privateKeyHex": "c5aa8df43f9f837bedb7442f31dcb7b166d38535076f094b85ce3a2e0b4458f7",
+      "publicKeyHex": "fc51cd8e6218a1a38da47ed00230f0580816ed13ba3303ac5deb911548908025",
+      "did": "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr"
+    }
+  },
+  "mandates": [
+    {
+      "name": "task-root",
+      "signer": "human",
+      "mandate": {
+        "mandateType": "task",
+        "mandateTier": "intent",
+        "allowed": [
+          "web-search",
+          "draft-email",
+          "send-email",
+          "read-calendar"
+        ],
+        "blocked": [
+          "delete-files"
+        ],
+        "taskConstraints": {
+          "actionLimits": {
+            "send-email": 3,
+            "web-search": 20
+          },
+          "computeLimit": {
+            "llmTokens": 50000,
+            "webRequests": 40,
+            "executionTimeMs": 600000
+          },
+          "dataAccess": {
+            "calendar": "read",
+            "email": "read-write",
+            "files:/drafts": "write"
+          },
+          "outputHandling": "user-only",
+          "reversibleOnly": false,
+          "humanGates": [
+            "send-email"
+          ],
+          "checkpointIntervalMs": 30000,
+          "requireSandbox": true,
+          "maxDelegationDepth": 2,
+          "onBehalfOf": "did:aroha:guest-bob",
+          "roomId": "room-7f3a"
+        },
+        "grantee": "did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5",
+        "grantor": "did:aroha:zFVen3X669xLzsi6N2V91DoiyzHzg1uAgqiT8jZ9nS96Z",
+        "issuedAt": "2026-01-01T00:00:00.000Z",
+        "expiresAt": "2099-01-01T00:00:00.000Z",
+        "parentMandateId": null,
+        "mandateId": "00000000-0000-4000-8000-0000000000a1"
+      },
+      "expectedSigningPayload": "{\"mandate\":{\"allowed\":[\"web-search\",\"draft-email\",\"send-email\",\"read-calendar\"],\"blocked\":[\"delete-files\"],\"expiresAt\":\"2099-01-01T00:00:00.000Z\",\"grantee\":\"did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5\",\"grantor\":\"did:aroha:zFVen3X669xLzsi6N2V91DoiyzHzg1uAgqiT8jZ9nS96Z\",\"issuedAt\":\"2026-01-01T00:00:00.000Z\",\"mandateId\":\"00000000-0000-4000-8000-0000000000a1\",\"mandateTier\":\"intent\",\"mandateType\":\"task\",\"parentMandateId\":null,\"taskConstraints\":{\"actionLimits\":{\"send-email\":3,\"web-search\":20},\"checkpointIntervalMs\":30000,\"computeLimit\":{\"executionTimeMs\":600000,\"llmTokens\":50000,\"webRequests\":40},\"dataAccess\":{\"calendar\":\"read\",\"email\":\"read-write\",\"files:/drafts\":\"write\"},\"humanGates\":[\"send-email\"],\"maxDelegationDepth\":2,\"onBehalfOf\":\"did:aroha:guest-bob\",\"outputHandling\":\"user-only\",\"requireSandbox\":true,\"reversibleOnly\":false,\"roomId\":\"room-7f3a\"}},\"purpose\":\"aroha.task-mandate/v2\",\"v\":2}",
+      "expectedSignature": "Zbv7zQWVQM9qvBiwd6v6NqyBJXOBnx7C4cgpu6GT05fkdi81Mys-AOUqDtgcibprUi04-DaU_pNWHPiQSYxlCQ"
+    },
+    {
+      "name": "task-child",
+      "signer": "agent",
+      "mandate": {
+        "mandateType": "task",
+        "mandateTier": "cart",
+        "allowed": [
+          "web-search",
+          "send-email"
+        ],
+        "blocked": [
+          "delete-files"
+        ],
+        "taskConstraints": {
+          "actionLimits": {
+            "send-email": 1,
+            "web-search": 5.5
+          },
+          "computeLimit": {
+            "llmTokens": 1000,
+            "webRequests": 10,
+            "executionTimeMs": 60000
+          },
+          "dataAccess": {
+            "email": "read"
+          },
+          "outputHandling": "internal-only",
+          "humanGates": [
+            "send-email"
+          ],
+          "checkpointIntervalMs": 10000,
+          "requireSandbox": true,
+          "onBehalfOf": "did:aroha:guest-bob",
+          "roomId": "room-7f3a"
+        },
+        "grantee": "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr",
+        "grantor": "did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5",
+        "issuedAt": "2026-01-01T00:00:01.000Z",
+        "expiresAt": "2098-01-01T00:00:00.000Z",
+        "parentMandateId": "00000000-0000-4000-8000-0000000000a1",
+        "mandateId": "00000000-0000-4000-8000-0000000000a2"
+      },
+      "expectedSigningPayload": "{\"mandate\":{\"allowed\":[\"web-search\",\"send-email\"],\"blocked\":[\"delete-files\"],\"expiresAt\":\"2098-01-01T00:00:00.000Z\",\"grantee\":\"did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr\",\"grantor\":\"did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5\",\"issuedAt\":\"2026-01-01T00:00:01.000Z\",\"mandateId\":\"00000000-0000-4000-8000-0000000000a2\",\"mandateTier\":\"cart\",\"mandateType\":\"task\",\"parentMandateId\":\"00000000-0000-4000-8000-0000000000a1\",\"taskConstraints\":{\"actionLimits\":{\"send-email\":1,\"web-search\":5.5},\"checkpointIntervalMs\":10000,\"computeLimit\":{\"executionTimeMs\":60000,\"llmTokens\":1000,\"webRequests\":10},\"dataAccess\":{\"email\":\"read\"},\"humanGates\":[\"send-email\"],\"onBehalfOf\":\"did:aroha:guest-bob\",\"outputHandling\":\"internal-only\",\"requireSandbox\":true,\"roomId\":\"room-7f3a\"}},\"purpose\":\"aroha.task-mandate/v2\",\"v\":2}",
+      "expectedSignature": "vYNLFAUEcnpH7zwAupddvL9mmnqiUe6W3rJ9HJm1c37HoWHmYdfLUw8ss52SrpubQfxhCcZSm7CJVSmlKYm6Cw"
+    },
+    {
+      "name": "hybrid-root",
+      "signer": "human",
+      "mandate": {
+        "mandateType": "hybrid",
+        "mandateTier": "intent",
+        "allowed": [
+          "book-flight"
+        ],
+        "taskConstraints": {
+          "reversibleOnly": true
+        },
+        "spendingConstraints": {
+          "spendLimitUsd": 420.07,
+          "currency": "USD",
+          "allowedMerchants": [
+            "did:aroha:airline"
+          ]
+        },
+        "invariants": {
+          "payee": [
+            "did:aroha:airline"
+          ],
+          "parameters": {
+            "destination": "JFK",
+            "seats": 1,
+            "refundable": true
+          }
+        },
+        "grantee": "did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5",
+        "grantor": "did:aroha:zFVen3X669xLzsi6N2V91DoiyzHzg1uAgqiT8jZ9nS96Z",
+        "issuedAt": "2026-01-01T00:00:00.000Z",
+        "expiresAt": "2027-01-01T00:00:00.000Z",
+        "parentMandateId": null,
+        "mandateId": "00000000-0000-4000-8000-0000000000b1"
+      },
+      "expectedSigningPayload": "{\"mandate\":{\"allowed\":[\"book-flight\"],\"expiresAt\":\"2027-01-01T00:00:00.000Z\",\"grantee\":\"did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5\",\"grantor\":\"did:aroha:zFVen3X669xLzsi6N2V91DoiyzHzg1uAgqiT8jZ9nS96Z\",\"invariants\":{\"parameters\":{\"destination\":\"JFK\",\"refundable\":true,\"seats\":1},\"payee\":[\"did:aroha:airline\"]},\"issuedAt\":\"2026-01-01T00:00:00.000Z\",\"mandateId\":\"00000000-0000-4000-8000-0000000000b1\",\"mandateTier\":\"intent\",\"mandateType\":\"hybrid\",\"parentMandateId\":null,\"spendingConstraints\":{\"allowedMerchants\":[\"did:aroha:airline\"],\"currency\":\"USD\",\"spendLimitUsd\":420.07},\"taskConstraints\":{\"reversibleOnly\":true}},\"purpose\":\"aroha.task-mandate/v2\",\"v\":2}",
+      "expectedSignature": "48heWOYfehMUgngmlOtbmLhHdxO8ZrrbGUxmYFzIofjLxD0mvBlLqZQ_C9ewEyegQqyKRcCPo1YKLLGzr4jMBg"
+    },
+    {
+      "name": "task-child-widened",
+      "signer": "agent",
+      "mandate": {
+        "mandateType": "task",
+        "mandateTier": "cart",
+        "allowed": [
+          "web-search",
+          "send-email"
+        ],
+        "blocked": [
+          "delete-files"
+        ],
+        "taskConstraints": {
+          "actionLimits": {
+            "send-email": 9,
+            "web-search": 5
+          },
+          "computeLimit": {
+            "llmTokens": 1000,
+            "webRequests": 10,
+            "executionTimeMs": 60000
+          },
+          "dataAccess": {
+            "email": "read"
+          },
+          "outputHandling": "internal-only",
+          "humanGates": [
+            "send-email"
+          ],
+          "checkpointIntervalMs": 10000,
+          "requireSandbox": true,
+          "onBehalfOf": "did:aroha:guest-bob"
+        },
+        "grantee": "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr",
+        "grantor": "did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5",
+        "issuedAt": "2026-01-01T00:00:01.000Z",
+        "expiresAt": "2098-01-01T00:00:00.000Z",
+        "parentMandateId": "00000000-0000-4000-8000-0000000000a1",
+        "mandateId": "00000000-0000-4000-8000-0000000000a3"
+      },
+      "expectedSigningPayload": "{\"mandate\":{\"allowed\":[\"web-search\",\"send-email\"],\"blocked\":[\"delete-files\"],\"expiresAt\":\"2098-01-01T00:00:00.000Z\",\"grantee\":\"did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr\",\"grantor\":\"did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5\",\"issuedAt\":\"2026-01-01T00:00:01.000Z\",\"mandateId\":\"00000000-0000-4000-8000-0000000000a3\",\"mandateTier\":\"cart\",\"mandateType\":\"task\",\"parentMandateId\":\"00000000-0000-4000-8000-0000000000a1\",\"taskConstraints\":{\"actionLimits\":{\"send-email\":9,\"web-search\":5},\"checkpointIntervalMs\":10000,\"computeLimit\":{\"executionTimeMs\":60000,\"llmTokens\":1000,\"webRequests\":10},\"dataAccess\":{\"email\":\"read\"},\"humanGates\":[\"send-email\"],\"onBehalfOf\":\"did:aroha:guest-bob\",\"outputHandling\":\"internal-only\",\"requireSandbox\":true}},\"purpose\":\"aroha.task-mandate/v2\",\"v\":2}",
+      "expectedSignature": "HL4LLeC-YHiSIVxpUl4RrEEySmnQOLy97mhP2O6d71HEz9aL_jts3bNoiUs7_ISKIPs8UFQNpDJ3gkklPfhKCg"
+    },
+    {
+      "name": "task-root-deny-data",
+      "signer": "human",
+      "mandate": {
+        "mandateType": "task",
+        "mandateTier": "intent",
+        "allowed": [
+          "web-search",
+          "draft-email",
+          "send-email",
+          "read-calendar"
+        ],
+        "blocked": [
+          "delete-files"
+        ],
+        "taskConstraints": {
+          "actionLimits": {
+            "send-email": 3,
+            "web-search": 20
+          },
+          "computeLimit": {
+            "llmTokens": 50000,
+            "webRequests": 40,
+            "executionTimeMs": 600000
+          },
+          "dataAccess": {},
+          "outputHandling": "user-only",
+          "reversibleOnly": false,
+          "humanGates": [
+            "send-email"
+          ],
+          "checkpointIntervalMs": 30000,
+          "requireSandbox": true,
+          "maxDelegationDepth": 2,
+          "onBehalfOf": "did:aroha:guest-bob",
+          "roomId": "room-7f3a"
+        },
+        "grantee": "did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5",
+        "grantor": "did:aroha:zFVen3X669xLzsi6N2V91DoiyzHzg1uAgqiT8jZ9nS96Z",
+        "issuedAt": "2026-01-01T00:00:00.000Z",
+        "expiresAt": "2099-01-01T00:00:00.000Z",
+        "parentMandateId": null,
+        "mandateId": "00000000-0000-4000-8000-0000000000a4"
+      },
+      "expectedSigningPayload": "{\"mandate\":{\"allowed\":[\"web-search\",\"draft-email\",\"send-email\",\"read-calendar\"],\"blocked\":[\"delete-files\"],\"expiresAt\":\"2099-01-01T00:00:00.000Z\",\"grantee\":\"did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5\",\"grantor\":\"did:aroha:zFVen3X669xLzsi6N2V91DoiyzHzg1uAgqiT8jZ9nS96Z\",\"issuedAt\":\"2026-01-01T00:00:00.000Z\",\"mandateId\":\"00000000-0000-4000-8000-0000000000a4\",\"mandateTier\":\"intent\",\"mandateType\":\"task\",\"parentMandateId\":null,\"taskConstraints\":{\"actionLimits\":{\"send-email\":3,\"web-search\":20},\"checkpointIntervalMs\":30000,\"computeLimit\":{\"executionTimeMs\":600000,\"llmTokens\":50000,\"webRequests\":40},\"dataAccess\":{},\"humanGates\":[\"send-email\"],\"maxDelegationDepth\":2,\"onBehalfOf\":\"did:aroha:guest-bob\",\"outputHandling\":\"user-only\",\"requireSandbox\":true,\"reversibleOnly\":false,\"roomId\":\"room-7f3a\"}},\"purpose\":\"aroha.task-mandate/v2\",\"v\":2}",
+      "expectedSignature": "n1ZoOYcVbeH7HMz1ktGSNFKKmQ4H1IihkIKVjZ9vYHXDZt5PbkUJGxkS4eeRBTqQHxCINfiwhRmbu_zhvcHlBQ"
+    },
+    {
+      "name": "hybrid-root-no-payees",
+      "signer": "human",
+      "mandate": {
+        "mandateType": "hybrid",
+        "mandateTier": "intent",
+        "allowed": [
+          "book-flight"
+        ],
+        "taskConstraints": {
+          "reversibleOnly": true
+        },
+        "spendingConstraints": {
+          "spendLimitUsd": 420.07,
+          "currency": "USD",
+          "allowedMerchants": [
+            "did:aroha:airline"
+          ]
+        },
+        "invariants": {
+          "payee": [],
+          "parameters": {
+            "destination": "JFK",
+            "seats": 1,
+            "refundable": true
+          }
+        },
+        "grantee": "did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5",
+        "grantor": "did:aroha:zFVen3X669xLzsi6N2V91DoiyzHzg1uAgqiT8jZ9nS96Z",
+        "issuedAt": "2026-01-01T00:00:00.000Z",
+        "expiresAt": "2027-01-01T00:00:00.000Z",
+        "parentMandateId": null,
+        "mandateId": "00000000-0000-4000-8000-0000000000b2"
+      },
+      "expectedSigningPayload": "{\"mandate\":{\"allowed\":[\"book-flight\"],\"expiresAt\":\"2027-01-01T00:00:00.000Z\",\"grantee\":\"did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5\",\"grantor\":\"did:aroha:zFVen3X669xLzsi6N2V91DoiyzHzg1uAgqiT8jZ9nS96Z\",\"invariants\":{\"parameters\":{\"destination\":\"JFK\",\"refundable\":true,\"seats\":1},\"payee\":[]},\"issuedAt\":\"2026-01-01T00:00:00.000Z\",\"mandateId\":\"00000000-0000-4000-8000-0000000000b2\",\"mandateTier\":\"intent\",\"mandateType\":\"hybrid\",\"parentMandateId\":null,\"spendingConstraints\":{\"allowedMerchants\":[\"did:aroha:airline\"],\"currency\":\"USD\",\"spendLimitUsd\":420.07},\"taskConstraints\":{\"reversibleOnly\":true}},\"purpose\":\"aroha.task-mandate/v2\",\"v\":2}",
+      "expectedSignature": "WQ3wKGRZUpbSFyAQ9ouR2Y8dchAABq8lH0J-RONo4ZU5hzVbDYHWSLjg5DeLv0N6JuRqIpEgSk2hKzELIV-qDA"
+    }
+  ],
+  "tokens": [
+    {
+      "name": "valid-root",
+      "token": "eyJ2IjoyLCJtYW5kYXRlIjp7Im1hbmRhdGVUeXBlIjoidGFzayIsIm1hbmRhdGVUaWVyIjoiaW50ZW50IiwiYWxsb3dlZCI6WyJ3ZWItc2VhcmNoIiwiZHJhZnQtZW1haWwiLCJzZW5kLWVtYWlsIiwicmVhZC1jYWxlbmRhciJdLCJibG9ja2VkIjpbImRlbGV0ZS1maWxlcyJdLCJ0YXNrQ29uc3RyYWludHMiOnsiYWN0aW9uTGltaXRzIjp7InNlbmQtZW1haWwiOjMsIndlYi1zZWFyY2giOjIwfSwiY29tcHV0ZUxpbWl0Ijp7ImxsbVRva2VucyI6NTAwMDAsIndlYlJlcXVlc3RzIjo0MCwiZXhlY3V0aW9uVGltZU1zIjo2MDAwMDB9LCJkYXRhQWNjZXNzIjp7ImNhbGVuZGFyIjoicmVhZCIsImVtYWlsIjoicmVhZC13cml0ZSIsImZpbGVzOi9kcmFmdHMiOiJ3cml0ZSJ9LCJvdXRwdXRIYW5kbGluZyI6InVzZXItb25seSIsInJldmVyc2libGVPbmx5IjpmYWxzZSwiaHVtYW5HYXRlcyI6WyJzZW5kLWVtYWlsIl0sImNoZWNrcG9pbnRJbnRlcnZhbE1zIjozMDAwMCwicmVxdWlyZVNhbmRib3giOnRydWUsIm1heERlbGVnYXRpb25EZXB0aCI6Miwib25CZWhhbGZPZiI6ImRpZDphcm9oYTpndWVzdC1ib2IiLCJyb29tSWQiOiJyb29tLTdmM2EifSwiZ3JhbnRlZSI6ImRpZDphcm9oYTp6NTg2WjdIMnZwWDlxTmhOMlQ0ZTlVdHVnaWUzb2dqYnh6R2FNdE0zRTZIUjUiLCJncmFudG9yIjoiZGlkOmFyb2hhOnpGVmVuM1g2Njl4THpzaTZOMlY5MURvaXl6SHpnMXVBZ3FpVDhqWjluUzk2WiIsImlzc3VlZEF0IjoiMjAyNi0wMS0wMVQwMDowMDowMC4wMDBaIiwiZXhwaXJlc0F0IjoiMjA5OS0wMS0wMVQwMDowMDowMC4wMDBaIiwicGFyZW50TWFuZGF0ZUlkIjpudWxsLCJtYW5kYXRlSWQiOiIwMDAwMDAwMC0wMDAwLTQwMDAtODAwMC0wMDAwMDAwMDAwYTEifSwic2lnbmF0dXJlIjoiWmJ2N3pRV1ZRTTlxdkJpd2Q2djZOcXlCSlhPQm54N0M0Y2dwdTZHVDA1ZmtkaTgxTXlzLUFPVXFEdGdjaWJwclVpMDQtRGFVX3BOV0hQaVFTWXhsQ1EifQ",
+      "signer": "human",
+      "verifyAt": "2027-01-01T00:00:00.000Z",
+      "expected": {
+        "valid": true,
+        "reason": null
+      }
+    },
+    {
+      "name": "valid-child",
+      "token": "eyJ2IjoyLCJtYW5kYXRlIjp7Im1hbmRhdGVUeXBlIjoidGFzayIsIm1hbmRhdGVUaWVyIjoiY2FydCIsImFsbG93ZWQiOlsid2ViLXNlYXJjaCIsInNlbmQtZW1haWwiXSwiYmxvY2tlZCI6WyJkZWxldGUtZmlsZXMiXSwidGFza0NvbnN0cmFpbnRzIjp7ImFjdGlvbkxpbWl0cyI6eyJzZW5kLWVtYWlsIjoxLCJ3ZWItc2VhcmNoIjo1LjV9LCJjb21wdXRlTGltaXQiOnsibGxtVG9rZW5zIjoxMDAwLCJ3ZWJSZXF1ZXN0cyI6MTAsImV4ZWN1dGlvblRpbWVNcyI6NjAwMDB9LCJkYXRhQWNjZXNzIjp7ImVtYWlsIjoicmVhZCJ9LCJvdXRwdXRIYW5kbGluZyI6ImludGVybmFsLW9ubHkiLCJodW1hbkdhdGVzIjpbInNlbmQtZW1haWwiXSwiY2hlY2twb2ludEludGVydmFsTXMiOjEwMDAwLCJyZXF1aXJlU2FuZGJveCI6dHJ1ZSwib25CZWhhbGZPZiI6ImRpZDphcm9oYTpndWVzdC1ib2IiLCJyb29tSWQiOiJyb29tLTdmM2EifSwiZ3JhbnRlZSI6ImRpZDphcm9oYTp6SHl4NjJ3UFFHeXZYQ29paFpxMUJyYlVqQlJoMkx1TnhXaWlxTWtmQXVTWnIiLCJncmFudG9yIjoiZGlkOmFyb2hhOno1ODZaN0gydnBYOXFOaE4yVDRlOVV0dWdpZTNvZ2pieHpHYU10TTNFNkhSNSIsImlzc3VlZEF0IjoiMjAyNi0wMS0wMVQwMDowMDowMS4wMDBaIiwiZXhwaXJlc0F0IjoiMjA5OC0wMS0wMVQwMDowMDowMC4wMDBaIiwicGFyZW50TWFuZGF0ZUlkIjoiMDAwMDAwMDAtMDAwMC00MDAwLTgwMDAtMDAwMDAwMDAwMGExIiwibWFuZGF0ZUlkIjoiMDAwMDAwMDAtMDAwMC00MDAwLTgwMDAtMDAwMDAwMDAwMGEyIn0sInNpZ25hdHVyZSI6InZZTkxGQVVFY25wSDd6d0F1cGRkdkw5bW1ucWlVZTZXM3JKOUhKbTFjMzdIb1dIbVlkZkxVdzhzczUyU3JwdWJRZnhoQ2NaU203Q0pWU21sS1ltNkN3In0",
+      "signer": "agent",
+      "verifyAt": "2027-01-01T00:00:00.000Z",
+      "expected": {
+        "valid": true,
+        "reason": null
+      }
+    },
+    {
+      "name": "valid-hybrid",
+      "token": "eyJ2IjoyLCJtYW5kYXRlIjp7Im1hbmRhdGVUeXBlIjoiaHlicmlkIiwibWFuZGF0ZVRpZXIiOiJpbnRlbnQiLCJhbGxvd2VkIjpbImJvb2stZmxpZ2h0Il0sInRhc2tDb25zdHJhaW50cyI6eyJyZXZlcnNpYmxlT25seSI6dHJ1ZX0sInNwZW5kaW5nQ29uc3RyYWludHMiOnsic3BlbmRMaW1pdFVzZCI6NDIwLjA3LCJjdXJyZW5jeSI6IlVTRCIsImFsbG93ZWRNZXJjaGFudHMiOlsiZGlkOmFyb2hhOmFpcmxpbmUiXX0sImludmFyaWFudHMiOnsicGF5ZWUiOlsiZGlkOmFyb2hhOmFpcmxpbmUiXSwicGFyYW1ldGVycyI6eyJkZXN0aW5hdGlvbiI6IkpGSyIsInNlYXRzIjoxLCJyZWZ1bmRhYmxlIjp0cnVlfX0sImdyYW50ZWUiOiJkaWQ6YXJvaGE6ejU4Nlo3SDJ2cFg5cU5oTjJUNGU5VXR1Z2llM29namJ4ekdhTXRNM0U2SFI1IiwiZ3JhbnRvciI6ImRpZDphcm9oYTp6RlZlbjNYNjY5eEx6c2k2TjJWOTFEb2l5ekh6ZzF1QWdxaVQ4alo5blM5NloiLCJpc3N1ZWRBdCI6IjIwMjYtMDEtMDFUMDA6MDA6MDAuMDAwWiIsImV4cGlyZXNBdCI6IjIwMjctMDEtMDFUMDA6MDA6MDAuMDAwWiIsInBhcmVudE1hbmRhdGVJZCI6bnVsbCwibWFuZGF0ZUlkIjoiMDAwMDAwMDAtMDAwMC00MDAwLTgwMDAtMDAwMDAwMDAwMGIxIn0sInNpZ25hdHVyZSI6IjQ4aGVXT1lmZWhNVWduZ21sT3RibUxoSGR4TzhacnJiR1V4bVlGeklvZmpMeEQwbXZCbExxWlFfQzlld0V5ZWdRcXlLUmNDUG8xWUtMTEd6cjRqTUJnIn0",
+      "signer": "human",
+      "verifyAt": "2026-06-01T00:00:00.000Z",
+      "expected": {
+        "valid": true,
+        "reason": null
+      }
+    },
+    {
+      "name": "valid-legacy-v1",
+      "token": "eyJtYW5kYXRlIjp7Im1hbmRhdGVUeXBlIjoidGFzayIsIm1hbmRhdGVUaWVyIjoiaW50ZW50IiwiYWxsb3dlZCI6WyJ3ZWItc2VhcmNoIiwiZHJhZnQtZW1haWwiLCJzZW5kLWVtYWlsIiwicmVhZC1jYWxlbmRhciJdLCJibG9ja2VkIjpbImRlbGV0ZS1maWxlcyJdLCJ0YXNrQ29uc3RyYWludHMiOnsiYWN0aW9uTGltaXRzIjp7InNlbmQtZW1haWwiOjMsIndlYi1zZWFyY2giOjIwfSwiY29tcHV0ZUxpbWl0Ijp7ImxsbVRva2VucyI6NTAwMDAsIndlYlJlcXVlc3RzIjo0MCwiZXhlY3V0aW9uVGltZU1zIjo2MDAwMDB9LCJkYXRhQWNjZXNzIjp7ImNhbGVuZGFyIjoicmVhZCIsImVtYWlsIjoicmVhZC13cml0ZSIsImZpbGVzOi9kcmFmdHMiOiJ3cml0ZSJ9LCJvdXRwdXRIYW5kbGluZyI6InVzZXItb25seSIsInJldmVyc2libGVPbmx5IjpmYWxzZSwiaHVtYW5HYXRlcyI6WyJzZW5kLWVtYWlsIl0sImNoZWNrcG9pbnRJbnRlcnZhbE1zIjozMDAwMCwicmVxdWlyZVNhbmRib3giOnRydWUsIm1heERlbGVnYXRpb25EZXB0aCI6Miwib25CZWhhbGZPZiI6ImRpZDphcm9oYTpndWVzdC1ib2IiLCJyb29tSWQiOiJyb29tLTdmM2EifSwiZ3JhbnRlZSI6ImRpZDphcm9oYTp6NTg2WjdIMnZwWDlxTmhOMlQ0ZTlVdHVnaWUzb2dqYnh6R2FNdE0zRTZIUjUiLCJncmFudG9yIjoiZGlkOmFyb2hhOnpGVmVuM1g2Njl4THpzaTZOMlY5MURvaXl6SHpnMXVBZ3FpVDhqWjluUzk2WiIsImlzc3VlZEF0IjoiMjAyNi0wMS0wMVQwMDowMDowMC4wMDBaIiwiZXhwaXJlc0F0IjoiMjA5OS0wMS0wMVQwMDowMDowMC4wMDBaIiwicGFyZW50TWFuZGF0ZUlkIjpudWxsLCJtYW5kYXRlSWQiOiIwMDAwMDAwMC0wMDAwLTQwMDAtODAwMC0wMDAwMDAwMDAwYTEifSwic2lnbmF0dXJlIjoiVjVxSjJ1eVdTNDg4T1pjTm5wVGZVN3NMVHNhT0dpdU1QZDFSM3dubkdqbmVidUhmcVpRS3BaNXpWcnlkRnRtSElTaXdpQnNCOHJFanhzUFM4aEZWRHcifQ",
+      "signer": "human",
+      "verifyAt": "2027-01-01T00:00:00.000Z",
+      "expected": {
+        "valid": true,
+        "reason": null
+      }
+    },
+    {
+      "name": "tampered-allowed-list",
+      "token": "eyJ2IjoyLCJtYW5kYXRlIjp7Im1hbmRhdGVUeXBlIjoidGFzayIsIm1hbmRhdGVUaWVyIjoiaW50ZW50IiwiYWxsb3dlZCI6WyJ3ZWItc2VhcmNoIiwiZHJhZnQtZW1haWwiLCJzZW5kLWVtYWlsIiwicmVhZC1jYWxlbmRhciIsImRlbGV0ZS1maWxlcyJdLCJibG9ja2VkIjpbImRlbGV0ZS1maWxlcyJdLCJ0YXNrQ29uc3RyYWludHMiOnsiYWN0aW9uTGltaXRzIjp7InNlbmQtZW1haWwiOjMsIndlYi1zZWFyY2giOjIwfSwiY29tcHV0ZUxpbWl0Ijp7ImxsbVRva2VucyI6NTAwMDAsIndlYlJlcXVlc3RzIjo0MCwiZXhlY3V0aW9uVGltZU1zIjo2MDAwMDB9LCJkYXRhQWNjZXNzIjp7ImNhbGVuZGFyIjoicmVhZCIsImVtYWlsIjoicmVhZC13cml0ZSIsImZpbGVzOi9kcmFmdHMiOiJ3cml0ZSJ9LCJvdXRwdXRIYW5kbGluZyI6InVzZXItb25seSIsInJldmVyc2libGVPbmx5IjpmYWxzZSwiaHVtYW5HYXRlcyI6WyJzZW5kLWVtYWlsIl0sImNoZWNrcG9pbnRJbnRlcnZhbE1zIjozMDAwMCwicmVxdWlyZVNhbmRib3giOnRydWUsIm1heERlbGVnYXRpb25EZXB0aCI6Miwib25CZWhhbGZPZiI6ImRpZDphcm9oYTpndWVzdC1ib2IiLCJyb29tSWQiOiJyb29tLTdmM2EifSwiZ3JhbnRlZSI6ImRpZDphcm9oYTp6NTg2WjdIMnZwWDlxTmhOMlQ0ZTlVdHVnaWUzb2dqYnh6R2FNdE0zRTZIUjUiLCJncmFudG9yIjoiZGlkOmFyb2hhOnpGVmVuM1g2Njl4THpzaTZOMlY5MURvaXl6SHpnMXVBZ3FpVDhqWjluUzk2WiIsImlzc3VlZEF0IjoiMjAyNi0wMS0wMVQwMDowMDowMC4wMDBaIiwiZXhwaXJlc0F0IjoiMjA5OS0wMS0wMVQwMDowMDowMC4wMDBaIiwicGFyZW50TWFuZGF0ZUlkIjpudWxsLCJtYW5kYXRlSWQiOiIwMDAwMDAwMC0wMDAwLTQwMDAtODAwMC0wMDAwMDAwMDAwYTEifSwic2lnbmF0dXJlIjoiWmJ2N3pRV1ZRTTlxdkJpd2Q2djZOcXlCSlhPQm54N0M0Y2dwdTZHVDA1ZmtkaTgxTXlzLUFPVXFEdGdjaWJwclVpMDQtRGFVX3BOV0hQaVFTWXhsQ1EifQ",
+      "signer": "human",
+      "verifyAt": "2027-01-01T00:00:00.000Z",
+      "expected": {
+        "valid": false,
+        "reason": "Invalid signature"
+      }
+    },
+    {
+      "name": "wrong-signer-key",
+      "token": "eyJ2IjoyLCJtYW5kYXRlIjp7Im1hbmRhdGVUeXBlIjoidGFzayIsIm1hbmRhdGVUaWVyIjoiaW50ZW50IiwiYWxsb3dlZCI6WyJ3ZWItc2VhcmNoIiwiZHJhZnQtZW1haWwiLCJzZW5kLWVtYWlsIiwicmVhZC1jYWxlbmRhciJdLCJibG9ja2VkIjpbImRlbGV0ZS1maWxlcyJdLCJ0YXNrQ29uc3RyYWludHMiOnsiYWN0aW9uTGltaXRzIjp7InNlbmQtZW1haWwiOjMsIndlYi1zZWFyY2giOjIwfSwiY29tcHV0ZUxpbWl0Ijp7ImxsbVRva2VucyI6NTAwMDAsIndlYlJlcXVlc3RzIjo0MCwiZXhlY3V0aW9uVGltZU1zIjo2MDAwMDB9LCJkYXRhQWNjZXNzIjp7ImNhbGVuZGFyIjoicmVhZCIsImVtYWlsIjoicmVhZC13cml0ZSIsImZpbGVzOi9kcmFmdHMiOiJ3cml0ZSJ9LCJvdXRwdXRIYW5kbGluZyI6InVzZXItb25seSIsInJldmVyc2libGVPbmx5IjpmYWxzZSwiaHVtYW5HYXRlcyI6WyJzZW5kLWVtYWlsIl0sImNoZWNrcG9pbnRJbnRlcnZhbE1zIjozMDAwMCwicmVxdWlyZVNhbmRib3giOnRydWUsIm1heERlbGVnYXRpb25EZXB0aCI6Miwib25CZWhhbGZPZiI6ImRpZDphcm9oYTpndWVzdC1ib2IiLCJyb29tSWQiOiJyb29tLTdmM2EifSwiZ3JhbnRlZSI6ImRpZDphcm9oYTp6NTg2WjdIMnZwWDlxTmhOMlQ0ZTlVdHVnaWUzb2dqYnh6R2FNdE0zRTZIUjUiLCJncmFudG9yIjoiZGlkOmFyb2hhOnpGVmVuM1g2Njl4THpzaTZOMlY5MURvaXl6SHpnMXVBZ3FpVDhqWjluUzk2WiIsImlzc3VlZEF0IjoiMjAyNi0wMS0wMVQwMDowMDowMC4wMDBaIiwiZXhwaXJlc0F0IjoiMjA5OS0wMS0wMVQwMDowMDowMC4wMDBaIiwicGFyZW50TWFuZGF0ZUlkIjpudWxsLCJtYW5kYXRlSWQiOiIwMDAwMDAwMC0wMDAwLTQwMDAtODAwMC0wMDAwMDAwMDAwYTEifSwic2lnbmF0dXJlIjoiWmJ2N3pRV1ZRTTlxdkJpd2Q2djZOcXlCSlhPQm54N0M0Y2dwdTZHVDA1ZmtkaTgxTXlzLUFPVXFEdGdjaWJwclVpMDQtRGFVX3BOV0hQaVFTWXhsQ1EifQ",
+      "signer": "agent",
+      "verifyAt": "2027-01-01T00:00:00.000Z",
+      "expected": {
+        "valid": false,
+        "reason": "Invalid signature"
+      }
+    },
+    {
+      "name": "no-purpose-tag",
+      "token": "eyJ2IjoyLCJtYW5kYXRlIjp7Im1hbmRhdGVUeXBlIjoidGFzayIsIm1hbmRhdGVUaWVyIjoiaW50ZW50IiwiYWxsb3dlZCI6WyJ3ZWItc2VhcmNoIiwiZHJhZnQtZW1haWwiLCJzZW5kLWVtYWlsIiwicmVhZC1jYWxlbmRhciJdLCJibG9ja2VkIjpbImRlbGV0ZS1maWxlcyJdLCJ0YXNrQ29uc3RyYWludHMiOnsiYWN0aW9uTGltaXRzIjp7InNlbmQtZW1haWwiOjMsIndlYi1zZWFyY2giOjIwfSwiY29tcHV0ZUxpbWl0Ijp7ImxsbVRva2VucyI6NTAwMDAsIndlYlJlcXVlc3RzIjo0MCwiZXhlY3V0aW9uVGltZU1zIjo2MDAwMDB9LCJkYXRhQWNjZXNzIjp7ImNhbGVuZGFyIjoicmVhZCIsImVtYWlsIjoicmVhZC13cml0ZSIsImZpbGVzOi9kcmFmdHMiOiJ3cml0ZSJ9LCJvdXRwdXRIYW5kbGluZyI6InVzZXItb25seSIsInJldmVyc2libGVPbmx5IjpmYWxzZSwiaHVtYW5HYXRlcyI6WyJzZW5kLWVtYWlsIl0sImNoZWNrcG9pbnRJbnRlcnZhbE1zIjozMDAwMCwicmVxdWlyZVNhbmRib3giOnRydWUsIm1heERlbGVnYXRpb25EZXB0aCI6Miwib25CZWhhbGZPZiI6ImRpZDphcm9oYTpndWVzdC1ib2IiLCJyb29tSWQiOiJyb29tLTdmM2EifSwiZ3JhbnRlZSI6ImRpZDphcm9oYTp6NTg2WjdIMnZwWDlxTmhOMlQ0ZTlVdHVnaWUzb2dqYnh6R2FNdE0zRTZIUjUiLCJncmFudG9yIjoiZGlkOmFyb2hhOnpGVmVuM1g2Njl4THpzaTZOMlY5MURvaXl6SHpnMXVBZ3FpVDhqWjluUzk2WiIsImlzc3VlZEF0IjoiMjAyNi0wMS0wMVQwMDowMDowMC4wMDBaIiwiZXhwaXJlc0F0IjoiMjA5OS0wMS0wMVQwMDowMDowMC4wMDBaIiwicGFyZW50TWFuZGF0ZUlkIjpudWxsLCJtYW5kYXRlSWQiOiIwMDAwMDAwMC0wMDAwLTQwMDAtODAwMC0wMDAwMDAwMDAwYTEifSwic2lnbmF0dXJlIjoiSlZhSFJMWnIweE9JUVdyVXZwMUFGVXYzMTJpTzhtSG5mQWFBMlA1dGw2UjljWS1TTFJiV1FqTHhsUUN1XzhCN21MdEZoaUdINmhrS2t2aWNueW9BQWcifQ",
+      "signer": "human",
+      "verifyAt": "2027-01-01T00:00:00.000Z",
+      "expected": {
+        "valid": false,
+        "reason": "Invalid signature"
+      }
+    },
+    {
+      "name": "v1-signature-claimed-as-v2",
+      "token": "eyJ2IjoyLCJtYW5kYXRlIjp7Im1hbmRhdGVUeXBlIjoidGFzayIsIm1hbmRhdGVUaWVyIjoiaW50ZW50IiwiYWxsb3dlZCI6WyJ3ZWItc2VhcmNoIiwiZHJhZnQtZW1haWwiLCJzZW5kLWVtYWlsIiwicmVhZC1jYWxlbmRhciJdLCJibG9ja2VkIjpbImRlbGV0ZS1maWxlcyJdLCJ0YXNrQ29uc3RyYWludHMiOnsiYWN0aW9uTGltaXRzIjp7InNlbmQtZW1haWwiOjMsIndlYi1zZWFyY2giOjIwfSwiY29tcHV0ZUxpbWl0Ijp7ImxsbVRva2VucyI6NTAwMDAsIndlYlJlcXVlc3RzIjo0MCwiZXhlY3V0aW9uVGltZU1zIjo2MDAwMDB9LCJkYXRhQWNjZXNzIjp7ImNhbGVuZGFyIjoicmVhZCIsImVtYWlsIjoicmVhZC13cml0ZSIsImZpbGVzOi9kcmFmdHMiOiJ3cml0ZSJ9LCJvdXRwdXRIYW5kbGluZyI6InVzZXItb25seSIsInJldmVyc2libGVPbmx5IjpmYWxzZSwiaHVtYW5HYXRlcyI6WyJzZW5kLWVtYWlsIl0sImNoZWNrcG9pbnRJbnRlcnZhbE1zIjozMDAwMCwicmVxdWlyZVNhbmRib3giOnRydWUsIm1heERlbGVnYXRpb25EZXB0aCI6Miwib25CZWhhbGZPZiI6ImRpZDphcm9oYTpndWVzdC1ib2IiLCJyb29tSWQiOiJyb29tLTdmM2EifSwiZ3JhbnRlZSI6ImRpZDphcm9oYTp6NTg2WjdIMnZwWDlxTmhOMlQ0ZTlVdHVnaWUzb2dqYnh6R2FNdE0zRTZIUjUiLCJncmFudG9yIjoiZGlkOmFyb2hhOnpGVmVuM1g2Njl4THpzaTZOMlY5MURvaXl6SHpnMXVBZ3FpVDhqWjluUzk2WiIsImlzc3VlZEF0IjoiMjAyNi0wMS0wMVQwMDowMDowMC4wMDBaIiwiZXhwaXJlc0F0IjoiMjA5OS0wMS0wMVQwMDowMDowMC4wMDBaIiwicGFyZW50TWFuZGF0ZUlkIjpudWxsLCJtYW5kYXRlSWQiOiIwMDAwMDAwMC0wMDAwLTQwMDAtODAwMC0wMDAwMDAwMDAwYTEifSwic2lnbmF0dXJlIjoiVjVxSjJ1eVdTNDg4T1pjTm5wVGZVN3NMVHNhT0dpdU1QZDFSM3dubkdqbmVidUhmcVpRS3BaNXpWcnlkRnRtSElTaXdpQnNCOHJFanhzUFM4aEZWRHcifQ",
+      "signer": "human",
+      "verifyAt": "2027-01-01T00:00:00.000Z",
+      "expected": {
+        "valid": false,
+        "reason": "Invalid signature"
+      }
+    },
+    {
+      "name": "expired",
+      "token": "eyJ2IjoyLCJtYW5kYXRlIjp7Im1hbmRhdGVUeXBlIjoiaHlicmlkIiwibWFuZGF0ZVRpZXIiOiJpbnRlbnQiLCJhbGxvd2VkIjpbImJvb2stZmxpZ2h0Il0sInRhc2tDb25zdHJhaW50cyI6eyJyZXZlcnNpYmxlT25seSI6dHJ1ZX0sInNwZW5kaW5nQ29uc3RyYWludHMiOnsic3BlbmRMaW1pdFVzZCI6NDIwLjA3LCJjdXJyZW5jeSI6IlVTRCIsImFsbG93ZWRNZXJjaGFudHMiOlsiZGlkOmFyb2hhOmFpcmxpbmUiXX0sImludmFyaWFudHMiOnsicGF5ZWUiOlsiZGlkOmFyb2hhOmFpcmxpbmUiXSwicGFyYW1ldGVycyI6eyJkZXN0aW5hdGlvbiI6IkpGSyIsInNlYXRzIjoxLCJyZWZ1bmRhYmxlIjp0cnVlfX0sImdyYW50ZWUiOiJkaWQ6YXJvaGE6ejU4Nlo3SDJ2cFg5cU5oTjJUNGU5VXR1Z2llM29namJ4ekdhTXRNM0U2SFI1IiwiZ3JhbnRvciI6ImRpZDphcm9oYTp6RlZlbjNYNjY5eEx6c2k2TjJWOTFEb2l5ekh6ZzF1QWdxaVQ4alo5blM5NloiLCJpc3N1ZWRBdCI6IjIwMjYtMDEtMDFUMDA6MDA6MDAuMDAwWiIsImV4cGlyZXNBdCI6IjIwMjctMDEtMDFUMDA6MDA6MDAuMDAwWiIsInBhcmVudE1hbmRhdGVJZCI6bnVsbCwibWFuZGF0ZUlkIjoiMDAwMDAwMDAtMDAwMC00MDAwLTgwMDAtMDAwMDAwMDAwMGIxIn0sInNpZ25hdHVyZSI6IjQ4aGVXT1lmZWhNVWduZ21sT3RibUxoSGR4TzhacnJiR1V4bVlGeklvZmpMeEQwbXZCbExxWlFfQzlld0V5ZWdRcXlLUmNDUG8xWUtMTEd6cjRqTUJnIn0",
+      "signer": "human",
+      "verifyAt": "2027-01-01T00:00:00.001Z",
+      "expected": {
+        "valid": false,
+        "reason": "Task mandate expired"
+      }
+    },
+    {
+      "name": "issued-in-future",
+      "token": "eyJ2IjoyLCJtYW5kYXRlIjp7Im1hbmRhdGVUeXBlIjoidGFzayIsIm1hbmRhdGVUaWVyIjoiaW50ZW50IiwiYWxsb3dlZCI6WyJ3ZWItc2VhcmNoIiwiZHJhZnQtZW1haWwiLCJzZW5kLWVtYWlsIiwicmVhZC1jYWxlbmRhciJdLCJibG9ja2VkIjpbImRlbGV0ZS1maWxlcyJdLCJ0YXNrQ29uc3RyYWludHMiOnsiYWN0aW9uTGltaXRzIjp7InNlbmQtZW1haWwiOjMsIndlYi1zZWFyY2giOjIwfSwiY29tcHV0ZUxpbWl0Ijp7ImxsbVRva2VucyI6NTAwMDAsIndlYlJlcXVlc3RzIjo0MCwiZXhlY3V0aW9uVGltZU1zIjo2MDAwMDB9LCJkYXRhQWNjZXNzIjp7ImNhbGVuZGFyIjoicmVhZCIsImVtYWlsIjoicmVhZC13cml0ZSIsImZpbGVzOi9kcmFmdHMiOiJ3cml0ZSJ9LCJvdXRwdXRIYW5kbGluZyI6InVzZXItb25seSIsInJldmVyc2libGVPbmx5IjpmYWxzZSwiaHVtYW5HYXRlcyI6WyJzZW5kLWVtYWlsIl0sImNoZWNrcG9pbnRJbnRlcnZhbE1zIjozMDAwMCwicmVxdWlyZVNhbmRib3giOnRydWUsIm1heERlbGVnYXRpb25EZXB0aCI6Miwib25CZWhhbGZPZiI6ImRpZDphcm9oYTpndWVzdC1ib2IiLCJyb29tSWQiOiJyb29tLTdmM2EifSwiZ3JhbnRlZSI6ImRpZDphcm9oYTp6NTg2WjdIMnZwWDlxTmhOMlQ0ZTlVdHVnaWUzb2dqYnh6R2FNdE0zRTZIUjUiLCJncmFudG9yIjoiZGlkOmFyb2hhOnpGVmVuM1g2Njl4THpzaTZOMlY5MURvaXl6SHpnMXVBZ3FpVDhqWjluUzk2WiIsImlzc3VlZEF0IjoiMjAyNi0wMS0wMVQwMDowMDowMC4wMDBaIiwiZXhwaXJlc0F0IjoiMjA5OS0wMS0wMVQwMDowMDowMC4wMDBaIiwicGFyZW50TWFuZGF0ZUlkIjpudWxsLCJtYW5kYXRlSWQiOiIwMDAwMDAwMC0wMDAwLTQwMDAtODAwMC0wMDAwMDAwMDAwYTEifSwic2lnbmF0dXJlIjoiWmJ2N3pRV1ZRTTlxdkJpd2Q2djZOcXlCSlhPQm54N0M0Y2dwdTZHVDA1ZmtkaTgxTXlzLUFPVXFEdGdjaWJwclVpMDQtRGFVX3BOV0hQaVFTWXhsQ1EifQ",
+      "signer": "human",
+      "verifyAt": "2025-12-31T23:59:00.000Z",
+      "expected": {
+        "valid": false,
+        "reason": "Task mandate issuedAt 2026-01-01T00:00:00.000Z is in the future"
+      }
+    },
+    {
+      "name": "grantee-mismatch",
+      "token": "eyJ2IjoyLCJtYW5kYXRlIjp7Im1hbmRhdGVUeXBlIjoidGFzayIsIm1hbmRhdGVUaWVyIjoiaW50ZW50IiwiYWxsb3dlZCI6WyJ3ZWItc2VhcmNoIiwiZHJhZnQtZW1haWwiLCJzZW5kLWVtYWlsIiwicmVhZC1jYWxlbmRhciJdLCJibG9ja2VkIjpbImRlbGV0ZS1maWxlcyJdLCJ0YXNrQ29uc3RyYWludHMiOnsiYWN0aW9uTGltaXRzIjp7InNlbmQtZW1haWwiOjMsIndlYi1zZWFyY2giOjIwfSwiY29tcHV0ZUxpbWl0Ijp7ImxsbVRva2VucyI6NTAwMDAsIndlYlJlcXVlc3RzIjo0MCwiZXhlY3V0aW9uVGltZU1zIjo2MDAwMDB9LCJkYXRhQWNjZXNzIjp7ImNhbGVuZGFyIjoicmVhZCIsImVtYWlsIjoicmVhZC13cml0ZSIsImZpbGVzOi9kcmFmdHMiOiJ3cml0ZSJ9LCJvdXRwdXRIYW5kbGluZyI6InVzZXItb25seSIsInJldmVyc2libGVPbmx5IjpmYWxzZSwiaHVtYW5HYXRlcyI6WyJzZW5kLWVtYWlsIl0sImNoZWNrcG9pbnRJbnRlcnZhbE1zIjozMDAwMCwicmVxdWlyZVNhbmRib3giOnRydWUsIm1heERlbGVnYXRpb25EZXB0aCI6Miwib25CZWhhbGZPZiI6ImRpZDphcm9oYTpndWVzdC1ib2IiLCJyb29tSWQiOiJyb29tLTdmM2EifSwiZ3JhbnRlZSI6ImRpZDphcm9oYTp6NTg2WjdIMnZwWDlxTmhOMlQ0ZTlVdHVnaWUzb2dqYnh6R2FNdE0zRTZIUjUiLCJncmFudG9yIjoiZGlkOmFyb2hhOnpGVmVuM1g2Njl4THpzaTZOMlY5MURvaXl6SHpnMXVBZ3FpVDhqWjluUzk2WiIsImlzc3VlZEF0IjoiMjAyNi0wMS0wMVQwMDowMDowMC4wMDBaIiwiZXhwaXJlc0F0IjoiMjA5OS0wMS0wMVQwMDowMDowMC4wMDBaIiwicGFyZW50TWFuZGF0ZUlkIjpudWxsLCJtYW5kYXRlSWQiOiIwMDAwMDAwMC0wMDAwLTQwMDAtODAwMC0wMDAwMDAwMDAwYTEifSwic2lnbmF0dXJlIjoiWmJ2N3pRV1ZRTTlxdkJpd2Q2djZOcXlCSlhPQm54N0M0Y2dwdTZHVDA1ZmtkaTgxTXlzLUFPVXFEdGdjaWJwclVpMDQtRGFVX3BOV0hQaVFTWXhsQ1EifQ",
+      "signer": "human",
+      "verifyAt": "2027-01-01T00:00:00.000Z",
+      "expectedGrantee": "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr",
+      "expected": {
+        "valid": false,
+        "reason": "Grantee mismatch: expected did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr"
+      }
+    },
+    {
+      "name": "unsupported-version",
+      "token": "eyJ2IjozLCJtYW5kYXRlIjp7Im1hbmRhdGVUeXBlIjoidGFzayIsIm1hbmRhdGVUaWVyIjoiaW50ZW50IiwiYWxsb3dlZCI6WyJ3ZWItc2VhcmNoIiwiZHJhZnQtZW1haWwiLCJzZW5kLWVtYWlsIiwicmVhZC1jYWxlbmRhciJdLCJibG9ja2VkIjpbImRlbGV0ZS1maWxlcyJdLCJ0YXNrQ29uc3RyYWludHMiOnsiYWN0aW9uTGltaXRzIjp7InNlbmQtZW1haWwiOjMsIndlYi1zZWFyY2giOjIwfSwiY29tcHV0ZUxpbWl0Ijp7ImxsbVRva2VucyI6NTAwMDAsIndlYlJlcXVlc3RzIjo0MCwiZXhlY3V0aW9uVGltZU1zIjo2MDAwMDB9LCJkYXRhQWNjZXNzIjp7ImNhbGVuZGFyIjoicmVhZCIsImVtYWlsIjoicmVhZC13cml0ZSIsImZpbGVzOi9kcmFmdHMiOiJ3cml0ZSJ9LCJvdXRwdXRIYW5kbGluZyI6InVzZXItb25seSIsInJldmVyc2libGVPbmx5IjpmYWxzZSwiaHVtYW5HYXRlcyI6WyJzZW5kLWVtYWlsIl0sImNoZWNrcG9pbnRJbnRlcnZhbE1zIjozMDAwMCwicmVxdWlyZVNhbmRib3giOnRydWUsIm1heERlbGVnYXRpb25EZXB0aCI6Miwib25CZWhhbGZPZiI6ImRpZDphcm9oYTpndWVzdC1ib2IiLCJyb29tSWQiOiJyb29tLTdmM2EifSwiZ3JhbnRlZSI6ImRpZDphcm9oYTp6NTg2WjdIMnZwWDlxTmhOMlQ0ZTlVdHVnaWUzb2dqYnh6R2FNdE0zRTZIUjUiLCJncmFudG9yIjoiZGlkOmFyb2hhOnpGVmVuM1g2Njl4THpzaTZOMlY5MURvaXl6SHpnMXVBZ3FpVDhqWjluUzk2WiIsImlzc3VlZEF0IjoiMjAyNi0wMS0wMVQwMDowMDowMC4wMDBaIiwiZXhwaXJlc0F0IjoiMjA5OS0wMS0wMVQwMDowMDowMC4wMDBaIiwicGFyZW50TWFuZGF0ZUlkIjpudWxsLCJtYW5kYXRlSWQiOiIwMDAwMDAwMC0wMDAwLTQwMDAtODAwMC0wMDAwMDAwMDAwYTEifSwic2lnbmF0dXJlIjoiWmJ2N3pRV1ZRTTlxdkJpd2Q2djZOcXlCSlhPQm54N0M0Y2dwdTZHVDA1ZmtkaTgxTXlzLUFPVXFEdGdjaWJwclVpMDQtRGFVX3BOV0hQaVFTWXhsQ1EifQ",
+      "signer": "human",
+      "verifyAt": "2027-01-01T00:00:00.000Z",
+      "expected": {
+        "valid": false,
+        "reason": "Unsupported task mandate token version: 3"
+      }
+    },
+    {
+      "name": "bad-shape-onBehalfOf",
+      "token": "eyJ2IjoyLCJtYW5kYXRlIjp7Im1hbmRhdGVUeXBlIjoidGFzayIsIm1hbmRhdGVUaWVyIjoiaW50ZW50IiwiYWxsb3dlZCI6WyJ3ZWItc2VhcmNoIiwiZHJhZnQtZW1haWwiLCJzZW5kLWVtYWlsIiwicmVhZC1jYWxlbmRhciJdLCJibG9ja2VkIjpbImRlbGV0ZS1maWxlcyJdLCJ0YXNrQ29uc3RyYWludHMiOnsib25CZWhhbGZPZiI6IiJ9LCJncmFudGVlIjoiZGlkOmFyb2hhOno1ODZaN0gydnBYOXFOaE4yVDRlOVV0dWdpZTNvZ2pieHpHYU10TTNFNkhSNSIsImdyYW50b3IiOiJkaWQ6YXJvaGE6ekZWZW4zWDY2OXhMenNpNk4yVjkxRG9peXpIemcxdUFncWlUOGpaOW5TOTZaIiwiaXNzdWVkQXQiOiIyMDI2LTAxLTAxVDAwOjAwOjAwLjAwMFoiLCJleHBpcmVzQXQiOiIyMDk5LTAxLTAxVDAwOjAwOjAwLjAwMFoiLCJwYXJlbnRNYW5kYXRlSWQiOm51bGwsIm1hbmRhdGVJZCI6IjAwMDAwMDAwLTAwMDAtNDAwMC04MDAwLTAwMDAwMDAwMDBhMSJ9LCJzaWduYXR1cmUiOiJaYnY3elFXVlFNOXF2Qml3ZDZ2Nk5xeUJKWE9Cbng3QzRjZ3B1NkdUMDVma2RpODFNeXMtQU9VcUR0Z2NpYnByVWkwNC1EYVVfcE5XSFBpUVNZeGxDUSJ9",
+      "signer": "human",
+      "verifyAt": "2027-01-01T00:00:00.000Z",
+      "expected": {
+        "valid": false,
+        "reason": "Malformed token: taskConstraints.onBehalfOf must be a non-empty string"
+      }
+    }
+  ],
+  "narrowing": [
+    {
+      "name": "child-narrows-root",
+      "parent": {
+        "mandateType": "task",
+        "mandateTier": "intent",
+        "allowed": [
+          "web-search",
+          "draft-email",
+          "send-email",
+          "read-calendar"
+        ],
+        "blocked": [
+          "delete-files"
+        ],
+        "taskConstraints": {
+          "actionLimits": {
+            "send-email": 3,
+            "web-search": 20
+          },
+          "computeLimit": {
+            "llmTokens": 50000,
+            "webRequests": 40,
+            "executionTimeMs": 600000
+          },
+          "dataAccess": {
+            "calendar": "read",
+            "email": "read-write",
+            "files:/drafts": "write"
+          },
+          "outputHandling": "user-only",
+          "reversibleOnly": false,
+          "humanGates": [
+            "send-email"
+          ],
+          "checkpointIntervalMs": 30000,
+          "requireSandbox": true,
+          "maxDelegationDepth": 2,
+          "onBehalfOf": "did:aroha:guest-bob",
+          "roomId": "room-7f3a"
+        },
+        "grantee": "did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5",
+        "grantor": "did:aroha:zFVen3X669xLzsi6N2V91DoiyzHzg1uAgqiT8jZ9nS96Z",
+        "issuedAt": "2026-01-01T00:00:00.000Z",
+        "expiresAt": "2099-01-01T00:00:00.000Z",
+        "parentMandateId": null,
+        "mandateId": "00000000-0000-4000-8000-0000000000a1"
+      },
+      "child": {
+        "mandateType": "task",
+        "mandateTier": "cart",
+        "allowed": [
+          "web-search",
+          "send-email"
+        ],
+        "blocked": [
+          "delete-files"
+        ],
+        "taskConstraints": {
+          "actionLimits": {
+            "send-email": 1,
+            "web-search": 5.5
+          },
+          "computeLimit": {
+            "llmTokens": 1000,
+            "webRequests": 10,
+            "executionTimeMs": 60000
+          },
+          "dataAccess": {
+            "email": "read"
+          },
+          "outputHandling": "internal-only",
+          "humanGates": [
+            "send-email"
+          ],
+          "checkpointIntervalMs": 10000,
+          "requireSandbox": true,
+          "onBehalfOf": "did:aroha:guest-bob",
+          "roomId": "room-7f3a"
+        },
+        "grantee": "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr",
+        "grantor": "did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5",
+        "issuedAt": "2026-01-01T00:00:01.000Z",
+        "expiresAt": "2098-01-01T00:00:00.000Z",
+        "parentMandateId": "00000000-0000-4000-8000-0000000000a1",
+        "mandateId": "00000000-0000-4000-8000-0000000000a2"
+      },
+      "expectedReason": null
+    },
+    {
+      "name": "widened-child",
+      "parent": {
+        "mandateType": "task",
+        "mandateTier": "intent",
+        "allowed": [
+          "web-search",
+          "draft-email",
+          "send-email",
+          "read-calendar"
+        ],
+        "blocked": [
+          "delete-files"
+        ],
+        "taskConstraints": {
+          "actionLimits": {
+            "send-email": 3,
+            "web-search": 20
+          },
+          "computeLimit": {
+            "llmTokens": 50000,
+            "webRequests": 40,
+            "executionTimeMs": 600000
+          },
+          "dataAccess": {
+            "calendar": "read",
+            "email": "read-write",
+            "files:/drafts": "write"
+          },
+          "outputHandling": "user-only",
+          "reversibleOnly": false,
+          "humanGates": [
+            "send-email"
+          ],
+          "checkpointIntervalMs": 30000,
+          "requireSandbox": true,
+          "maxDelegationDepth": 2,
+          "onBehalfOf": "did:aroha:guest-bob",
+          "roomId": "room-7f3a"
+        },
+        "grantee": "did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5",
+        "grantor": "did:aroha:zFVen3X669xLzsi6N2V91DoiyzHzg1uAgqiT8jZ9nS96Z",
+        "issuedAt": "2026-01-01T00:00:00.000Z",
+        "expiresAt": "2099-01-01T00:00:00.000Z",
+        "parentMandateId": null,
+        "mandateId": "00000000-0000-4000-8000-0000000000a1"
+      },
+      "child": {
+        "mandateType": "task",
+        "mandateTier": "cart",
+        "allowed": [
+          "web-search",
+          "send-email"
+        ],
+        "blocked": [
+          "delete-files"
+        ],
+        "taskConstraints": {
+          "actionLimits": {
+            "send-email": 9,
+            "web-search": 5
+          },
+          "computeLimit": {
+            "llmTokens": 1000,
+            "webRequests": 10,
+            "executionTimeMs": 60000
+          },
+          "dataAccess": {
+            "email": "read"
+          },
+          "outputHandling": "internal-only",
+          "humanGates": [
+            "send-email"
+          ],
+          "checkpointIntervalMs": 10000,
+          "requireSandbox": true,
+          "onBehalfOf": "did:aroha:guest-bob"
+        },
+        "grantee": "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr",
+        "grantor": "did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5",
+        "issuedAt": "2026-01-01T00:00:01.000Z",
+        "expiresAt": "2098-01-01T00:00:00.000Z",
+        "parentMandateId": "00000000-0000-4000-8000-0000000000a1",
+        "mandateId": "00000000-0000-4000-8000-0000000000a3"
+      },
+      "expectedReason": "Cannot attenuate task mandate: child actionLimits[\"send-email\"] (9) exceeds parent (3)"
+    },
+    {
+      "name": "drops-room",
+      "parent": {
+        "mandateType": "task",
+        "mandateTier": "intent",
+        "allowed": [
+          "web-search",
+          "draft-email",
+          "send-email",
+          "read-calendar"
+        ],
+        "blocked": [
+          "delete-files"
+        ],
+        "taskConstraints": {
+          "actionLimits": {
+            "send-email": 3,
+            "web-search": 20
+          },
+          "computeLimit": {
+            "llmTokens": 50000,
+            "webRequests": 40,
+            "executionTimeMs": 600000
+          },
+          "dataAccess": {
+            "calendar": "read",
+            "email": "read-write",
+            "files:/drafts": "write"
+          },
+          "outputHandling": "user-only",
+          "reversibleOnly": false,
+          "humanGates": [
+            "send-email"
+          ],
+          "checkpointIntervalMs": 30000,
+          "requireSandbox": true,
+          "maxDelegationDepth": 2,
+          "onBehalfOf": "did:aroha:guest-bob",
+          "roomId": "room-7f3a"
+        },
+        "grantee": "did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5",
+        "grantor": "did:aroha:zFVen3X669xLzsi6N2V91DoiyzHzg1uAgqiT8jZ9nS96Z",
+        "issuedAt": "2026-01-01T00:00:00.000Z",
+        "expiresAt": "2099-01-01T00:00:00.000Z",
+        "parentMandateId": null,
+        "mandateId": "00000000-0000-4000-8000-0000000000a1"
+      },
+      "child": {
+        "mandateType": "task",
+        "mandateTier": "cart",
+        "allowed": [
+          "web-search",
+          "send-email"
+        ],
+        "blocked": [
+          "delete-files"
+        ],
+        "taskConstraints": {
+          "actionLimits": {
+            "send-email": 1,
+            "web-search": 5.5
+          },
+          "computeLimit": {
+            "llmTokens": 1000,
+            "webRequests": 10,
+            "executionTimeMs": 60000
+          },
+          "dataAccess": {
+            "email": "read"
+          },
+          "outputHandling": "internal-only",
+          "humanGates": [
+            "send-email"
+          ],
+          "checkpointIntervalMs": 10000,
+          "requireSandbox": true,
+          "onBehalfOf": "did:aroha:guest-bob"
+        },
+        "grantee": "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr",
+        "grantor": "did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5",
+        "issuedAt": "2026-01-01T00:00:01.000Z",
+        "expiresAt": "2098-01-01T00:00:00.000Z",
+        "parentMandateId": "00000000-0000-4000-8000-0000000000a1",
+        "mandateId": "00000000-0000-4000-8000-0000000000a2"
+      },
+      "expectedReason": "Cannot attenuate task mandate: child roomId (unset) does not keep the parent's roomId (room-7f3a)"
+    },
+    {
+      "name": "changes-onBehalfOf",
+      "parent": {
+        "mandateType": "task",
+        "mandateTier": "intent",
+        "allowed": [
+          "web-search",
+          "draft-email",
+          "send-email",
+          "read-calendar"
+        ],
+        "blocked": [
+          "delete-files"
+        ],
+        "taskConstraints": {
+          "actionLimits": {
+            "send-email": 3,
+            "web-search": 20
+          },
+          "computeLimit": {
+            "llmTokens": 50000,
+            "webRequests": 40,
+            "executionTimeMs": 600000
+          },
+          "dataAccess": {
+            "calendar": "read",
+            "email": "read-write",
+            "files:/drafts": "write"
+          },
+          "outputHandling": "user-only",
+          "reversibleOnly": false,
+          "humanGates": [
+            "send-email"
+          ],
+          "checkpointIntervalMs": 30000,
+          "requireSandbox": true,
+          "maxDelegationDepth": 2,
+          "onBehalfOf": "did:aroha:guest-bob",
+          "roomId": "room-7f3a"
+        },
+        "grantee": "did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5",
+        "grantor": "did:aroha:zFVen3X669xLzsi6N2V91DoiyzHzg1uAgqiT8jZ9nS96Z",
+        "issuedAt": "2026-01-01T00:00:00.000Z",
+        "expiresAt": "2099-01-01T00:00:00.000Z",
+        "parentMandateId": null,
+        "mandateId": "00000000-0000-4000-8000-0000000000a1"
+      },
+      "child": {
+        "mandateType": "task",
+        "mandateTier": "cart",
+        "allowed": [
+          "web-search",
+          "send-email"
+        ],
+        "blocked": [
+          "delete-files"
+        ],
+        "taskConstraints": {
+          "actionLimits": {
+            "send-email": 1,
+            "web-search": 5.5
+          },
+          "computeLimit": {
+            "llmTokens": 1000,
+            "webRequests": 10,
+            "executionTimeMs": 60000
+          },
+          "dataAccess": {
+            "email": "read"
+          },
+          "outputHandling": "internal-only",
+          "humanGates": [
+            "send-email"
+          ],
+          "checkpointIntervalMs": 10000,
+          "requireSandbox": true,
+          "onBehalfOf": "did:aroha:mallory",
+          "roomId": "room-7f3a"
+        },
+        "grantee": "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr",
+        "grantor": "did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5",
+        "issuedAt": "2026-01-01T00:00:01.000Z",
+        "expiresAt": "2098-01-01T00:00:00.000Z",
+        "parentMandateId": "00000000-0000-4000-8000-0000000000a1",
+        "mandateId": "00000000-0000-4000-8000-0000000000a2"
+      },
+      "expectedReason": "Cannot attenuate task mandate: child onBehalfOf (did:aroha:mallory) does not keep the parent's onBehalfOf (did:aroha:guest-bob)"
+    },
+    {
+      "name": "adds-capability",
+      "parent": {
+        "mandateType": "task",
+        "mandateTier": "intent",
+        "allowed": [
+          "web-search",
+          "draft-email",
+          "send-email",
+          "read-calendar"
+        ],
+        "blocked": [
+          "delete-files"
+        ],
+        "taskConstraints": {
+          "actionLimits": {
+            "send-email": 3,
+            "web-search": 20
+          },
+          "computeLimit": {
+            "llmTokens": 50000,
+            "webRequests": 40,
+            "executionTimeMs": 600000
+          },
+          "dataAccess": {
+            "calendar": "read",
+            "email": "read-write",
+            "files:/drafts": "write"
+          },
+          "outputHandling": "user-only",
+          "reversibleOnly": false,
+          "humanGates": [
+            "send-email"
+          ],
+          "checkpointIntervalMs": 30000,
+          "requireSandbox": true,
+          "maxDelegationDepth": 2,
+          "onBehalfOf": "did:aroha:guest-bob",
+          "roomId": "room-7f3a"
+        },
+        "grantee": "did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5",
+        "grantor": "did:aroha:zFVen3X669xLzsi6N2V91DoiyzHzg1uAgqiT8jZ9nS96Z",
+        "issuedAt": "2026-01-01T00:00:00.000Z",
+        "expiresAt": "2099-01-01T00:00:00.000Z",
+        "parentMandateId": null,
+        "mandateId": "00000000-0000-4000-8000-0000000000a1"
+      },
+      "child": {
+        "mandateType": "task",
+        "mandateTier": "cart",
+        "allowed": [
+          "web-search",
+          "delete-files"
+        ],
+        "blocked": [
+          "delete-files"
+        ],
+        "taskConstraints": {
+          "actionLimits": {
+            "send-email": 1,
+            "web-search": 5.5
+          },
+          "computeLimit": {
+            "llmTokens": 1000,
+            "webRequests": 10,
+            "executionTimeMs": 60000
+          },
+          "dataAccess": {
+            "email": "read"
+          },
+          "outputHandling": "internal-only",
+          "humanGates": [
+            "send-email"
+          ],
+          "checkpointIntervalMs": 10000,
+          "requireSandbox": true,
+          "onBehalfOf": "did:aroha:guest-bob",
+          "roomId": "room-7f3a"
+        },
+        "grantee": "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr",
+        "grantor": "did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5",
+        "issuedAt": "2026-01-01T00:00:01.000Z",
+        "expiresAt": "2098-01-01T00:00:00.000Z",
+        "parentMandateId": "00000000-0000-4000-8000-0000000000a1",
+        "mandateId": "00000000-0000-4000-8000-0000000000a2"
+      },
+      "expectedReason": "Cannot attenuate task mandate: child allowed includes \"delete-files\" which is not in parent's allowed list"
+    },
+    {
+      "name": "drops-blocked",
+      "parent": {
+        "mandateType": "task",
+        "mandateTier": "intent",
+        "allowed": [
+          "web-search",
+          "draft-email",
+          "send-email",
+          "read-calendar"
+        ],
+        "blocked": [
+          "delete-files"
+        ],
+        "taskConstraints": {
+          "actionLimits": {
+            "send-email": 3,
+            "web-search": 20
+          },
+          "computeLimit": {
+            "llmTokens": 50000,
+            "webRequests": 40,
+            "executionTimeMs": 600000
+          },
+          "dataAccess": {
+            "calendar": "read",
+            "email": "read-write",
+            "files:/drafts": "write"
+          },
+          "outputHandling": "user-only",
+          "reversibleOnly": false,
+          "humanGates": [
+            "send-email"
+          ],
+          "checkpointIntervalMs": 30000,
+          "requireSandbox": true,
+          "maxDelegationDepth": 2,
+          "onBehalfOf": "did:aroha:guest-bob",
+          "roomId": "room-7f3a"
+        },
+        "grantee": "did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5",
+        "grantor": "did:aroha:zFVen3X669xLzsi6N2V91DoiyzHzg1uAgqiT8jZ9nS96Z",
+        "issuedAt": "2026-01-01T00:00:00.000Z",
+        "expiresAt": "2099-01-01T00:00:00.000Z",
+        "parentMandateId": null,
+        "mandateId": "00000000-0000-4000-8000-0000000000a1"
+      },
+      "child": {
+        "mandateType": "task",
+        "mandateTier": "cart",
+        "allowed": [
+          "web-search",
+          "send-email"
+        ],
+        "blocked": [],
+        "taskConstraints": {
+          "actionLimits": {
+            "send-email": 1,
+            "web-search": 5.5
+          },
+          "computeLimit": {
+            "llmTokens": 1000,
+            "webRequests": 10,
+            "executionTimeMs": 60000
+          },
+          "dataAccess": {
+            "email": "read"
+          },
+          "outputHandling": "internal-only",
+          "humanGates": [
+            "send-email"
+          ],
+          "checkpointIntervalMs": 10000,
+          "requireSandbox": true,
+          "onBehalfOf": "did:aroha:guest-bob",
+          "roomId": "room-7f3a"
+        },
+        "grantee": "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr",
+        "grantor": "did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5",
+        "issuedAt": "2026-01-01T00:00:01.000Z",
+        "expiresAt": "2098-01-01T00:00:00.000Z",
+        "parentMandateId": "00000000-0000-4000-8000-0000000000a1",
+        "mandateId": "00000000-0000-4000-8000-0000000000a2"
+      },
+      "expectedReason": "Cannot attenuate task mandate: child drops parent's blocked capability \"delete-files\""
+    },
+    {
+      "name": "write-only-to-read",
+      "parent": {
+        "mandateType": "task",
+        "mandateTier": "intent",
+        "allowed": [
+          "web-search",
+          "draft-email",
+          "send-email",
+          "read-calendar"
+        ],
+        "blocked": [
+          "delete-files"
+        ],
+        "taskConstraints": {
+          "actionLimits": {
+            "send-email": 3,
+            "web-search": 20
+          },
+          "computeLimit": {
+            "llmTokens": 50000,
+            "webRequests": 40,
+            "executionTimeMs": 600000
+          },
+          "dataAccess": {
+            "calendar": "read",
+            "email": "read-write",
+            "files:/drafts": "write"
+          },
+          "outputHandling": "user-only",
+          "reversibleOnly": false,
+          "humanGates": [
+            "send-email"
+          ],
+          "checkpointIntervalMs": 30000,
+          "requireSandbox": true,
+          "maxDelegationDepth": 2,
+          "onBehalfOf": "did:aroha:guest-bob",
+          "roomId": "room-7f3a"
+        },
+        "grantee": "did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5",
+        "grantor": "did:aroha:zFVen3X669xLzsi6N2V91DoiyzHzg1uAgqiT8jZ9nS96Z",
+        "issuedAt": "2026-01-01T00:00:00.000Z",
+        "expiresAt": "2099-01-01T00:00:00.000Z",
+        "parentMandateId": null,
+        "mandateId": "00000000-0000-4000-8000-0000000000a1"
+      },
+      "child": {
+        "mandateType": "task",
+        "mandateTier": "cart",
+        "allowed": [
+          "web-search",
+          "send-email"
+        ],
+        "blocked": [
+          "delete-files"
+        ],
+        "taskConstraints": {
+          "actionLimits": {
+            "send-email": 1,
+            "web-search": 5.5
+          },
+          "computeLimit": {
+            "llmTokens": 1000,
+            "webRequests": 10,
+            "executionTimeMs": 60000
+          },
+          "dataAccess": {
+            "files:/drafts": "read"
+          },
+          "outputHandling": "internal-only",
+          "humanGates": [
+            "send-email"
+          ],
+          "checkpointIntervalMs": 10000,
+          "requireSandbox": true,
+          "onBehalfOf": "did:aroha:guest-bob",
+          "roomId": "room-7f3a"
+        },
+        "grantee": "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr",
+        "grantor": "did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5",
+        "issuedAt": "2026-01-01T00:00:01.000Z",
+        "expiresAt": "2098-01-01T00:00:00.000Z",
+        "parentMandateId": "00000000-0000-4000-8000-0000000000a1",
+        "mandateId": "00000000-0000-4000-8000-0000000000a2"
+      },
+      "expectedReason": "Cannot attenuate task mandate: child dataAccess[\"files:/drafts\"] (read) exceeds parent (write)"
+    },
+    {
+      "name": "omits-compute-field",
+      "parent": {
+        "mandateType": "task",
+        "mandateTier": "intent",
+        "allowed": [
+          "web-search",
+          "draft-email",
+          "send-email",
+          "read-calendar"
+        ],
+        "blocked": [
+          "delete-files"
+        ],
+        "taskConstraints": {
+          "actionLimits": {
+            "send-email": 3,
+            "web-search": 20
+          },
+          "computeLimit": {
+            "llmTokens": 50000,
+            "webRequests": 40,
+            "executionTimeMs": 600000
+          },
+          "dataAccess": {
+            "calendar": "read",
+            "email": "read-write",
+            "files:/drafts": "write"
+          },
+          "outputHandling": "user-only",
+          "reversibleOnly": false,
+          "humanGates": [
+            "send-email"
+          ],
+          "checkpointIntervalMs": 30000,
+          "requireSandbox": true,
+          "maxDelegationDepth": 2,
+          "onBehalfOf": "did:aroha:guest-bob",
+          "roomId": "room-7f3a"
+        },
+        "grantee": "did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5",
+        "grantor": "did:aroha:zFVen3X669xLzsi6N2V91DoiyzHzg1uAgqiT8jZ9nS96Z",
+        "issuedAt": "2026-01-01T00:00:00.000Z",
+        "expiresAt": "2099-01-01T00:00:00.000Z",
+        "parentMandateId": null,
+        "mandateId": "00000000-0000-4000-8000-0000000000a1"
+      },
+      "child": {
+        "mandateType": "task",
+        "mandateTier": "cart",
+        "allowed": [
+          "web-search",
+          "send-email"
+        ],
+        "blocked": [
+          "delete-files"
+        ],
+        "taskConstraints": {
+          "actionLimits": {
+            "send-email": 1,
+            "web-search": 5.5
+          },
+          "computeLimit": {
+            "llmTokens": 1
+          },
+          "dataAccess": {
+            "email": "read"
+          },
+          "outputHandling": "internal-only",
+          "humanGates": [
+            "send-email"
+          ],
+          "checkpointIntervalMs": 10000,
+          "requireSandbox": true,
+          "onBehalfOf": "did:aroha:guest-bob",
+          "roomId": "room-7f3a"
+        },
+        "grantee": "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr",
+        "grantor": "did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5",
+        "issuedAt": "2026-01-01T00:00:01.000Z",
+        "expiresAt": "2098-01-01T00:00:00.000Z",
+        "parentMandateId": "00000000-0000-4000-8000-0000000000a1",
+        "mandateId": "00000000-0000-4000-8000-0000000000a2"
+      },
+      "expectedReason": "Cannot attenuate task mandate: parent sets computeLimit.webRequests (40) but child omits it"
+    },
+    {
+      "name": "outlives-parent",
+      "parent": {
+        "mandateType": "task",
+        "mandateTier": "intent",
+        "allowed": [
+          "web-search",
+          "draft-email",
+          "send-email",
+          "read-calendar"
+        ],
+        "blocked": [
+          "delete-files"
+        ],
+        "taskConstraints": {
+          "actionLimits": {
+            "send-email": 3,
+            "web-search": 20
+          },
+          "computeLimit": {
+            "llmTokens": 50000,
+            "webRequests": 40,
+            "executionTimeMs": 600000
+          },
+          "dataAccess": {
+            "calendar": "read",
+            "email": "read-write",
+            "files:/drafts": "write"
+          },
+          "outputHandling": "user-only",
+          "reversibleOnly": false,
+          "humanGates": [
+            "send-email"
+          ],
+          "checkpointIntervalMs": 30000,
+          "requireSandbox": true,
+          "maxDelegationDepth": 2,
+          "onBehalfOf": "did:aroha:guest-bob",
+          "roomId": "room-7f3a"
+        },
+        "grantee": "did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5",
+        "grantor": "did:aroha:zFVen3X669xLzsi6N2V91DoiyzHzg1uAgqiT8jZ9nS96Z",
+        "issuedAt": "2026-01-01T00:00:00.000Z",
+        "expiresAt": "2099-01-01T00:00:00.000Z",
+        "parentMandateId": null,
+        "mandateId": "00000000-0000-4000-8000-0000000000a1"
+      },
+      "child": {
+        "mandateType": "task",
+        "mandateTier": "cart",
+        "allowed": [
+          "web-search",
+          "send-email"
+        ],
+        "blocked": [
+          "delete-files"
+        ],
+        "taskConstraints": {
+          "actionLimits": {
+            "send-email": 1,
+            "web-search": 5.5
+          },
+          "computeLimit": {
+            "llmTokens": 1000,
+            "webRequests": 10,
+            "executionTimeMs": 60000
+          },
+          "dataAccess": {
+            "email": "read"
+          },
+          "outputHandling": "internal-only",
+          "humanGates": [
+            "send-email"
+          ],
+          "checkpointIntervalMs": 10000,
+          "requireSandbox": true,
+          "onBehalfOf": "did:aroha:guest-bob",
+          "roomId": "room-7f3a"
+        },
+        "grantee": "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr",
+        "grantor": "did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5",
+        "issuedAt": "2026-01-01T00:00:01.000Z",
+        "expiresAt": "2099-01-01T00:00:00.001Z",
+        "parentMandateId": "00000000-0000-4000-8000-0000000000a1",
+        "mandateId": "00000000-0000-4000-8000-0000000000a2"
+      },
+      "expectedReason": "Cannot attenuate task mandate: child expiry (2099-01-01T00:00:00.001Z) extends beyond parent (2099-01-01T00:00:00.000Z)"
+    },
+    {
+      "name": "hybrid-spend-widened",
+      "parent": {
+        "mandateType": "hybrid",
+        "mandateTier": "intent",
+        "allowed": [
+          "book-flight"
+        ],
+        "taskConstraints": {
+          "reversibleOnly": true
+        },
+        "spendingConstraints": {
+          "spendLimitUsd": 420.07,
+          "currency": "USD",
+          "allowedMerchants": [
+            "did:aroha:airline"
+          ]
+        },
+        "invariants": {
+          "payee": [
+            "did:aroha:airline"
+          ],
+          "parameters": {
+            "destination": "JFK",
+            "seats": 1,
+            "refundable": true
+          }
+        },
+        "grantee": "did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5",
+        "grantor": "did:aroha:zFVen3X669xLzsi6N2V91DoiyzHzg1uAgqiT8jZ9nS96Z",
+        "issuedAt": "2026-01-01T00:00:00.000Z",
+        "expiresAt": "2027-01-01T00:00:00.000Z",
+        "parentMandateId": null,
+        "mandateId": "00000000-0000-4000-8000-0000000000b1"
+      },
+      "child": {
+        "mandateType": "hybrid",
+        "mandateTier": "intent",
+        "allowed": [
+          "book-flight"
+        ],
+        "taskConstraints": {
+          "reversibleOnly": true
+        },
+        "spendingConstraints": {
+          "spendLimitUsd": 500,
+          "allowedMerchants": [
+            "did:aroha:airline"
+          ]
+        },
+        "invariants": {
+          "payee": [
+            "did:aroha:airline"
+          ],
+          "parameters": {
+            "destination": "JFK",
+            "seats": 1,
+            "refundable": true
+          }
+        },
+        "grantee": "did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5",
+        "grantor": "did:aroha:zFVen3X669xLzsi6N2V91DoiyzHzg1uAgqiT8jZ9nS96Z",
+        "issuedAt": "2026-01-01T00:00:00.000Z",
+        "expiresAt": "2027-01-01T00:00:00.000Z",
+        "parentMandateId": null,
+        "mandateId": "00000000-0000-4000-8000-0000000000b1"
+      },
+      "expectedReason": "Cannot attenuate task mandate: spendingConstraints: Cannot attenuate task → task: child spendLimitUsd (500) exceeds parent (420.07)"
+    },
+    {
+      "name": "hybrid-invariant-param-changed",
+      "parent": {
+        "mandateType": "hybrid",
+        "mandateTier": "intent",
+        "allowed": [
+          "book-flight"
+        ],
+        "taskConstraints": {
+          "reversibleOnly": true
+        },
+        "spendingConstraints": {
+          "spendLimitUsd": 420.07,
+          "currency": "USD",
+          "allowedMerchants": [
+            "did:aroha:airline"
+          ]
+        },
+        "invariants": {
+          "payee": [
+            "did:aroha:airline"
+          ],
+          "parameters": {
+            "destination": "JFK",
+            "seats": 1,
+            "refundable": true
+          }
+        },
+        "grantee": "did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5",
+        "grantor": "did:aroha:zFVen3X669xLzsi6N2V91DoiyzHzg1uAgqiT8jZ9nS96Z",
+        "issuedAt": "2026-01-01T00:00:00.000Z",
+        "expiresAt": "2027-01-01T00:00:00.000Z",
+        "parentMandateId": null,
+        "mandateId": "00000000-0000-4000-8000-0000000000b1"
+      },
+      "child": {
+        "mandateType": "hybrid",
+        "mandateTier": "intent",
+        "allowed": [
+          "book-flight"
+        ],
+        "taskConstraints": {
+          "reversibleOnly": true
+        },
+        "spendingConstraints": {
+          "spendLimitUsd": 420.07,
+          "currency": "USD",
+          "allowedMerchants": [
+            "did:aroha:airline"
+          ]
+        },
+        "invariants": {
+          "payee": [
+            "did:aroha:airline"
+          ],
+          "parameters": {
+            "destination": "JFK",
+            "seats": 1,
+            "refundable": "true"
+          }
+        },
+        "grantee": "did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5",
+        "grantor": "did:aroha:zFVen3X669xLzsi6N2V91DoiyzHzg1uAgqiT8jZ9nS96Z",
+        "issuedAt": "2026-01-01T00:00:00.000Z",
+        "expiresAt": "2027-01-01T00:00:00.000Z",
+        "parentMandateId": null,
+        "mandateId": "00000000-0000-4000-8000-0000000000b1"
+      },
+      "expectedReason": "Cannot attenuate task mandate: child parameter \"refundable\" does not match parent's fixed value"
+    },
+    {
+      "name": "hybrid-same",
+      "parent": {
+        "mandateType": "hybrid",
+        "mandateTier": "intent",
+        "allowed": [
+          "book-flight"
+        ],
+        "taskConstraints": {
+          "reversibleOnly": true
+        },
+        "spendingConstraints": {
+          "spendLimitUsd": 420.07,
+          "currency": "USD",
+          "allowedMerchants": [
+            "did:aroha:airline"
+          ]
+        },
+        "invariants": {
+          "payee": [
+            "did:aroha:airline"
+          ],
+          "parameters": {
+            "destination": "JFK",
+            "seats": 1,
+            "refundable": true
+          }
+        },
+        "grantee": "did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5",
+        "grantor": "did:aroha:zFVen3X669xLzsi6N2V91DoiyzHzg1uAgqiT8jZ9nS96Z",
+        "issuedAt": "2026-01-01T00:00:00.000Z",
+        "expiresAt": "2027-01-01T00:00:00.000Z",
+        "parentMandateId": null,
+        "mandateId": "00000000-0000-4000-8000-0000000000b1"
+      },
+      "child": {
+        "mandateType": "hybrid",
+        "mandateTier": "intent",
+        "allowed": [
+          "book-flight"
+        ],
+        "taskConstraints": {
+          "reversibleOnly": true
+        },
+        "spendingConstraints": {
+          "spendLimitUsd": 420.07,
+          "currency": "USD",
+          "allowedMerchants": [
+            "did:aroha:airline"
+          ]
+        },
+        "invariants": {
+          "payee": [
+            "did:aroha:airline"
+          ],
+          "parameters": {
+            "destination": "JFK",
+            "seats": 1,
+            "refundable": true
+          }
+        },
+        "grantee": "did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5",
+        "grantor": "did:aroha:zFVen3X669xLzsi6N2V91DoiyzHzg1uAgqiT8jZ9nS96Z",
+        "issuedAt": "2026-01-01T00:00:00.000Z",
+        "expiresAt": "2027-01-01T00:00:00.000Z",
+        "parentMandateId": null,
+        "mandateId": "00000000-0000-4000-8000-0000000000b1"
+      },
+      "expectedReason": null
+    },
+    {
+      "name": "empty-dataAccess-dropped",
+      "parent": {
+        "mandateType": "task",
+        "mandateTier": "intent",
+        "allowed": [
+          "web-search",
+          "draft-email",
+          "send-email",
+          "read-calendar"
+        ],
+        "blocked": [
+          "delete-files"
+        ],
+        "taskConstraints": {
+          "actionLimits": {
+            "send-email": 3,
+            "web-search": 20
+          },
+          "computeLimit": {
+            "llmTokens": 50000,
+            "webRequests": 40,
+            "executionTimeMs": 600000
+          },
+          "dataAccess": {},
+          "outputHandling": "user-only",
+          "reversibleOnly": false,
+          "humanGates": [
+            "send-email"
+          ],
+          "checkpointIntervalMs": 30000,
+          "requireSandbox": true,
+          "maxDelegationDepth": 2,
+          "onBehalfOf": "did:aroha:guest-bob",
+          "roomId": "room-7f3a"
+        },
+        "grantee": "did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5",
+        "grantor": "did:aroha:zFVen3X669xLzsi6N2V91DoiyzHzg1uAgqiT8jZ9nS96Z",
+        "issuedAt": "2026-01-01T00:00:00.000Z",
+        "expiresAt": "2099-01-01T00:00:00.000Z",
+        "parentMandateId": null,
+        "mandateId": "00000000-0000-4000-8000-0000000000a4"
+      },
+      "child": {
+        "mandateType": "task",
+        "mandateTier": "cart",
+        "allowed": [
+          "web-search",
+          "send-email"
+        ],
+        "blocked": [
+          "delete-files"
+        ],
+        "taskConstraints": {
+          "actionLimits": {
+            "send-email": 1,
+            "web-search": 5.5
+          },
+          "computeLimit": {
+            "llmTokens": 1000,
+            "webRequests": 10,
+            "executionTimeMs": 60000
+          },
+          "outputHandling": "internal-only",
+          "humanGates": [
+            "send-email"
+          ],
+          "checkpointIntervalMs": 10000,
+          "requireSandbox": true,
+          "onBehalfOf": "did:aroha:guest-bob",
+          "roomId": "room-7f3a"
+        },
+        "grantee": "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr",
+        "grantor": "did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5",
+        "issuedAt": "2026-01-01T00:00:01.000Z",
+        "expiresAt": "2098-01-01T00:00:00.000Z",
+        "parentMandateId": "00000000-0000-4000-8000-0000000000a1",
+        "mandateId": "00000000-0000-4000-8000-0000000000a2"
+      },
+      "expectedReason": "Cannot attenuate task mandate: parent restricts dataAccess but child omits it"
+    },
+    {
+      "name": "empty-dataAccess-kept",
+      "parent": {
+        "mandateType": "task",
+        "mandateTier": "intent",
+        "allowed": [
+          "web-search",
+          "draft-email",
+          "send-email",
+          "read-calendar"
+        ],
+        "blocked": [
+          "delete-files"
+        ],
+        "taskConstraints": {
+          "actionLimits": {
+            "send-email": 3,
+            "web-search": 20
+          },
+          "computeLimit": {
+            "llmTokens": 50000,
+            "webRequests": 40,
+            "executionTimeMs": 600000
+          },
+          "dataAccess": {},
+          "outputHandling": "user-only",
+          "reversibleOnly": false,
+          "humanGates": [
+            "send-email"
+          ],
+          "checkpointIntervalMs": 30000,
+          "requireSandbox": true,
+          "maxDelegationDepth": 2,
+          "onBehalfOf": "did:aroha:guest-bob",
+          "roomId": "room-7f3a"
+        },
+        "grantee": "did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5",
+        "grantor": "did:aroha:zFVen3X669xLzsi6N2V91DoiyzHzg1uAgqiT8jZ9nS96Z",
+        "issuedAt": "2026-01-01T00:00:00.000Z",
+        "expiresAt": "2099-01-01T00:00:00.000Z",
+        "parentMandateId": null,
+        "mandateId": "00000000-0000-4000-8000-0000000000a4"
+      },
+      "child": {
+        "mandateType": "task",
+        "mandateTier": "cart",
+        "allowed": [
+          "web-search",
+          "send-email"
+        ],
+        "blocked": [
+          "delete-files"
+        ],
+        "taskConstraints": {
+          "actionLimits": {
+            "send-email": 1,
+            "web-search": 5.5
+          },
+          "computeLimit": {
+            "llmTokens": 1000,
+            "webRequests": 10,
+            "executionTimeMs": 60000
+          },
+          "dataAccess": {},
+          "outputHandling": "internal-only",
+          "humanGates": [
+            "send-email"
+          ],
+          "checkpointIntervalMs": 10000,
+          "requireSandbox": true,
+          "onBehalfOf": "did:aroha:guest-bob",
+          "roomId": "room-7f3a"
+        },
+        "grantee": "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr",
+        "grantor": "did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5",
+        "issuedAt": "2026-01-01T00:00:01.000Z",
+        "expiresAt": "2098-01-01T00:00:00.000Z",
+        "parentMandateId": "00000000-0000-4000-8000-0000000000a1",
+        "mandateId": "00000000-0000-4000-8000-0000000000a2"
+      },
+      "expectedReason": null
+    },
+    {
+      "name": "empty-dataAccess-widened",
+      "parent": {
+        "mandateType": "task",
+        "mandateTier": "intent",
+        "allowed": [
+          "web-search",
+          "draft-email",
+          "send-email",
+          "read-calendar"
+        ],
+        "blocked": [
+          "delete-files"
+        ],
+        "taskConstraints": {
+          "actionLimits": {
+            "send-email": 3,
+            "web-search": 20
+          },
+          "computeLimit": {
+            "llmTokens": 50000,
+            "webRequests": 40,
+            "executionTimeMs": 600000
+          },
+          "dataAccess": {},
+          "outputHandling": "user-only",
+          "reversibleOnly": false,
+          "humanGates": [
+            "send-email"
+          ],
+          "checkpointIntervalMs": 30000,
+          "requireSandbox": true,
+          "maxDelegationDepth": 2,
+          "onBehalfOf": "did:aroha:guest-bob",
+          "roomId": "room-7f3a"
+        },
+        "grantee": "did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5",
+        "grantor": "did:aroha:zFVen3X669xLzsi6N2V91DoiyzHzg1uAgqiT8jZ9nS96Z",
+        "issuedAt": "2026-01-01T00:00:00.000Z",
+        "expiresAt": "2099-01-01T00:00:00.000Z",
+        "parentMandateId": null,
+        "mandateId": "00000000-0000-4000-8000-0000000000a4"
+      },
+      "child": {
+        "mandateType": "task",
+        "mandateTier": "cart",
+        "allowed": [
+          "web-search",
+          "send-email"
+        ],
+        "blocked": [
+          "delete-files"
+        ],
+        "taskConstraints": {
+          "actionLimits": {
+            "send-email": 1,
+            "web-search": 5.5
+          },
+          "computeLimit": {
+            "llmTokens": 1000,
+            "webRequests": 10,
+            "executionTimeMs": 60000
+          },
+          "dataAccess": {
+            "email": "read"
+          },
+          "outputHandling": "internal-only",
+          "humanGates": [
+            "send-email"
+          ],
+          "checkpointIntervalMs": 10000,
+          "requireSandbox": true,
+          "onBehalfOf": "did:aroha:guest-bob",
+          "roomId": "room-7f3a"
+        },
+        "grantee": "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr",
+        "grantor": "did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5",
+        "issuedAt": "2026-01-01T00:00:01.000Z",
+        "expiresAt": "2098-01-01T00:00:00.000Z",
+        "parentMandateId": "00000000-0000-4000-8000-0000000000a1",
+        "mandateId": "00000000-0000-4000-8000-0000000000a2"
+      },
+      "expectedReason": "Cannot attenuate task mandate: child dataAccess[\"email\"] (read) exceeds parent (none)"
+    },
+    {
+      "name": "empty-payee-dropped",
+      "parent": {
+        "mandateType": "hybrid",
+        "mandateTier": "intent",
+        "allowed": [
+          "book-flight"
+        ],
+        "taskConstraints": {
+          "reversibleOnly": true
+        },
+        "spendingConstraints": {
+          "spendLimitUsd": 420.07,
+          "currency": "USD",
+          "allowedMerchants": [
+            "did:aroha:airline"
+          ]
+        },
+        "invariants": {
+          "payee": [],
+          "parameters": {
+            "destination": "JFK",
+            "seats": 1,
+            "refundable": true
+          }
+        },
+        "grantee": "did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5",
+        "grantor": "did:aroha:zFVen3X669xLzsi6N2V91DoiyzHzg1uAgqiT8jZ9nS96Z",
+        "issuedAt": "2026-01-01T00:00:00.000Z",
+        "expiresAt": "2027-01-01T00:00:00.000Z",
+        "parentMandateId": null,
+        "mandateId": "00000000-0000-4000-8000-0000000000b2"
+      },
+      "child": {
+        "mandateType": "hybrid",
+        "mandateTier": "intent",
+        "allowed": [
+          "book-flight"
+        ],
+        "taskConstraints": {
+          "reversibleOnly": true
+        },
+        "spendingConstraints": {
+          "spendLimitUsd": 420.07,
+          "currency": "USD",
+          "allowedMerchants": [
+            "did:aroha:airline"
+          ]
+        },
+        "invariants": {
+          "parameters": {
+            "destination": "JFK",
+            "seats": 1,
+            "refundable": true
+          }
+        },
+        "grantee": "did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5",
+        "grantor": "did:aroha:zFVen3X669xLzsi6N2V91DoiyzHzg1uAgqiT8jZ9nS96Z",
+        "issuedAt": "2026-01-01T00:00:00.000Z",
+        "expiresAt": "2027-01-01T00:00:00.000Z",
+        "parentMandateId": null,
+        "mandateId": "00000000-0000-4000-8000-0000000000b2"
+      },
+      "expectedReason": "Cannot attenuate task mandate: parent restricts payee but child has no payee invariant"
+    },
+    {
+      "name": "empty-payee-widened",
+      "parent": {
+        "mandateType": "hybrid",
+        "mandateTier": "intent",
+        "allowed": [
+          "book-flight"
+        ],
+        "taskConstraints": {
+          "reversibleOnly": true
+        },
+        "spendingConstraints": {
+          "spendLimitUsd": 420.07,
+          "currency": "USD",
+          "allowedMerchants": [
+            "did:aroha:airline"
+          ]
+        },
+        "invariants": {
+          "payee": [],
+          "parameters": {
+            "destination": "JFK",
+            "seats": 1,
+            "refundable": true
+          }
+        },
+        "grantee": "did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5",
+        "grantor": "did:aroha:zFVen3X669xLzsi6N2V91DoiyzHzg1uAgqiT8jZ9nS96Z",
+        "issuedAt": "2026-01-01T00:00:00.000Z",
+        "expiresAt": "2027-01-01T00:00:00.000Z",
+        "parentMandateId": null,
+        "mandateId": "00000000-0000-4000-8000-0000000000b2"
+      },
+      "child": {
+        "mandateType": "hybrid",
+        "mandateTier": "intent",
+        "allowed": [
+          "book-flight"
+        ],
+        "taskConstraints": {
+          "reversibleOnly": true
+        },
+        "spendingConstraints": {
+          "spendLimitUsd": 420.07,
+          "currency": "USD",
+          "allowedMerchants": [
+            "did:aroha:airline"
+          ]
+        },
+        "invariants": {
+          "payee": [
+            "did:aroha:airline"
+          ],
+          "parameters": {
+            "destination": "JFK",
+            "seats": 1,
+            "refundable": true
+          }
+        },
+        "grantee": "did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5",
+        "grantor": "did:aroha:zFVen3X669xLzsi6N2V91DoiyzHzg1uAgqiT8jZ9nS96Z",
+        "issuedAt": "2026-01-01T00:00:00.000Z",
+        "expiresAt": "2027-01-01T00:00:00.000Z",
+        "parentMandateId": null,
+        "mandateId": "00000000-0000-4000-8000-0000000000b2"
+      },
+      "expectedReason": "Cannot attenuate task mandate: child payee \"did:aroha:airline\" is not in parent's payee list"
+    }
+  ],
+  "actions": [
+    {
+      "name": "allowed-search",
+      "mandate": "task-root",
+      "request": {
+        "requestedCapability": "web-search",
+        "roomId": "room-7f3a",
+        "onBehalfOf": "did:aroha:guest-bob",
+        "capabilityReversibility": "full"
+      },
+      "expected": null
+    },
+    {
+      "name": "no-room",
+      "mandate": "task-root",
+      "request": {
+        "requestedCapability": "web-search",
+        "onBehalfOf": "did:aroha:guest-bob"
+      },
+      "expected": {
+        "code": "CONTEXT_MISMATCH",
+        "message": "The mandate is bound to room room-7f3a; the request is from no room"
+      }
+    },
+    {
+      "name": "other-room",
+      "mandate": "task-root",
+      "request": {
+        "requestedCapability": "web-search",
+        "roomId": "room-other",
+        "onBehalfOf": "did:aroha:guest-bob"
+      },
+      "expected": {
+        "code": "CONTEXT_MISMATCH",
+        "message": "The mandate is bound to room room-7f3a; the request is from room-other"
+      }
+    },
+    {
+      "name": "other-member",
+      "mandate": "task-root",
+      "request": {
+        "requestedCapability": "web-search",
+        "roomId": "room-7f3a",
+        "onBehalfOf": "did:aroha:mallory"
+      },
+      "expected": {
+        "code": "CONTEXT_MISMATCH",
+        "message": "The mandate acts on behalf of did:aroha:guest-bob; the request is for did:aroha:mallory"
+      }
+    },
+    {
+      "name": "not-allowed",
+      "mandate": "task-root",
+      "request": {
+        "requestedCapability": "post-social",
+        "roomId": "room-7f3a",
+        "onBehalfOf": "did:aroha:guest-bob"
+      },
+      "expected": {
+        "code": "CAPABILITY_NOT_PERMITTED",
+        "message": "Capability \"post-social\" is not in the mandate's allowed list"
+      }
+    },
+    {
+      "name": "blocked",
+      "mandate": "task-root",
+      "request": {
+        "roomId": "room-7f3a",
+        "onBehalfOf": "did:aroha:guest-bob",
+        "requestedCapability": "delete-files"
+      },
+      "expected": {
+        "code": "CAPABILITY_NOT_PERMITTED",
+        "message": "Capability \"delete-files\" is not in the mandate's allowed list"
+      }
+    },
+    {
+      "name": "gate-unapproved",
+      "mandate": "task-root",
+      "request": {
+        "requestedCapability": "send-email",
+        "roomId": "room-7f3a",
+        "onBehalfOf": "did:aroha:guest-bob"
+      },
+      "expected": {
+        "code": "HUMAN_GATE_REQUIRED",
+        "message": "Capability \"send-email\" requires human approval (humanGate)"
+      }
+    },
+    {
+      "name": "gate-approved",
+      "mandate": "task-root",
+      "request": {
+        "requestedCapability": "send-email",
+        "roomId": "room-7f3a",
+        "onBehalfOf": "did:aroha:guest-bob",
+        "humanApproved": true,
+        "currentActionCounts": {
+          "send-email": 2
+        }
+      },
+      "expected": null
+    },
+    {
+      "name": "over-action-limit",
+      "mandate": "task-root",
+      "request": {
+        "requestedCapability": "send-email",
+        "roomId": "room-7f3a",
+        "onBehalfOf": "did:aroha:guest-bob",
+        "humanApproved": true,
+        "currentActionCounts": {
+          "send-email": 3
+        }
+      },
+      "expected": {
+        "code": "ACTION_LIMIT_EXCEEDED",
+        "message": "Action limit exceeded for \"send-email\": 3/3"
+      }
+    },
+    {
+      "name": "over-llm-tokens",
+      "mandate": "task-root",
+      "request": {
+        "requestedCapability": "web-search",
+        "roomId": "room-7f3a",
+        "onBehalfOf": "did:aroha:guest-bob",
+        "currentCompute": {
+          "llmTokens": 50000
+        }
+      },
+      "expected": {
+        "code": "COMPUTE_LIMIT_EXCEEDED",
+        "message": "LLM token budget exhausted (50000 max)"
+      }
+    },
+    {
+      "name": "over-wall-clock",
+      "mandate": "task-root",
+      "request": {
+        "requestedCapability": "web-search",
+        "roomId": "room-7f3a",
+        "onBehalfOf": "did:aroha:guest-bob",
+        "currentCompute": {
+          "llmTokens": 1,
+          "webRequests": 1,
+          "wallClockMs": 600000
+        }
+      },
+      "expected": {
+        "code": "COMPUTE_LIMIT_EXCEEDED",
+        "message": "Execution time budget exhausted (600000ms max)"
+      }
+    },
+    {
+      "name": "data-read-ok",
+      "mandate": "task-root",
+      "request": {
+        "requestedCapability": "read-calendar",
+        "roomId": "room-7f3a",
+        "onBehalfOf": "did:aroha:guest-bob",
+        "dataAccess": {
+          "calendar": "read",
+          "email": "read-write"
+        }
+      },
+      "expected": null
+    },
+    {
+      "name": "data-write-on-read",
+      "mandate": "task-root",
+      "request": {
+        "requestedCapability": "read-calendar",
+        "roomId": "room-7f3a",
+        "onBehalfOf": "did:aroha:guest-bob",
+        "dataAccess": {
+          "calendar": "write"
+        }
+      },
+      "expected": {
+        "code": "DATA_ACCESS_VIOLATION",
+        "message": "Data access \"write\" on \"calendar\" exceeds the mandate's grant (read)"
+      }
+    },
+    {
+      "name": "data-read-on-write-only",
+      "mandate": "task-root",
+      "request": {
+        "requestedCapability": "read-calendar",
+        "roomId": "room-7f3a",
+        "onBehalfOf": "did:aroha:guest-bob",
+        "dataAccess": {
+          "files:/drafts": "read"
+        }
+      },
+      "expected": {
+        "code": "DATA_ACCESS_VIOLATION",
+        "message": "Data access \"read\" on \"files:/drafts\" exceeds the mandate's grant (write)"
+      }
+    },
+    {
+      "name": "data-unlisted-resource",
+      "mandate": "task-root",
+      "request": {
+        "requestedCapability": "read-calendar",
+        "roomId": "room-7f3a",
+        "onBehalfOf": "did:aroha:guest-bob",
+        "dataAccess": {
+          "customer-db": "read"
+        }
+      },
+      "expected": {
+        "code": "DATA_ACCESS_VIOLATION",
+        "message": "Data access \"read\" on \"customer-db\" exceeds the mandate's grant (none)"
+      }
+    },
+    {
+      "name": "empty-dataAccess-denies-read",
+      "mandate": "task-root-deny-data",
+      "request": {
+        "requestedCapability": "read-calendar",
+        "roomId": "room-7f3a",
+        "onBehalfOf": "did:aroha:guest-bob",
+        "dataAccess": {
+          "calendar": "read"
+        }
+      },
+      "expected": {
+        "code": "DATA_ACCESS_VIOLATION",
+        "message": "Data access \"read\" on \"calendar\" exceeds the mandate's grant (none)"
+      }
+    },
+    {
+      "name": "empty-dataAccess-no-data-requested",
+      "mandate": "task-root-deny-data",
+      "request": {
+        "requestedCapability": "read-calendar",
+        "roomId": "room-7f3a",
+        "onBehalfOf": "did:aroha:guest-bob"
+      },
+      "expected": null
+    },
+    {
+      "name": "reversible-only-default-irreversible",
+      "mandate": "hybrid-root",
+      "request": {
+        "requestedCapability": "book-flight"
+      },
+      "expected": {
+        "code": "REVERSIBILITY_VIOLATION",
+        "message": "Capability \"book-flight\" is irreversible but mandate requires reversibleOnly"
+      }
+    },
+    {
+      "name": "reversible-only-semi",
+      "mandate": "hybrid-root",
+      "request": {
+        "requestedCapability": "book-flight",
+        "capabilityReversibility": "semi"
+      },
+      "expected": null
+    }
+  ]
+}

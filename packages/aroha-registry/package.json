@@ -1,0 +1,83 @@
+{
+  "name": "@aroha-sdk/registry",
+  "version": "2.0.0",
+  "description": "Aroha registry SDK: blockchain contract wrapper, IPFS manifest storage, capability discovery",
+  "files": [
+    "dist",
+    "src",
+    "openapi.yaml",
+    "NOTICE",
+    "!**/*.test.*",
+    "!**/test-utils/**",
+    "!**/*.tsbuildinfo"
+  ],
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./contract": {
+      "types": "./dist/contract.d.ts",
+      "import": "./dist/contract.js",
+      "default": "./dist/contract.js"
+    },
+    "./ipfs": {
+      "types": "./dist/ipfs.d.ts",
+      "import": "./dist/ipfs.js",
+      "default": "./dist/ipfs.js"
+    },
+    "./discover": {
+      "types": "./dist/discover.d.ts",
+      "import": "./dist/discover.js",
+      "default": "./dist/discover.js"
+    },
+    "./server": {
+      "types": "./dist/http-server.d.ts",
+      "import": "./dist/http-server.js",
+      "default": "./dist/http-server.js"
+    },
+    "./sar": {
+      "types": "./dist/sar.d.ts",
+      "import": "./dist/sar.js",
+      "default": "./dist/sar.js"
+    },
+    "./personal-name": {
+      "types": "./dist/personal-name.d.ts",
+      "import": "./dist/personal-name.js",
+      "default": "./dist/personal-name.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "dev": "tsc -p tsconfig.json --watch",
+    "prepack": "node ../../scripts/clean-dist.mjs && tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@aroha-sdk/core": "^2.0.0",
+    "@noble/ed25519": "^2.1.0",
+    "@noble/hashes": "^1.4.0"
+  },
+  "peerDependencies": {
+    "ethers": "^6.13.0"
+  },
+  "peerDependenciesMeta": {
+    "ethers": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5",
+    "vitest": "^5.0.3",
+    "@types/node": "^20.14.0",
+    "ethers": "^6.13.0"
+  },
+  "license": "Apache-2.0",
+  "engines": {
+    "node": ">=22"
+  }
+}

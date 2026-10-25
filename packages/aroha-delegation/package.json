@@ -1,0 +1,53 @@
+{
+  "name": "@aroha-sdk/delegation",
+  "version": "0.3.0",
+  "description": "Turnkey multi-hop delegation for Aroha agent networks — verified mandate chains, auto-attenuating ctx.delegate(), depth enforcement, and stitched receipts on top of @aroha-sdk/run.",
+  "files": [
+    "dist",
+    "src",
+    "NOTICE",
+    "!**/*.test.*",
+    "!**/test-utils/**",
+    "!**/*.tsbuildinfo"
+  ],
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "dev": "tsc -p tsconfig.json --watch",
+    "prepack": "node ../../scripts/clean-dist.mjs && tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@aroha-sdk/core": "^2.0.0",
+    "@aroha-sdk/credentials": "^2.0.0",
+    "@aroha-sdk/run": "^2.0.0",
+    "@noble/ed25519": "^2.1.0",
+    "@noble/hashes": "^1.4.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5",
+    "vitest": "^5.0.3"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "keywords": [
+    "aroha",
+    "agent",
+    "delegation",
+    "mandate",
+    "multi-agent",
+    "agent-network",
+    "attenuation",
+    "capability"
+  ],
+  "license": "Apache-2.0"
+}

@@ -1,0 +1,7 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": { "composite": true, "outDir": "./dist", "rootDir": "./src" },
+  "references": [{ "path": "../aroha-core" }, { "path": "../aroha-registry" }, { "path": "../aroha-credentials" }],
+  "include": ["src/**/*"],
+  "exclude": ["dist", "node_modules", "**/*.test.ts"]
+}

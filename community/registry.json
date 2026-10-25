@@ -1,0 +1,155 @@
+{
+  "$schema": "https://aroha-labs.com/schemas/ecosystem-registry/v1.json",
+  "version": "1.0",
+  "updatedAt": "2026-04-29T00:00:00Z",
+  "description": "Aroha community ecosystem registry — community-built bridges, proxy agents, and extensions",
+  "entries": [
+    {
+      "id": "aroha-stripe-agent",
+      "type": "proxy-agent",
+      "name": "Stripe Proxy Agent",
+      "description": "Payments, customers, invoices, and subscriptions via signed Aroha envelopes",
+      "package": "@aroha-sdk/stripe-agent",
+      "repository": "https://github.com/ArohaLabs/aroha-protocol",
+      "capabilities": [
+        "get-customer",
+        "list-invoices",
+        "get-payment-intent",
+        "list-subscriptions",
+        "list-products",
+        "create-payment-intent",
+        "create-invoice",
+        "create-customer"
+      ],
+      "sagaCapable": true,
+      "author": "aroha-labs",
+      "license": "Apache-2.0",
+      "tags": ["payments", "stripe", "saas"]
+    },
+    {
+      "id": "aroha-salesforce-agent",
+      "type": "proxy-agent",
+      "name": "Salesforce Proxy Agent",
+      "description": "Leads, accounts, opportunities, and cases via signed Aroha envelopes",
+      "package": "@aroha-sdk/salesforce-agent",
+      "repository": "https://github.com/ArohaLabs/aroha-protocol",
+      "capabilities": [
+        "get-account",
+        "search-leads",
+        "get-opportunity",
+        "list-cases",
+        "search-contacts",
+        "create-lead",
+        "create-opportunity",
+        "update-case-status"
+      ],
+      "sagaCapable": true,
+      "author": "aroha-labs",
+      "license": "Apache-2.0",
+      "tags": ["crm", "salesforce", "enterprise"]
+    },
+    {
+      "id": "aroha-zendesk-agent",
+      "type": "proxy-agent",
+      "name": "Zendesk Proxy Agent",
+      "description": "Tickets, users, and organizations via signed Aroha envelopes",
+      "package": "@aroha-sdk/zendesk-agent",
+      "repository": "https://github.com/ArohaLabs/aroha-protocol",
+      "capabilities": [
+        "get-ticket",
+        "list-tickets",
+        "search-tickets",
+        "get-user",
+        "list-organizations",
+        "get-ticket-comments",
+        "create-ticket",
+        "update-ticket-status",
+        "add-comment"
+      ],
+      "sagaCapable": true,
+      "author": "aroha-labs",
+      "license": "Apache-2.0",
+      "tags": ["support", "zendesk", "customer-service"]
+    },
+    {
+      "id": "aroha-github-agent",
+      "type": "proxy-agent",
+      "name": "GitHub Agent",
+      "description": "Issues, PRs, comments, and merge operations via signed Aroha envelopes",
+      "package": "@aroha-sdk/github-agent",
+      "repository": "https://github.com/ArohaLabs/aroha-protocol",
+      "capabilities": [
+        "list-issues",
+        "create-issue",
+        "get-pull-request",
+        "list-pull-requests",
+        "merge-pull-request",
+        "create-comment"
+      ],
+      "sagaCapable": true,
+      "author": "aroha-labs",
+      "license": "Apache-2.0",
+      "tags": ["developer-tools", "github", "devops"]
+    },
+    {
+      "id": "aroha-jira-agent",
+      "type": "proxy-agent",
+      "name": "Jira Agent",
+      "description": "Issues, transitions, and assignments via signed Aroha envelopes",
+      "package": "@aroha-sdk/jira-agent",
+      "repository": "https://github.com/ArohaLabs/aroha-protocol",
+      "capabilities": [
+        "search-issues",
+        "get-issue",
+        "create-issue",
+        "transition-issue",
+        "assign-issue",
+        "add-comment"
+      ],
+      "sagaCapable": true,
+      "author": "aroha-labs",
+      "license": "Apache-2.0",
+      "tags": ["project-management", "jira", "atlassian"]
+    },
+    {
+      "id": "aroha-langchain-bridge",
+      "type": "bridge",
+      "name": "LangChain Bridge",
+      "description": "Bidirectional bridge between LangChain tools and Aroha capabilities",
+      "package": "@aroha-sdk/langchain-bridge",
+      "repository": "https://github.com/ArohaLabs/aroha-protocol",
+      "bridges": ["langchain", "autogen", "semantic-kernel"],
+      "author": "aroha-labs",
+      "license": "Apache-2.0",
+      "tags": ["langchain", "llm", "bridge"]
+    },
+    {
+      "id": "aroha-mcp-bridge",
+      "type": "bridge",
+      "name": "MCP Bridge",
+      "description": "Model Context Protocol ↔ Aroha capability translation",
+      "package": "@aroha-sdk/mcp-bridge",
+      "repository": "https://github.com/ArohaLabs/aroha-protocol",
+      "bridges": ["mcp"],
+      "author": "aroha-labs",
+      "license": "Apache-2.0",
+      "tags": ["mcp", "model-context-protocol", "bridge"]
+    },
+    {
+      "id": "aroha-a2a-bridge",
+      "type": "bridge",
+      "name": "A2A Bridge",
+      "description": "Agent-to-Agent protocol ↔ Aroha message translation",
+      "package": "@aroha-sdk/a2a-bridge",
+      "repository": "https://github.com/ArohaLabs/aroha-protocol",
+      "bridges": ["a2a", "google-a2a"],
+      "author": "aroha-labs",
+      "license": "Apache-2.0",
+      "tags": ["a2a", "google", "bridge"]
+    }
+  ],
+  "submit": {
+    "instructions": "To add your bridge or agent to this registry, open an issue at https://github.com/ArohaLabs/aroha-spec/issues with your package name and repo link. Requirements: Apache-2.0 or MIT license, public npm package, README with usage example.",
+    "schema": "https://aroha-labs.com/schemas/ecosystem-registry/v1.json"
+  }
+}

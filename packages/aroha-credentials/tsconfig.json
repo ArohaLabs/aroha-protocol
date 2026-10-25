@@ -1,0 +1,17 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "composite": true
+  },
+  "references": [
+    { "path": "../../packages/aroha-core" }
+  ],
+  "include": ["src/**/*"],
+  // Test helpers and specs are not part of the published surface, and
+  // src/test-utils/sqlite-d1.ts imports node:sqlite — Node 22+, which
+  // @types/node@20 does not declare. Compiling them here broke the build
+  // on any clean checkout. Tests are still type-checked by the test run.
+  "exclude": ["src/**/*.test.ts", "src/test-utils/**", "**/*.test.ts"]
+}

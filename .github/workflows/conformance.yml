@@ -1,0 +1,166 @@
+# Copyright (c) 2026 Aroha Labs
+# SPDX-License-Identifier: Apache-2.0
+
+name: Conformance
+
+on:
+  push:
+    branches: [main]
+    # Conformance tests protocol packages — website/docs changes cannot affect it
+    paths:
+      - "packages/**"
+      - "vitest.conformance.config.ts"
+      - ".github/workflows/conformance.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "packages/**"
+      - "vitest.conformance.config.ts"
+      - ".github/workflows/conformance.yml"
+  schedule:
+    # Weekly freshness check (Mondays 02:00 UTC) — was daily, trimmed to save minutes
+    - cron: "0 2 * * 1"
+  workflow_dispatch:
+
+# E7: push runs are limited to main on purpose. fix/** and feat/** branches
+# get conformance through their pull request to main (pull_request above);
+# adding branch pushes would double-run every PR commit on metered
+# private-repo minutes for no extra coverage.
+
+permissions:
+  contents: read
+
+jobs:
+  conformance:
+    name: Aroha Conformance Suite
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write   # only used by the scheduled-failure notification step
+
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: 22.x
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Run conformance tests
+        run: |
+          # Use the dedicated conformance config so individual package test runs are unaffected.
+          # The config sets include: ["packages/*/src/**/*.conformance.test.ts"].
+          # Two reporters: "default" prints failures to the job log (a
+          # json-only reporter goes straight to the file with nothing on
+          # stdout, which made a real CI-only conformance failure
+          # undiagnosable from the log alone); "json" still feeds the
+          # scorecard step below.
+          npx vitest run --config vitest.conformance.config.ts --reporter=default --reporter=json --outputFile=conformance-results.json
+        # No continue-on-error — a broken or empty test run must fail the workflow
+
+      - name: Generate conformance scorecard
+        run: |
+          node -e "
+            const fs = require('fs');
+            const date = new Date().toISOString().split('T')[0];
+
+            let results;
+            try {
+              results = JSON.parse(fs.readFileSync('conformance-results.json'));
+            } catch (e) {
+              console.error('ERROR: Could not parse conformance-results.json — test run may have failed or produced no output');
+              process.exit(1);
+            }
+
+            const total = results.numTotalTests || 0;
+            const passed = results.numPassedTests || 0;
+            const failed = results.numFailedTests || 0;
+
+            // Fail-closed: 0 tests is not a passing state
+            if (total === 0) {
+              console.error('ERROR: Conformance suite ran 0 tests. Add test files whose path includes "conformance" or the suite is misconfigured.');
+              process.exit(1);
+            }
+
+            const rate = ((passed / total) * 100).toFixed(1);
+
+            const scorecard = {
+              date,
+              implementation: 'aroha-reference',
+              // The reference implementation's version is @aroha-sdk/core's; the
+              // private monorepo root's version (1.0.0) never changes.
+              implementationPackage: '@aroha-sdk/core',
+              version: require('./packages/aroha-core/package.json').version,
+              conformanceRate: rate + '%',
+              passed,
+              failed,
+              total,
+              status: failed === 0 ? 'PASS' : 'FAIL'
+            };
+
+            fs.writeFileSync('conformance-scorecard.json', JSON.stringify(scorecard, null, 2));
+            console.log('Conformance Scorecard:', JSON.stringify(scorecard, null, 2));
+          "
+
+      # Keeping a copy of the scorecard is a convenience, not the gate: the
+      # two steps above already failed the job on a broken, empty or failing
+      # run. An upload refused for storage quota must not turn 123 passing
+      # tests red, so it may fail — and the summary below says when it did.
+      - name: Upload scorecard artifact
+        id: upload
+        continue-on-error: true
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: conformance-scorecard-${{ github.sha }}
+          path: conformance-scorecard.json
+          retention-days: 7
+
+      - name: Publish conformance summary
+        env:
+          UPLOAD_OUTCOME: ${{ steps.upload.outcome }}
+        run: |
+          set -euo pipefail
+          SCORECARD="$(cat conformance-scorecard.json)"
+          STATUS=$(printf '%s' "$SCORECARD" | node -e "const d=JSON.parse(require('fs').readFileSync(0,'utf8')); process.stdout.write(d.status)")
+          RATE=$(printf '%s' "$SCORECARD" | node -e "const d=JSON.parse(require('fs').readFileSync(0,'utf8')); process.stdout.write(d.conformanceRate)")
+
+          {
+            echo "## Aroha Conformance Report"
+            echo "**Date:** $(date -u +%Y-%m-%d)"
+            echo "**Status:** $STATUS"
+            echo "**Pass Rate:** $RATE"
+            echo ""
+            echo "See [docs/conformance/test-matrix.md](docs/conformance/test-matrix.md) for the full rubric."
+            if [ "${UPLOAD_OUTCOME}" != "success" ]; then
+              echo ""
+              echo "> The scorecard artifact was not uploaded (${UPLOAD_OUTCOME}); the result above is from this run's own test output."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # The weekly scheduled run has nobody watching it. On failure, open an
+      # issue (or comment on the open one) so a regression is not silent.
+      # Uses only the job's GITHUB_TOKEN with issues: write.
+      - name: Notify on scheduled failure
+        if: failure() && github.event_name == 'schedule'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          TITLE="Scheduled conformance run failed"
+          BODY="The scheduled conformance suite failed on $(date -u +%Y-%m-%d) at ${GITHUB_SHA}: ${RUN_URL}"
+          NUM=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search "\"$TITLE\" in:title" --json number --jq '.[0].number // empty')
+          if [ -n "$NUM" ]; then
+            gh issue comment "$NUM" --repo "$GITHUB_REPOSITORY" --body "$BODY"
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" --title "$TITLE" --body "$BODY"
+          fi

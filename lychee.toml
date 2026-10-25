@@ -1,0 +1,40 @@
+# Copyright (c) 2026 Aroha Labs
+# SPDX-License-Identifier: Apache-2.0
+#
+# Link-checker configuration shared by the two CI jobs in
+# .github/workflows/ci.yml:
+#   links-internal  — `--offline`: only relative/file links are checked, and
+#                     a broken one fails the build.
+#   links-external  — network links, report only (third-party sites
+#                     rate-limit CI runners too often to gate on).
+# URL patterns that must never be fetched live in .lycheeignore.
+
+# Paths whose links are not checked (regexes matched against the file path):
+#   node_modules  — vendored code
+#   apps/         — each app documents itself
+#   docs/superpowers/ — dated working notes, kept as written
+#   docs/reports/ — historical audit reports; they quote links as they were
+#                   at the time, and rewriting them would falsify the record
+#   papers/       — LaTeX sources and their build output
+exclude_path = [
+  "node_modules",
+  "(^|/)apps/",
+  "(^|/)docs/superpowers/",
+  "(^|/)docs/reports/",
+  "(^|/)papers/",
+]
+
+# Never treat these as links to check.
+exclude = [
+  "^https?://localhost",
+  "^https?://127\\.0\\.0\\.1",
+  "^https?://0\\.0\\.0\\.0",
+  "^https?://[a-z0-9-]+\\.example(/|$)",
+  "^https?://[a-z0-9.-]+\\.example\\.(com|org|net)(/|$)",
+]
+
+# 429 = rate limited: not evidence the link is broken.
+accept = ["200..=206", "429"]
+
+max_concurrency = 8
+no_progress = true

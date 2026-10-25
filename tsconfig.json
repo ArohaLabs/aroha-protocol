@@ -1,0 +1,17 @@
+{
+  "files": [],
+  "references": [
+    { "path": "./packages/aroha-core" },
+    { "path": "./packages/aroha-credentials" },
+    { "path": "./packages/aroha-store-postgres" },
+    { "path": "./packages/aroha-store-redis" },
+    { "path": "./packages/aroha-registry" },
+    { "path": "./packages/aroha-mcp-bridge" },
+    { "path": "./packages/aroha-a2a-bridge" },
+    { "path": "./packages/aroha-hermes-bridge" },
+    { "path": "./packages/aroha-openclaw-bridge" },
+    { "path": "./packages/aroha-composio-bridge" },
+    { "path": "./packages/aroha-cli" },
+    { "path": "./agents/mock-provider-agent" }
+  ]
+}

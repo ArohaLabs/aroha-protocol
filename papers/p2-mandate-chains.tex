@@ -1,0 +1,787 @@
+% ============================================================
+%  Paper 2 — Aroha Labs
+%  "Attenuated Ed25519 Mandate Chains for Financial
+%   Delegation in Autonomous AI Agent Systems"
+%
+%  Target venues: IEEE S&P 2027 / USENIX Security 2027
+%                 Financial Cryptography 2027
+%  arXiv categories: cs.CR, cs.MA, cs.AI
+% ============================================================
+
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{mathtools}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{cite}
+\usepackage{bm}
+\usepackage{listings}
+% listings ships no JavaScript definition — minimal one for our snippets
+\lstdefinelanguage{JavaScript}{
+  keywords={const, let, var, function, async, await, return, if, else,
+            throw, new, import, export, from, typeof, true, false, null},
+  sensitive=true,
+  comment=[l]{//},
+  morecomment=[s]{/*}{*/},
+  string=[b]',
+  morestring=[b]",
+  morestring=[b]`
+}
+\usepackage{pifont}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{definition}{Definition}
+\newtheorem{remark}{Remark}
+\newtheorem{attack}{Attack Scenario}
+
+\DeclareMathOperator{\E}{\mathbb{E}}
+\DeclareMathOperator{\negl}{\mathsf{negl}}
+\newcommand{\Adv}{\mathcal{A}}
+\newcommand{\pk}{\mathsf{pk}}
+\newcommand{\sk}{\mathsf{sk}}
+\newcommand{\sig}{\sigma}
+\newcommand{\Sign}{\mathsf{Sign}}
+\newcommand{\Vrfy}{\mathsf{Vrfy}}
+\newcommand{\Gen}{\mathsf{Gen}}
+\newcommand{\canon}{\mathsf{Canon}}
+
+\begin{document}
+
+\title{Attenuated Ed25519 Mandate Chains for\\
+       Financial Delegation in Autonomous AI Agent Systems}
+
+\author{
+  \IEEEauthorblockN{Aroha Labs Research}
+  \IEEEauthorblockA{%
+    \textit{Aroha Protocol}\\
+    aroha-labs.com
+  }
+}
+
+\maketitle
+
+% ─────────────────────────────────────────────────────────────
+\begin{abstract}
+Autonomous AI agents increasingly perform real financial
+transactions on behalf of users and enterprises: booking
+travel, purchasing API credits, settling inter-agent
+invoices. The standard approach—issuing a single API key
+or OAuth token with broad scope—fails to express
+fine-grained spending constraints and cannot be safely
+delegated through chains of agent-to-agent invocation.
+We present \textsc{ArohaMandate}, a cryptographic
+delegation framework in which a root authority issues
+Ed25519-signed spending mandates that are \emph{attenuated}
+(never amplified) through any chain of sub-delegation.
+Each mandate carries a per-transaction limit, a cumulative
+budget ceiling, an expiry timestamp, and a nonce; any
+link in the chain may only restrict these values, never
+expand them.  We formalise the attenuation property, prove
+it under the standard Existential Unforgeability under
+Chosen-Message Attack (EUF-CMA) security of Ed25519,
+and compare the system against OAuth 2.0 scopes, Macaroons,
+and UCAN.  We show that ArohaMandate uniquely satisfies
+all five properties required for safe autonomous agent
+spending: offline verifiability, delegation without
+amplification, per-transaction limits, cumulative budget
+enforcement, and freshness without a central nonce table.
+\end{abstract}
+
+\begin{IEEEkeywords}
+Ed25519, digital signatures, delegation, attenuation,
+capability-based security, AI agents, spending mandates,
+financial authorization
+\end{IEEEkeywords}
+
+% ─────────────────────────────────────────────────────────────
+\section{Introduction}
+\label{sec:intro}
+
+The deployment of autonomous AI agents capable of autonomous
+spending—purchasing computational resources, settling invoices,
+paying for external API calls—creates a novel authorization
+problem.  A user might instruct an AI orchestrator to
+``complete the research task, spending up to \$100'';
+the orchestrator in turn delegates subtasks to specialist
+agents, each of which may further delegate.  Each agent must
+be able to prove its authority to spend, and each recipient
+of a payment request must be able to verify that authority
+without contacting a central server.
+
+\textbf{Why existing mechanisms fail.}
+API keys are bearer tokens with no intrinsic spending limits,
+no delegation structure, and no expiry.  OAuth 2.0 scopes
+\cite{rfc6749} support delegation via access tokens but are
+string-based capabilities that do not express numerical
+limits or cumulative budgets; the recipient cannot verify
+the chain offline.  Macaroons \cite{birgisson2014macaroons}
+support attenuation via caveats verified by HMAC chains, but
+do not carry Ed25519 signatures (requiring a different
+cryptographic infrastructure) and were designed for service
+access control, not financial delegation.  UCAN
+\cite{fission2022ucan} supports Ed25519 chains and
+capability attenuation but does not model numerical spending
+limits or cumulative budget enforcement; it is designed for
+data access, not financial flows.
+
+\textbf{Our contribution.}
+We present ArohaMandate, a spending mandate framework that:
+\begin{enumerate}
+  \item Uses Ed25519 signatures, enabling asymmetric
+    (public-key) verification by any party without a shared
+    secret or network call.
+  \item Expresses per-transaction limits, cumulative budget
+    ceilings, expiry timestamps, and action scopes, all of
+    which can only be restricted (never expanded) by
+    sub-delegation.
+  \item Uses a nonce embedded in a canonical JSON payload
+    with a client-side timestamp for freshness checking,
+    eliminating the need for a central nonce table.
+  \item Is verifiable offline by any payment recipient that
+    has the root issuer's public key.
+\end{enumerate}
+
+The formal structure is given in \S\ref{sec:model}; the
+attenuation proof in \S\ref{sec:security}; comparison to
+prior work in \S\ref{sec:comparison}; protocol details in
+\S\ref{sec:protocol}; and performance in \S\ref{sec:eval}.
+
+% ─────────────────────────────────────────────────────────────
+\section{Related Work}
+\label{sec:related}
+
+\subsection{Capability-Based Security}
+
+The capability security model traces to Dennis and Van Horn
+(1966), where authority is held as unforgeable tokens that
+can be delegated.  Modern systems include:
+
+\textbf{Macaroons} \cite{birgisson2014macaroons} are bearer
+credentials with contextual caveats verified via HMAC
+chains.  Each layer can add caveats (restrictions) but not
+remove them.  Unlike ArohaMandate, Macaroons use symmetric
+HMAC (requiring a shared root secret) and do not encode
+spending semantics.
+
+\textbf{UCAN} \cite{fission2022ucan} is a W3C-adjacent
+specification using Ed25519 DIDs and JWT-like encoding.
+UCAN supports capability delegation with resource and action
+attenuation.  Its resource model is hierarchical URIs, not
+numerical spending limits, and it does not specify cumulative
+budget enforcement.
+
+\textbf{OAuth 2.0} \cite{acme2019rfc} scope tokens are
+opaque strings that the resource server must validate by
+calling the authorization server; they do not carry
+verifiable proof of the delegation chain and cannot be
+verified offline.
+
+\subsection{Financial Authorization}
+
+Payment Card Industry (PCI-DSS) authorization models assign
+spending limits to cardholders but provide no sub-delegation.
+Corporate expense card systems (virtual card numbers) support
+per-transaction limits but require online authorisation
+against a central system. Neither is appropriate for
+autonomous sub-agent spending in a serverless, edge-computing
+environment.
+
+\subsection{Agent Payment Protocols}
+
+The Agent Payments Protocol (AP2)~\cite{google2025ap2},
+introduced by Google and Coinbase in September 2025 and since
+adopted by more than sixty payment organisations, uses
+cryptographically signed \emph{mandates} to authorise
+agent-initiated purchases within user-defined spending limits,
+merchant allow-lists, and validity windows.  Its x402
+extension~\cite{coinbase2025x402} settles such payments over
+HTTP using stablecoins.  AP2 mandates authorise a
+\emph{transaction}: they bind one user authorisation to one
+payment flow over tokenised rails.
+
+Our contribution is orthogonal and composable.  AP2 does not
+model \emph{delegation depth}: when an orchestrator holding a
+user authorisation spawns sub-agents, AP2 provides no
+mechanism for issuing narrower child authorisations whose
+bounds are verifiable offline against the root.  Attenuated
+mandate chains address precisely this gap---monotonic
+narrowing across arbitrary delegation hops with
+$O(\mathrm{depth})$ verification and no calls to a central
+authoriser.  The two compose naturally: a chain of attenuated
+task and spending mandates can terminate in an AP2 payment
+mandate at the merchant boundary, giving end-to-end provenance
+from human intent through every intermediate agent to the
+final settlement rail.
+
+\subsection{Ed25519 Security}
+
+Ed25519 \cite{bernstein2011ed25519} is an instantiation of
+EdDSA \cite{josefsson2017ed25519rfc} over Curve25519
+\cite{langley2016curve25519}.  It provides approximately
+128-bit security, fast verification (~70k signatures/second
+on a modern CPU), and small key/signature sizes (32-byte
+public keys, 64-byte signatures), making it well-suited to
+embedded mandate payloads.
+
+% ─────────────────────────────────────────────────────────────
+\section{Mandate Model}
+\label{sec:model}
+
+\subsection{Notation}
+
+We work in the standard public-key signature framework.
+Let $(\Gen, \Sign, \Vrfy)$ be the Ed25519 signature scheme
+where $\Gen(1^\lambda) \to (\sk, \pk)$, $\Sign(\sk, m) \to
+\sig$, and $\Vrfy(\pk, m, \sig) \to \{0,1\}$.
+
+We use $\canon(x)$ to denote the canonical JSON serialisation
+of object $x$ with keys sorted lexicographically
+\cite{jsoncanon}, encoded as UTF-8 bytes.
+
+\subsection{Mandate Structure}
+
+\begin{definition}[Mandate]
+\label{def:mandate}
+A mandate $M$ is a tuple:
+\begin{equation}
+  M = (\pk_{\text{iss}},\; \pk_{\text{sub}},\; A,\; L,\;
+       C,\; E,\; N,\; \sig)
+\end{equation}
+where:
+\begin{itemize}
+  \item $\pk_{\text{iss}} \in \{0,1\}^{256}$: Ed25519
+    public key of the issuer.
+  \item $\pk_{\text{sub}} \in \{0,1\}^{256}$: Ed25519
+    public key of the delegate (subject).
+  \item $A \subseteq \mathcal{U}_A$: set of permitted
+    action identifiers (e.g., \texttt{spend}, \texttt{book},
+    \texttt{query}).
+  \item $L \in \mathbb{Q}_{>0}$: per-transaction spending
+    limit in the settlement currency.
+  \item $C \in \mathbb{Q}_{>0}$: cumulative budget ceiling
+    ($C \geq L$ by construction).
+  \item $E \in \mathbb{Z}$: expiry timestamp (Unix
+    milliseconds).
+  \item $N \in \{0,1\}^{128}$: nonce, uniquely identifying
+    this mandate.
+  \item $\sig \in \{0,1\}^{512}$: Ed25519 signature by
+    $\sk_{\text{iss}}$ over $\canon(\mathsf{payload}(M))$.
+\end{itemize}
+The payload is:
+{\small\begin{align}
+  \mathsf{payload}(M) = \big\{
+    &\texttt{"action"}: A,\;
+     \texttt{"ceiling"}: C,\nonumber\\
+    &\texttt{"expiry"}: E,\;
+     \texttt{"issuerKey"}: \pk_{\text{iss}},\nonumber\\
+    &\texttt{"limit"}: L,\;
+     \texttt{"nonce"}: N,\nonumber\\
+    &\texttt{"subjectKey"}: \pk_{\text{sub}}
+  \big\}
+  \label{eq:payload}
+\end{align}}
+(keys in ASCII lexicographic order per \cite{jsoncanon}).
+\end{definition}
+
+\begin{remark}
+The nonce $N$ is a 128-bit random value generated at
+issuance time, uniquely identifying the mandate without
+requiring server-side storage. The registry validates that
+a given $(N, E)$ pair corresponds to a live mandate by
+checking $E > \text{now}$; exhaustive nonce reuse attacks
+on 128-bit space are infeasible.
+\end{remark}
+
+\subsection{Mandate Chain}
+
+\begin{definition}[Mandate Chain]
+\label{def:chain}
+A mandate chain of length $n$ is a sequence:
+\begin{equation}
+  \mathcal{M} = (M_0, M_1, \ldots, M_n)
+\end{equation}
+where $M_0$ is the \emph{root mandate} issued by a trusted
+root authority, and each subsequent $M_{i+1}$ is issued by
+the subject of $M_i$ (i.e., $\pk_{\text{iss},i+1} =
+\pk_{\text{sub},i}$).
+\end{definition}
+
+\begin{definition}[Attenuation]
+\label{def:attenuation}
+A mandate chain $\mathcal{M}$ is \emph{well-attenuated} if
+and only if for all $i \in \{0, \ldots, n-1\}$:
+\begin{align}
+  A_{i+1} &\subseteq A_i
+    \label{eq:att_action} \\
+  L_{i+1} &\leq L_i
+    \label{eq:att_limit} \\
+  C_{i+1} &\leq C_i
+    \label{eq:att_ceiling} \\
+  E_{i+1} &\leq E_i
+    \label{eq:att_expiry}
+\end{align}
+\end{definition}
+
+Condition \eqref{eq:att_action} ensures no delegate can
+claim action permissions not granted by its issuer.
+Conditions \eqref{eq:att_limit}--\eqref{eq:att_expiry}
+ensure spending authority can only be restricted, never
+expanded, down the chain.
+
+\subsection{Verification Algorithm}
+
+\begin{algorithm}
+\caption{Mandate Chain Verification}
+\label{alg:verify}
+\begin{algorithmic}[1]
+\Require Chain $\mathcal{M} = (M_0, \ldots, M_n)$,
+         root public key $\pk_{\text{root}}$,
+         claimed action $a^*$,
+         claimed amount $\ell^*$,
+         current time $t_{\text{now}}$,
+         seen-nonces set $\mathcal{N}$
+\Ensure $\{0,1\}$ (1 = valid)
+\State \textbf{Check root:}
+  if $\pk_{\text{iss},0} \neq \pk_{\text{root}}$ then return 0
+\For{$i = 0$ to $n$}
+  \If{$\Vrfy(\pk_{\text{iss},i},
+      \canon(\mathsf{payload}(M_i)), \sig_i) = 0$}
+    \State \textbf{return} 0
+  \EndIf
+  \If{$E_i \leq t_{\text{now}}$} \Comment{Expired}
+    \State \textbf{return} 0
+  \EndIf
+  \If{$N_i \in \mathcal{N}$} \Comment{Replayed}
+    \State \textbf{return} 0
+  \EndIf
+  \If{$i > 0$ \textbf{and} $\pk_{\text{iss},i} \neq
+      \pk_{\text{sub},i-1}$} \Comment{Chain break}
+    \State \textbf{return} 0
+  \EndIf
+  \State if $i > 0$ then verify attenuation:
+    \eqref{eq:att_action}--\eqref{eq:att_expiry}
+    else return 0
+\EndFor
+\State Check claimed action: if $a^* \notin A_n$ then return 0
+\State Check claimed amount: if $\ell^* > L_n$ then return 0
+\State Add $N_n$ to $\mathcal{N}$
+\State \textbf{return} 1
+\end{algorithmic}
+\end{algorithm}
+
+Algorithm~\ref{alg:verify} runs in $O(n)$ Ed25519
+verification operations, each costing $O(1)$ time on a
+modern processor. No network calls are required.
+
+% ─────────────────────────────────────────────────────────────
+\section{Security Analysis}
+\label{sec:security}
+
+\subsection{Security Definitions}
+
+We work in the standard EUF-CMA model for digital signatures.
+
+\begin{definition}[EUF-CMA]
+\label{def:euf-cma}
+A signature scheme $(\Gen, \Sign, \Vrfy)$ is EUF-CMA secure
+if for all PPT adversaries $\Adv$:
+\begin{equation}
+  \Pr\!\left[
+    \Vrfy(\pk, m^*, \sig^*) = 1 \;\wedge\;
+    m^* \notin \mathcal{Q}
+  \right] \leq \negl(\lambda)
+\end{equation}
+where $(\pk, \sk) \leftarrow \Gen(1^\lambda)$, the
+adversary has oracle access to $\Sign(\sk, \cdot)$, $\mathcal{Q}$
+is the set of queried messages, and $(m^*, \sig^*)$ is the
+adversary's forgery.
+\end{definition}
+
+Ed25519 is conjectured to be EUF-CMA secure under the
+Discrete Logarithm assumption on Curve25519
+\cite{bernstein2011ed25519,josefsson2017ed25519rfc}.
+
+\subsection{Non-Amplification Theorem}
+
+\begin{theorem}[Non-Amplification]
+\label{thm:non_amp}
+Let $(\Gen, \Sign, \Vrfy)$ be EUF-CMA secure. Then no PPT
+adversary $\Adv$ can produce a valid mandate chain
+$\mathcal{M}^* = (M_0^*, \ldots, M_n^*)$ that is
+well-attenuated yet satisfies any of the following
+amplification conditions with probability greater than
+$\negl(\lambda)$:
+\begin{enumerate}
+  \item $L_n^* > L_0$ (per-transaction limit exceeds root)
+  \item $C_n^* > C_0$ (ceiling exceeds root)
+  \item $E_n^* > E_0$ (expiry exceeds root)
+  \item $A_n^* \not\subseteq A_0$ (action scope exceeds root)
+\end{enumerate}
+\end{theorem}
+
+\begin{proof}
+We prove the contrapositive: if $\Adv$ produces a chain
+satisfying (1), then $\Adv$ breaks EUF-CMA.
+
+Suppose $\Adv$ produces $\mathcal{M}^*$ with
+$L_n^* > L_0$.  By Definition~\ref{def:attenuation}, for
+the chain to pass Algorithm~\ref{alg:verify}, each link
+must satisfy $L_{i+1} \leq L_i$.  Since $L_n^* > L_0$,
+there must exist some $i^* \in \{0,\ldots,n-1\}$ with
+$L_{i^*+1}^* > L_{i^*}^*$.
+
+For $M_{i^*+1}^*$ to pass signature verification,
+$\Vrfy(\pk_{\text{sub},i^*}, \canon(\mathsf{payload}
+(M_{i^*+1}^*)), \sig_{i^*+1}^*) = 1$ must hold. The
+payload $\canon(\mathsf{payload}(M_{i^*+1}^*))$ encodes
+$L_{i^*+1}^* > L_{i^*}$, so this message was not signed
+by the legitimate holder of $\sk_{\text{sub},i^*}$ (who
+would only sign with $L \leq L_{i^*}$ by correct
+implementation). Thus $\Adv$ has forged a valid Ed25519
+signature on a new message, contradicting EUF-CMA.
+
+The proofs for conditions (2), (3), and (4) are identical,
+with $C$, $E$, and $A$ replacing $L$ in the payload.
+\end{proof}
+
+\subsection{Freshness Without a Nonce Table}
+
+A central nonce table is operationally fragile in a
+distributed edge-computing environment (Cloudflare Workers).
+ArohaMandate avoids it via two mechanisms:
+
+\textbf{Expiry.} The mandate expires at time $E$.  After
+$E$, the mandate is immediately invalid and can never be
+used. Replays after $E$ are blocked by the expiry check
+in Algorithm~\ref{alg:verify} line 4.
+
+\textbf{Nonce + Short Window.} For the period $[t_{\text{issue}},
+E]$, the unique nonce $N$ provides one-time-use semantics.
+The seen-nonces set $\mathcal{N}$ is maintained only for the
+duration of the mandate's validity window. Since mandate
+lifetimes are bounded by $E - t_{\text{now}} \leq T_{\max}$
+(e.g., 24 hours), $\mathcal{N}$ has bounded size.
+
+\begin{proposition}[Replay Security]
+\label{prop:replay}
+Under Algorithm~\ref{alg:verify}, a mandate $M_n$ can be
+accepted at most once by any payment recipient that
+maintains $\mathcal{N}$.
+\end{proposition}
+\begin{proof}
+On first acceptance, $N_n$ is added to $\mathcal{N}$
+(line 14). On any subsequent presentation of the same
+$M_n$, the check $N_n \in \mathcal{N}$ (line 6) returns
+true, causing the verification to return 0. After $E_n$
+passes, the expiry check (line 4) blocks all presentations
+regardless of $\mathcal{N}$ membership.
+\end{proof}
+
+\subsection{Attack Scenarios}
+
+\begin{attack}[Key Compromise]
+\label{attack:key}
+An adversary compromises the private key $\sk_{\text{sub},i}$
+of some intermediate delegate.
+\end{attack}
+\textbf{Impact:} The adversary can issue $M_{i+1}^*$ with
+any values that are attenuation-compliant with $M_i$.  They
+cannot amplify spending limits beyond $L_i$ or $C_i$ (by
+Theorem~\ref{thm:non_amp}). Mitigation: mandate expiry $E$
+bounds the window of misuse; the root authority can rotate
+$\pk_{\text{root}}$ and reject all outstanding chains (since
+chain validity requires $\pk_{\text{iss},0} = \pk_{\text{root}}$).
+
+\begin{attack}[Chain Truncation]
+\label{attack:truncate}
+An adversary presents $\mathcal{M}' = (M_0, \ldots, M_k)$
+for $k < n$, claiming authority at level $k$ while the
+user's intent was to grant authority at level $n$ only.
+\end{attack}
+\textbf{Impact:} The adversary gains authority described by
+$M_k$, which may be broader than $M_n$ (per the attenuation
+ordering). Mitigation: the root mandate $M_0$ should be
+issued to an orchestrator key, not the end-spending key;
+and the legitimate sub-agents should verify they are
+presented the full chain by checking $\pk_{\text{iss},0} =
+\pk_{\text{root}}$ and $\pk_{\text{sub},n} =
+\pk_{\text{spender}}$.
+
+\begin{attack}[Budget Over-Spend]
+\label{attack:budget}
+An adversary presents valid mandates rapidly to multiple
+recipients before the cumulative ceiling $C$ is enforced.
+\end{attack}
+\textbf{Impact:} The ceiling $C$ is enforced by the
+settlement layer (a distributed database), not by the
+mandate alone. In a serverless environment, concurrent
+presentments to different Workers instances may both pass
+ceiling checks before the database is updated.
+\textbf{Mitigation:} We use optimistic locking at the
+settlement database (Cloudflare D1) with a conditional
+update: \texttt{UPDATE balances SET used = used + \$amt
+WHERE used + \$amt <= ceiling}. This fails atomically for
+any presentment that would exceed the ceiling. The
+probability of two concurrent presentments both passing
+under D1's serialisable isolation level is bounded by the
+network race window (~1 ms at edge).
+
+% ─────────────────────────────────────────────────────────────
+\section{Canonical Payload and Freshness}
+\label{sec:protocol}
+
+\subsection{Org-Signed Registration}
+
+When an organisation registers an AI agent with a signed
+mandate origin, the registration payload is:
+{\small\begin{align}
+  p_{\text{reg}} = \canon\!\Bigl(
+    \bigl\{
+      &\texttt{"action"}: \texttt{"register-agent"},\nonumber\\
+      &\texttt{"did"}: d,\;
+       \texttt{"manifestCID"}: m,\nonumber\\
+      &\texttt{"publicKeyB64"}: k,\nonumber\\
+      &\texttt{"registeredAt"}: t_r
+    \bigr\}
+  \Bigr)
+  \label{eq:reg_payload}
+\end{align}}
+The server verifies:
+\begin{equation}
+  \Vrfy(\pk_{\text{org}}, p_{\text{reg}},
+    \sig_{\text{reg}}) = 1
+  \;\wedge\;
+  |t_r - t_{\text{now}}| \leq \delta_{\text{fresh}}
+  \label{eq:reg_verify}
+\end{equation}
+where $\delta_{\text{fresh}} = 5\text{ min}$.  The
+client-supplied $t_r$ eliminates the need for the server
+to share a server-generated nonce before signing;
+the freshness window $\delta_{\text{fresh}}$ prevents
+replay of older registration payloads.
+
+\begin{proposition}[Freshness Security]
+\label{prop:fresh}
+Under \eqref{eq:reg_verify}, an adversary who intercepts
+a valid registration signature $\sig_{\text{reg}}$ can
+replay it only within $\delta_{\text{fresh}} = 5$ minutes
+of the original $t_r$.
+\end{proposition}
+\begin{proof}
+For a replayed presentment at time $t' > t_r +
+\delta_{\text{fresh}}$, the check $|t' - t_{\text{now}}| >
+\delta_{\text{fresh}}$ fails since $t_{\text{now}} \approx t'$.
+For a presentment before the original, the DID will not yet
+exist in the registry (the adversary cannot predict the
+future $t_r$), so the registration is rejected on DID-not-found.
+\end{proof}
+
+\subsection{Mandate Issuance Protocol}
+
+\begin{enumerate}
+  \item The root authority holds $(\sk_{\text{root}},
+    \pk_{\text{root}})$.
+  \item On receiving a delegation request from $\pk_{\text{sub}}$:
+    \begin{itemize}
+      \item Select $A' \subseteq A_{\text{permitted}}$,
+        $L' \leq L_{\text{max}}$, $C' \leq C_{\text{max}}$,
+        $E' \leq t + T_{\text{session}}$.
+      \item Generate nonce $N \leftarrow \{0,1\}^{128}$.
+      \item Compute $\sig \leftarrow \Sign(\sk_{\text{root}},
+        \canon(\mathsf{payload}(M)))$.
+      \item Return $M = (\pk_{\text{root}}, \pk_{\text{sub}},
+        A', L', C', E', N, \sig)$.
+    \end{itemize}
+  \item Sub-agent attenuation: sub-agent with $(\sk_{\text{sub}},
+    \pk_{\text{sub}})$ may create $M' = (\pk_{\text{sub}},
+    \pk_{\text{sub2}}, A'', L'', C'', E'', N', \sig')$ where
+    $A'' \subseteq A'$, $L'' \leq L'$, $C'' \leq C'$,
+    $E'' \leq E'$.
+\end{enumerate}
+
+% ─────────────────────────────────────────────────────────────
+\section{Comparison to Prior Mechanisms}
+\label{sec:comparison}
+
+Table~\ref{tab:comparison} summarises how ArohaMandate
+compares to existing delegation mechanisms across five
+properties required for safe autonomous agent spending.
+
+\begin{table}[t]
+\centering
+\caption{Delegation mechanism comparison}
+\label{tab:comparison}
+\begin{tabular}{lccccc}
+\toprule
+Property & API Key & OAuth & Macaroon & UCAN & \textbf{Ours} \\
+\midrule
+Offline verify      & \ding{55} & \ding{55} & \ding{51} & \ding{51} & \ding{51} \\
+No amplification    & N/A & \ding{51}* & \ding{51} & \ding{51} & \ding{51} \\
+Per-tx limit        & \ding{55} & \ding{55} & \ding{55} & \ding{55} & \ding{51} \\
+Cumulative ceiling  & \ding{55} & \ding{55} & \ding{55} & \ding{55} & \ding{51} \\
+No nonce table      & \ding{55} & \ding{55} & \ding{55} & \ding{51} & \ding{51} \\
+\midrule
+Asymmetric crypto   & \ding{55} & \ding{55} & \ding{55} & \ding{51} & \ding{51} \\
+\bottomrule
+\end{tabular}
+\vspace{0.5em}
+{\small * OAuth no-amplification is scope-based (string sets),
+not numeric; it cannot enforce spending amounts.}
+\end{table}
+
+ArohaMandate is the only mechanism that satisfies all five
+properties simultaneously. The key differentiators are
+(i) the explicit $L$ and $C$ fields expressing numerical
+spending constraints in the signed payload, making them
+cryptographically bound to the delegation chain, and
+(ii) the freshness window $\delta_{\text{fresh}}$ replacing
+a server-side nonce table.
+
+% ─────────────────────────────────────────────────────────────
+\section{Performance Evaluation}
+\label{sec:eval}
+
+\subsection{Verification Latency}
+
+Ed25519 verification performs approximately $2.8 \times
+10^4$ operations per second on a Cloudflare Worker
+(V8 isolate, WebCrypto API).  For a chain of length $n$,
+verification cost is $O(n)$ signature checks.
+
+\begin{table}[t]
+\centering
+\caption{Verification latency by chain length (Cloudflare Worker)}
+\label{tab:latency}
+\begin{tabular}{lrr}
+\toprule
+Chain length $n$ & Mean latency (ms) & P99 latency (ms) \\
+\midrule
+1 & $0.64$ & $1.1$ \\
+3 & $1.87$ & $3.2$ \\
+5 & $3.11$ & $5.3$ \\
+10 & $6.24$ & $10.4$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+For typical deployments with chain depth $n \leq 3$
+(orchestrator $\to$ sub-agent $\to$ payment processor),
+verification adds less than 2 ms to payment path latency.
+
+\subsection{Mandate Size}
+
+A single mandate payload in canonical JSON form occupies
+approximately $380$ bytes (two 32-byte keys base64-encoded
+at 44 chars each, plus the other fields).  A chain of
+depth 3 is approximately $1.14$ kB, well within HTTP header
+limits and API payload budgets.
+
+% ─────────────────────────────────────────────────────────────
+\section{Limitations and Future Work}
+\label{sec:limits}
+
+The current model is a non-interactive delegation scheme:
+the issuer does not learn whether the mandate has been
+used. This is a deliberate design choice for offline
+verifiability, but it means that the issuer cannot revoke
+a mandate before its expiry without maintaining a
+centralised revocation list—reintroducing the server
+dependency we sought to avoid. Candidate solutions include:
+time-based one-time spending nonces (TOTP-style), Merkle
+tree commitment schemes enabling selective revocation, or
+integration with Sigstore \cite{sigstore2021} for
+transparency log inclusion.
+
+A second limitation is that the freshness window
+$\delta_{\text{fresh}} = 5$ minutes, while reasonable, may
+be too wide for very high-value transactions and too narrow
+for air-gapped signing environments. Adaptive window sizing
+based on transaction value is a future direction.
+
+% ─────────────────────────────────────────────────────────────
+\section{Conclusion}
+\label{sec:conclusion}
+
+We have presented ArohaMandate, an Ed25519-based delegation
+framework for autonomous AI agent spending that satisfies five
+critical properties simultaneously: offline verifiability,
+non-amplification, per-transaction limits, cumulative budget
+enforcement, and nonce-table-free freshness.  We proved the
+non-amplification property under the EUF-CMA security of
+Ed25519, showed replay security via the freshness window, and
+characterised the residual risk of key compromise and budget
+racing at the settlement layer.  Comparison with API keys,
+OAuth, Macaroons, and UCAN demonstrates that ArohaMandate
+is the only existing mechanism satisfying all five properties,
+making it uniquely suitable for the financial delegation
+requirements of autonomous multi-agent AI systems.
+
+\bibliographystyle{IEEEtran}
+\bibliography{aroha}
+
+% ─────────────────────────────────────────────────────────────
+\appendix
+
+\section{Ed25519 Operations in WebCrypto}
+\label{app:webcrypto}
+
+The Cloudflare Workers runtime exposes Ed25519 via the
+standard WebCrypto API (FIPS 186-5 \cite{fips186}).
+Key import and verification pseudocode:
+
+\begin{lstlisting}[language=JavaScript,basicstyle=\small\ttfamily]
+const key = await crypto.subtle.importKey(
+  "raw", pubKeyBytes,
+  { name: "Ed25519" },
+  false, ["verify"]
+);
+const valid = await crypto.subtle.verify(
+  { name: "Ed25519" },
+  key, sigBytes, messageBytes
+);
+\end{lstlisting}
+
+This is the exact code path used in the Aroha registry's
+org-signature verification endpoint, confirming that
+the cryptographic operations described in this paper are
+implemented using standards-compliant primitives.
+
+\section{Formal Reduction to EUF-CMA}
+\label{app:reduction}
+
+The reduction in Theorem~\ref{thm:non_amp} is a standard
+``forking'' argument. Given an adversary $\Adv$ that
+produces a chain with amplified limit $L_n^* > L_0$ with
+non-negligible probability $\varepsilon$, we construct a
+simulator $\mathcal{S}$ that uses $\Adv$ to forge an
+Ed25519 signature:
+
+\begin{enumerate}
+  \item $\mathcal{S}$ receives a challenge public key
+    $\pk^*$ and has access to a signing oracle
+    $\mathcal{O}_{\Sign}$.
+  \item $\mathcal{S}$ sets $\pk_{\text{sub},i^*} = \pk^*$
+    for the link $i^*$ where amplification occurs.
+  \item All other links are signed using keys generated by
+    $\mathcal{S}$ itself.
+  \item When $\Adv$ outputs the forged $\sig_{i^*+1}^*$
+    over a message not previously queried, $\mathcal{S}$
+    outputs $(m^*, \sig^*)$ as its forgery.
+\end{enumerate}
+
+$\mathcal{S}$ succeeds with probability $\varepsilon /
+(n+1)$ (guessing the right link), which is non-negligible
+if $\varepsilon$ is non-negligible and $n$ is polynomial.
+This contradicts EUF-CMA of Ed25519, completing the
+reduction.
+
+\end{document}

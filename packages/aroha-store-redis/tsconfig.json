@@ -1,0 +1,14 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "composite": true
+  },
+  "references": [
+    { "path": "../aroha-credentials" }
+  ],
+  "include": ["src/**/*"],
+  // Specs are not part of the published surface.
+  "exclude": ["src/**/*.test.ts", "src/test-utils/**", "**/*.test.ts"]
+}

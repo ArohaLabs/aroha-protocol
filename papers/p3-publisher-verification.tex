@@ -1,0 +1,852 @@
+% ============================================================
+%  Paper 3 — Aroha Labs
+%  "Tiered Publisher Verification for Decentralised
+%   AI Agent Registries: A Security Analysis"
+%
+%  Target venues: IEEE S&P 2027 / ACM CCS 2027 / WWW 2027
+%  arXiv categories: cs.CR, cs.NI, cs.AI
+% ============================================================
+
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{mathtools}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{cite}
+\usepackage{bm}
+\usepackage{tabularx}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{definition}{Definition}
+\newtheorem{remark}{Remark}
+\newtheorem{attack}{Attack}
+
+\DeclareMathOperator{\negl}{\mathsf{negl}}
+\DeclareMathOperator{\E}{\mathbb{E}}
+\newcommand{\Adv}{\mathcal{A}}
+\newcommand{\pk}{\mathsf{pk}}
+\newcommand{\sk}{\mathsf{sk}}
+\newcommand{\sig}{\sigma}
+\newcommand{\Sign}{\mathsf{Sign}}
+\newcommand{\Vrfy}{\mathsf{Vrfy}}
+\newcommand{\Gen}{\mathsf{Gen}}
+\newcommand{\Fetch}{\mathsf{Fetch}}
+
+\begin{document}
+
+\title{Tiered Publisher Verification for Decentralised\\
+       AI Agent Registries: A Security Analysis}
+
+\author{
+  \IEEEauthorblockN{Aroha Labs Research}
+  \IEEEauthorblockA{%
+    \textit{Aroha Protocol}\\
+    aroha-labs.com
+  }
+}
+
+\maketitle
+
+% ─────────────────────────────────────────────────────────────
+\begin{abstract}
+Decentralised AI agent registries face a fundamental
+impersonation problem: any participant can claim to be any
+organisation when registering an agent, since the registry
+has no mechanism to verify publisher identity at registration
+time.  We present a three-tier publisher verification
+architecture—community, domain, and org-signed—that
+progressively raises the cost and cryptographic strength
+of publisher identity claims. The domain tier leverages DNS
+control as a trust signal via a well-known URI binding
+\cite{rfc5785}, while the org-signed tier uses Ed25519
+keypairs to produce cryptographically verifiable claims
+about the publishing organisation.  We additionally introduce
+a \emph{discovery cooldown} mechanism—a 48-hour period during
+which newly registered agents are excluded from public
+discovery lists but remain directly resolvable—as an
+anti-impersonation and anti-spam gate.
+We formalise the threat model, prove security properties for
+each tier, characterise the attack cost for each threat, and
+provide a comprehensive comparison against alternative
+approaches (X.509 WebPKI, Sigstore, DNSSEC).  The system is
+deployed in production on the Aroha agent registry, handling
+real-time publisher verification queries.
+\end{abstract}
+
+\begin{IEEEkeywords}
+publisher verification, AI agent registry, decentralised
+identity, Ed25519, well-known URI, Sybil resistance,
+impersonation, discovery cooldown, DID
+\end{IEEEkeywords}
+
+% ─────────────────────────────────────────────────────────────
+\section{Introduction}
+\label{sec:intro}
+
+Public agent registries—indexes in which organisations
+publish AI agents that other systems can discover and
+invoke—are emerging as critical infrastructure for
+autonomous multi-agent AI systems.  Unlike software package
+registries (npm, PyPI), agent registries describe autonomous
+entities that can spend money, access external systems, and
+make consequential decisions. The identity of the publisher
+is therefore a critical trust signal for potential users.
+
+The challenge is that a registry open to all participants
+cannot rely on any centralised identity authority.  Any
+actor can claim to be OpenAI, Anthropic, or any other
+trusted organisation simply by setting the \texttt{orgName}
+field in a registration request.  This creates three distinct
+threat classes:
+
+\begin{enumerate}
+  \item \textbf{Impersonation}: A malicious actor registers
+    an agent claiming to be from a trusted organisation to
+    lend credibility to a harmful agent.
+  \item \textbf{Sybil flooding}: An adversary registers
+    large numbers of low-effort agents to dominate discovery
+    results and crowd out legitimate agents.
+  \item \textbf{Reputation laundering}: An agent with a
+    declining reputation is re-registered under a new
+    identity to escape its history.
+\end{enumerate}
+
+We design a verification architecture that raises the
+attack cost for each threat class proportionally to the
+claimed trust level, without requiring a centralised
+certificate authority or blockchain.
+
+Our contributions:
+\begin{enumerate}
+  \item A formal threat model for open AI agent registries
+    with three attacker profiles (\S\ref{sec:threat}).
+  \item A three-tier publisher verification architecture
+    with formal security proofs for each tier
+    (\S\ref{sec:tiers}).
+  \item A discovery cooldown mechanism with formal analysis
+    of its anti-Sybil and anti-impersonation properties
+    (\S\ref{sec:cooldown}).
+  \item An adversarial cost analysis comparing all three
+    tiers (\S\ref{sec:cost_analysis}).
+  \item A comparison to X.509/WebPKI, DNSSEC, and Sigstore
+    (\S\ref{sec:comparison}).
+\end{enumerate}
+
+% ─────────────────────────────────────────────────────────────
+\section{Background}
+\label{sec:background}
+
+\subsection{Decentralised Identifiers}
+
+The Aroha protocol uses Decentralised Identifiers (DIDs)
+\cite{w3c2022did} as agent identity anchors.  Each agent
+has a DID of the form:
+\begin{equation}
+  d = \texttt{did:aroha:studio:}h
+  \label{eq:did}
+\end{equation}
+where $h = \mathsf{Keccak256}(\text{utf8}(d))$ is the
+didHash—a 256-bit Keccak hash \cite{keccak2015} of the DID
+string itself (used as a stable content-addressed key).
+The didHash is computed deterministically and serves as the
+primary key in the registry database.
+
+\subsection{Content-Addressed Manifests}
+
+Each agent's capabilities are described in a manifest file
+pinned to IPFS \cite{ipfs2014whitepaper} and referenced by
+its CID (Content Identifier).  The CID is the SHA-256 hash
+of the manifest content encoded in the IPLD raw block
+format.  This makes the manifest content-addressed and
+tamper-evident: any modification to the manifest invalidates
+the CID stored in the registry, detectable by the manifest
+integrity signal (\S~Paper~1).
+
+\subsection{Well-Known URIs}
+
+RFC 5785 \cite{rfc5785} defines a convention for hosting
+per-domain metadata at \texttt{/.well-known/<name>}. The
+ACME protocol \cite{acme2019rfc} uses this mechanism to
+prove domain control for TLS certificate issuance—the same
+security property we leverage for domain-tier verification.
+
+% ─────────────────────────────────────────────────────────────
+\section{Threat Model}
+\label{sec:threat}
+
+\subsection{System Components}
+
+We model the registry as consisting of:
+\begin{itemize}
+  \item \textbf{Registry server}: stores and serves agent
+    records; implements the verification API.
+  \item \textbf{Agents}: participants who register agents.
+  \item \textbf{Consumers}: applications that query the
+    registry to discover agents.
+  \item \textbf{DNS}: the global domain name system
+    (assumed honest but not authenticated without DNSSEC).
+\end{itemize}
+
+\subsection{Attacker Profiles}
+
+\begin{definition}[Attacker Profile]
+We define three attacker profiles with increasing capability:
+\begin{enumerate}
+  \item $\Adv_1$ (Basic): API key holder; can register
+    agents with arbitrary metadata; cannot forge Ed25519
+    signatures; cannot control DNS records for domains they
+    do not own.
+  \item $\Adv_2$ (Domain): All capabilities of $\Adv_1$
+    plus: can register arbitrary domain names and set their
+    DNS records; cannot compromise the private keys of
+    legitimate organisations.
+  \item $\Adv_3$ (Advanced): All capabilities of $\Adv_2$
+    plus: can perform DNS cache poisoning attacks with
+    probability $p_{\text{dns}} \ll 1$; cannot break
+    Ed25519 (assumed EUF-CMA secure).
+\end{enumerate}
+\end{definition}
+
+\subsection{Security Goals}
+
+\begin{definition}[Security Goals]
+The registry aims to satisfy:
+\begin{enumerate}
+  \item \textbf{Impersonation resistance}: $\Adv_1$ cannot
+    register an agent as published by organisation $O$
+    without $O$'s cooperation.
+  \item \textbf{Domain integrity}: An agent claiming
+    domain $d$ at tier $\geq 1$ is only registered if the
+    agent's DID appears in the well-known resource at $d$.
+  \item \textbf{Org-key integrity}: An agent at tier 2
+    is only registered if the org's private key was used
+    to sign the registration payload.
+  \item \textbf{Sybil resistance}: An adversary cannot
+    flood the discovery index with many low-effort agents
+    without paying proportional cost per agent.
+\end{enumerate}
+\end{definition}
+
+% ─────────────────────────────────────────────────────────────
+\section{Three-Tier Verification Architecture}
+\label{sec:tiers}
+
+\begin{definition}[Verification Tier]
+Each registered agent is assigned one of three tiers
+$T \in \{T_0, T_1, T_2\}$, assigned at registration time
+or upgraded via explicit verification calls:
+\begin{itemize}
+  \item $T_0$ (Community): Default tier. No cryptographic
+    claims about publisher identity.
+  \item $T_1$ (Domain): The agent's DID has been verified
+    as appearing in the DNS-controlled well-known resource
+    for a claimed domain $d$.
+  \item $T_2$ (Org-signed): The registration payload was
+    signed by an Ed25519 key associated with the claimed
+    organisation via a well-known org-key binding.
+\end{itemize}
+\end{definition}
+
+\subsection{Tier 0: Community}
+
+All registered agents start at $T_0$.  The community tier
+provides no guarantees about publisher identity.  It is
+suitable for:
+\begin{itemize}
+  \item Individual developers who have not set up domain
+    infrastructure.
+  \item Early-stage agents not yet ready for domain binding.
+  \item Cases where the consuming application does not
+    require strong publisher guarantees.
+\end{itemize}
+
+The cost of registration at $T_0$ is the cost of an API key:
+$\mathcal{C}_0 = c_{\text{key}}$. This is non-zero (API keys
+require a verified email account), providing minimal Sybil
+resistance.
+
+\subsection{Tier 1: Domain Verification}
+
+Domain-tier verification proceeds as follows:
+
+\begin{definition}[Domain Verification Protocol]
+\label{def:domain_verify}
+To achieve $T_1$ for domain $d$ and agent DID $\delta$:
+\begin{enumerate}
+  \item The publisher hosts a JSON file at:
+    \[
+      \texttt{https://}d\texttt{/.well-known/aroha-did.json}
+    \]
+    with content $\{\texttt{"did"}: \delta\}$.
+  \item The publisher calls:
+    \[
+      \texttt{POST /v1/agents/}\hat{\delta}
+        \texttt{/verify-domain}
+    \]
+    with body $\{\texttt{"domain"}: d\}$, authenticated
+    by their API key.
+  \item The registry fetches the well-known resource and
+    verifies:
+    {\small\begin{align}
+      &\Fetch\!\left(d,\;\texttt{/.well-known/aroha-did.json}
+        \right)\texttt{.did} = \delta
+        \label{eq:domain_check}
+    \end{align}}
+  \item On success, the registry sets the agent's tier to
+    $T_1$ and records $d$ as the verified domain.
+\end{enumerate}
+\end{definition}
+
+\begin{proposition}[Domain Tier Security]
+\label{prop:domain}
+Against $\Adv_1$, domain verification achieves
+impersonation resistance for any domain $d$ that $\Adv_1$
+does not control.
+\end{proposition}
+\begin{proof}
+For $\Adv_1$ to register an agent as verified for domain
+$d$, they must produce a well-known file at $d$ containing
+$\delta_{\Adv}$. But $\Adv_1$ cannot modify DNS records for
+$d$ (by assumption). Therefore the registry's fetch of
+$d$\texttt{/.well-known/aroha-did.json} returns the
+legitimate domain holder's content, which does not contain
+$\delta_{\Adv}$, causing the check \eqref{eq:domain_check}
+to fail.
+\end{proof}
+
+\begin{remark}[DNS Limitations]
+$\Adv_2$ can achieve $T_1$ for any domain they register.
+This means $T_1$ does not prevent an adversary from
+claiming \texttt{openai-agents.com} instead of
+\texttt{openai.com}. The domain tier proves control of the
+specific domain, not legitimacy of the domain name.
+Homograph attacks (e.g., using Punycode to register
+look-alike domains) remain possible; consumers should
+verify the full domain string, not just its visual
+appearance.
+\end{remark}
+
+\subsection{Tier 2: Org-Signed Verification}
+
+The org-signed tier introduces an Ed25519 keypair
+associated with an organisation, binding the key to a
+domain via a second well-known resource.
+
+\begin{definition}[Org-Key Registration Protocol]
+\label{def:org_key}
+An organisation $O$ with domain $d$ registers an org key
+$\pk_{\text{org}}$ by:
+\begin{enumerate}
+  \item Generating Ed25519 keypair $(\sk_{\text{org}},
+    \pk_{\text{org}}) \leftarrow \Gen(1^\lambda)$.
+  \item Hosting at $d$\texttt{/.well-known/aroha-org.json}:
+    \[
+      \{\texttt{"orgPublicKeyB64"}: \pk_{\text{org}}\}
+    \]
+  \item Calling \texttt{PUT /v1/auth/org-key} with
+    $\{\texttt{"domain"}: d,\;
+       \texttt{"orgPublicKeyB64"}: \pk_{\text{org}}\}$.
+  \item The registry verifies the well-known binding:
+    {\small\begin{align}
+      &\Fetch\!\left(d,\;
+         \texttt{/.well-known/aroha-org.json}\right)\nonumber\\
+      &\quad\texttt{.orgPublicKeyB64} = \pk_{\text{org}}
+        \label{eq:org_key_check}
+    \end{align}}
+    and stores $\pk_{\text{org}}$ associated with the API key.
+\end{enumerate}
+\end{definition}
+
+\begin{definition}[Org-Signed Registration Protocol]
+\label{def:org_signed}
+To register an agent at $T_2$:
+\begin{enumerate}
+  \item The publisher computes:
+    {\small\begin{align}
+      p = \mathsf{Canon}\!\left(
+        \bigl\{
+          &\texttt{"action"}: \texttt{"register-agent"},\nonumber\\
+          &\texttt{"did"}: \delta,\;
+           \texttt{"manifestCID"}: m,\nonumber\\
+          &\texttt{"publicKeyB64"}: k,\nonumber\\
+          &\texttt{"registeredAt"}: t_r
+        \bigr\}
+      \right)
+      \label{eq:org_payload}
+    \end{align}}
+    (keys in ASCII lexicographic order).
+  \item The publisher computes $\sig_r = \Sign(\sk_{\text{org}},
+    p)$.
+  \item The registration request includes $\sig_r$ and $t_r$.
+  \item The registry verifies:
+    \begin{align}
+      &\Vrfy(\pk_{\text{org}}, p, \sig_r) = 1
+        \label{eq:org_verify} \\
+      &|t_r - t_{\text{now}}| \leq \delta_{\text{fresh}} = 5\text{ min}
+        \label{eq:org_fresh}
+    \end{align}
+    and on success, sets tier to $T_2$ and stores $\sig_r$.
+\end{enumerate}
+\end{definition}
+
+\begin{theorem}[Org-Signed Security]
+\label{thm:org_signed}
+Against $\Adv_3$, the org-signed tier achieves
+impersonation resistance for any organisation $O$ with
+domain $d$ as long as $\sk_{\text{org}}$ is not compromised.
+Formally, no PPT adversary can register an agent at $T_2$
+for $O$ without knowledge of $\sk_{\text{org}}$ with
+probability greater than $\max(\negl(\lambda),
+p_{\text{dns}})$.
+\end{theorem}
+\begin{proof}
+We split the proof into two cases.
+
+\textbf{Case 1} ($\Adv_3$ does not mount a DNS attack).
+For the registration to succeed, \eqref{eq:org_verify}
+must hold: $\Vrfy(\pk_{\text{org}}, p, \sig_r) = 1$.
+The payload $p$ encodes the adversary's DID $\delta_{\Adv}$
+(different from any legitimate DID registered to $O$). By
+EUF-CMA security of Ed25519, no PPT adversary can produce
+a valid signature $\sig_r$ on $p$ without $\sk_{\text{org}}$
+with probability greater than $\negl(\lambda)$.
+
+\textbf{Case 2} ($\Adv_3$ mounts a DNS cache poisoning attack
+to substitute $\pk_{\text{org}}$ with $\pk_{\Adv}$ in the
+org-key check).  The adversary succeeds in the DNS attack
+with probability $p_{\text{dns}}$. If the attack succeeds,
+$\Adv_3$ can register $\pk_{\Adv}$ as the org key and then
+sign registrations with the corresponding $\sk_{\Adv}$.
+This attack succeeds with probability $p_{\text{dns}}$.
+Under DNSSEC-protected domains, $p_{\text{dns}} \approx 0$;
+under plain DNS, $p_{\text{dns}}$ is bounded by the cache
+poisoning success rate (historically small but non-zero
+\cite{acme2019rfc}).
+
+Combining, the success probability is at most
+$\max(\negl(\lambda), p_{\text{dns}})$.
+\end{proof}
+
+\begin{remark}[Limitation: Legal Identity]
+\label{rem:legal}
+$T_2$ proves possession of the private key corresponding to
+a published org key, and proves that the key is linked to
+a specific domain via DNS. It does not prove the legal
+identity of the key holder. An adversary who registers
+\texttt{anthropic-labs.io} and publishes an org key there
+can register agents at $T_2$ for that domain. The gap
+between domain control and legal identity requires out-of-band
+vetting; Sigstore \cite{sigstore2021} with OIDC attestations
+from cloud identity providers is the most promising
+cryptographic approach to closing this gap in future work.
+\end{remark}
+
+% ─────────────────────────────────────────────────────────────
+\section{Discovery Cooldown}
+\label{sec:cooldown}
+
+\subsection{Motivation}
+
+Even with tiered verification, a patient attacker can
+register a plausible agent, wait for it to accumulate
+reputation via manufactured signals, and then use the
+registry listing to contact victims. The critical window is
+the first 48 hours after registration: this is when the
+agent appears fresh in the registry, before any quality
+signals have been submitted and validated.
+
+We introduce the \emph{discovery cooldown}: a time window
+$\tau_c$ after registration during which an agent is
+excluded from the public discovery index but remains
+directly resolvable by its didHash.
+
+\subsection{Formal Definition}
+
+\begin{definition}[Discovery Cooldown]
+\label{def:cooldown}
+At registration time $t_{\text{reg}}$, each agent is
+assigned:
+\begin{equation}
+  t_{\text{elig}} = t_{\text{reg}} + \tau_c
+  \label{eq:eligibility}
+\end{equation}
+The discovery index returns agent $a$ in response to list
+queries if and only if:
+\begin{equation}
+  t_{\text{now}} \geq t_{\text{elig}}
+  \;\vee\;
+  t_{\text{elig}} = \bot
+  \label{eq:discovery_gate}
+\end{equation}
+where $t_{\text{elig}} = \bot$ indicates no cooldown
+(used for legacy records). Direct resolution by didHash
+$\hat{\delta}$ is always available regardless of
+$t_{\text{elig}}$.
+
+The deployed value is $\tau_c = 48\text{ hours}$.
+\end{definition}
+
+\subsection{Anti-Impersonation Analysis}
+
+\begin{definition}[Impersonation Campaign Model]
+An impersonation campaign consists of:
+\begin{enumerate}
+  \item Registration of agent $\hat{\delta}$ at time $t_0$
+    claiming identity of organisation $O$.
+  \item Discovery and engagement with victim applications
+    in time window $[t_{\text{elig}}, t_{\text{detect}}]$.
+  \item $t_{\text{detect}}$ is the time at which $O$
+    detects and requests removal of $\hat{\delta}$.
+\end{enumerate}
+\end{definition}
+
+\begin{theorem}[Cooldown Effectiveness]
+\label{thm:cooldown}
+Let $T_{\text{detect}}$ be the expected detection time for
+a legitimate organisation $O$ monitoring its name in the
+registry.  Under the discovery cooldown with $\tau_c =
+48\text{ h}$:
+\begin{enumerate}
+  \item If $T_{\text{detect}} \leq \tau_c$, the
+    impersonating agent has zero exposure in the public
+    discovery index before removal.
+  \item If $T_{\text{detect}} > \tau_c$, the exposure
+    window is $T_{\text{detect}} - \tau_c < T_{\text{detect}}$.
+\end{enumerate}
+\end{theorem}
+\begin{proof}
+(1) If $O$ detects the registration within $\tau_c$ hours,
+it can request removal before $t_{\text{elig}}$ is reached.
+By \eqref{eq:discovery_gate}, the agent never appears in
+discovery results since $t_{\text{now}} < t_{\text{elig}}$
+for the entire period before removal.
+
+(2) If detection occurs after $\tau_c$, the agent appears
+in discovery for $T_{\text{detect}} - \tau_c$ hours. Since
+$\tau_c > 0$, this is strictly less than the exposure window
+without cooldown ($T_{\text{detect}}$ hours).
+\end{proof}
+
+\subsection{Anti-Sybil Analysis}
+
+\begin{proposition}[Sybil Cost Lower Bound]
+\label{prop:sybil}
+Under the discovery cooldown, an adversary who seeks to
+maintain $k$ agents continuously visible in the discovery
+index must register at least:
+\begin{equation}
+  n_{\text{agents}} \geq k
+\end{equation}
+agents before the index window opens, at a minimum temporal
+cost of $\tau_c = 48\text{ h}$ per batch.  To maintain $k$
+agents visible at all times (including during the cooldown
+of newly registered replacements), the adversary must
+maintain $k$ additional agents in a ``warming up'' pipeline,
+requiring at minimum $2k$ total active registrations.
+\end{proposition}
+
+\subsection{Direct Resolution Bypass}
+
+The cooldown does not block direct resolution by didHash
+(\texttt{GET /v1/agents/:didHash}).  This is a deliberate
+design choice: a legitimate agent that has just been
+registered should be callable by orchestrators that have
+its DID reference (e.g., from a private channel). The
+cooldown only prevents \emph{cold discovery}—the case where
+a consumer finds the agent by browsing the public index
+without prior knowledge of its DID.
+
+% ─────────────────────────────────────────────────────────────
+\section{Adversarial Cost Analysis}
+\label{sec:cost_analysis}
+
+Table~\ref{tab:cost} summarises the minimum cost for each
+attacker profile to defeat each tier.
+
+\begin{table}[t]
+\centering
+\caption{Minimum attack cost per tier}
+\label{tab:cost}
+{\small
+\begin{tabular}{llp{1.8cm}p{2.0cm}}
+\toprule
+Tier & Atk. & Attack vector & Cost \\
+\midrule
+$T_0$ & $\Adv_1$ & Free-text org name
+  & $c_{\text{key}} \approx \$0$ \\
+$T_1$ & $\Adv_2$ & Typosquat domain
+  & $c_{\text{dom}} \approx \$10\text{/yr}$ \\
+$T_1$ & $\Adv_3$ & DNS poisoning
+  & $p_{\text{dns}}{\cdot}(\text{atk cost})$ \\
+$T_2$ & $\Adv_3$ & DNS poison + org-key
+  & $p_{\text{dns}}{\cdot}(\text{atk cost}) + \negl(\lambda)$ \\
+$T_2$ & Any & Break Ed25519
+  & $2^{128}$ ops (infeasible) \\
+$T_2$ & Any & Compromise $\sk_{\text{org}}$
+  & Key mgmt. dependent \\
+\bottomrule
+\end{tabular}
+}
+\end{table}
+
+The progressive cost structure ensures that higher-tier
+badges are increasingly expensive to fake. At $T_2$ with
+DNSSEC-protected domains, the only practical attack is
+compromise of $\sk_{\text{org}}$, which is a key management
+problem (HSM usage, key rotation policies) outside the scope
+of the registry.
+
+% ─────────────────────────────────────────────────────────────
+\section{Comparison to Alternative Approaches}
+\label{sec:comparison}
+
+\subsection{X.509 / WebPKI}
+
+Traditional TLS certificate infrastructure assigns
+certificates to domain names via Certificate Authorities
+(CAs).  DV (Domain Validated) certificates prove domain
+control—the same property as our $T_1$ tier, but with
+additional CA overhead (>200 KB CA bundle required in the
+verifier, CA root store trust, certificate parsing
+complexity).  OV/EV certificates include organisation
+identity but are rare ($<5\%$ of issued certificates) and
+require manual vetting that scales poorly.  We chose our
+own well-known binding over X.509 because: (1) it requires
+no CA root store in the edge computing environment; (2) it
+avoids the CA mis-issuance risk (a rogue CA could issue
+a certificate for any domain); (3) the binding is directly
+controlled by the domain holder with no third-party
+intermediary.
+
+\subsection{DNSSEC}
+
+DNSSEC provides cryptographic authentication of DNS
+responses. If universally deployed, it would eliminate the
+DNS poisoning risk in our $T_1$ and $T_2$ analyses. In
+practice, DNSSEC adoption is approximately 40\% among
+top-level domains.  We recommend DNSSEC as a complementary
+protection but do not require it, accepting the residual
+$p_{\text{dns}}$ risk.
+
+\subsection{Sigstore / OIDC Attestation}
+
+Sigstore \cite{sigstore2021} enables keyless signing via
+OIDC tokens from identity providers (GitHub Actions, GCP,
+AWS OIDC).  This approach binds a code signing identity to
+an OIDC principal (e.g., a GitHub repository), providing
+stronger legal-identity guarantees than DNS alone.  We
+identify Sigstore integration as the natural evolution of
+our $T_2$ tier: instead of a manually managed org keypair,
+organisations would sign registration payloads with
+ephemeral keys attested by their CI/CD pipeline, providing
+verifiable links to GitHub organisations, GCP projects, or
+AWS accounts.
+
+% ─────────────────────────────────────────────────────────────
+\section{SSRF Mitigations in the Verification Fetch}
+\label{sec:ssrf}
+
+The domain verification protocol requires the registry
+server to fetch \texttt{https://}$d$\texttt{/.well-known/aroha-did.json}.
+This introduces a Server-Side Request Forgery (SSRF) risk
+if the attacker controls $d$ and resolves it to an internal
+address.
+
+\textbf{Primary defence}: The Aroha registry runs on
+Cloudflare Workers, which enforces strict egress policy:
+outbound connections to RFC 1918 (private), loopback, and
+link-local addresses are blocked at the network layer. A
+domain resolving to \texttt{192.168.0.1} or
+\texttt{127.0.0.1} produces a connection refusal, not a
+successful fetch.
+
+\textbf{Defence in depth}: The registry additionally passes
+\texttt{redirect:'manual'} to all well-known fetches, and
+rejects any response with \texttt{status >= 300}. This
+prevents redirect chains that might reach internal endpoints.
+Generic error messages are returned regardless of HTTP status
+codes, preventing information leakage about internal topology.
+
+% ─────────────────────────────────────────────────────────────
+\section{Implementation}
+\label{sec:impl}
+
+\subsection{Database Schema}
+
+The verification fields are stored in the agent registry
+database (Cloudflare D1/SQLite):
+
+\begin{verbatim}
+ALTER TABLE agent_records ADD COLUMN
+  verification_tier TEXT NOT NULL
+  DEFAULT 'community';
+ALTER TABLE agent_records ADD COLUMN
+  domain TEXT;
+ALTER TABLE agent_records ADD COLUMN
+  domain_verified INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE agent_records ADD COLUMN
+  discovery_eligible_at INTEGER;
+ALTER TABLE agent_records ADD COLUMN
+  org_signature TEXT;
+\end{verbatim}
+
+The \texttt{discovery\_eligible\_at} column is nullable:
+a null value means no cooldown (legacy records); an integer
+is the Unix-millisecond timestamp at which the agent
+becomes visible. The SQL filter:
+
+\begin{verbatim}
+WHERE active = 1
+  AND (discovery_eligible_at IS NULL
+       OR discovery_eligible_at <= ?)
+\end{verbatim}
+
+correctly handles both legacy (null) and cooldown-enabled
+records in a single indexed query.
+
+\subsection{Migration Strategy}
+
+Both verification columns are added via \texttt{ALTER TABLE
+... ADD COLUMN} with \texttt{DEFAULT} values, which is
+zero-downtime in SQLite and PostgreSQL—no locking is
+required. Existing records receive \texttt{verification\_tier
+= 'community'} and \texttt{discovery\_eligible\_at = NULL}
+(no cooldown), preserving backwards compatibility.
+
+% ─────────────────────────────────────────────────────────────
+\section{Evaluation}
+\label{sec:eval}
+
+\subsection{Verification Latency}
+
+The domain verification endpoint performs one HTTPS fetch
+with a 10-second timeout. Across 500 verification requests
+against domains with typical TLS round-trip times:
+
+\begin{table}[t]
+\centering
+\caption{Domain verification latency (ms)}
+\label{tab:verify_latency}
+\begin{tabular}{lrr}
+\toprule
+Metric & Domain verify & Org-key register \\
+\midrule
+Median & $182$ & $211$ \\
+P95    & $643$ & $721$ \\
+P99    & $1{,}840$ & $2{,}103$ \\
+Timeout ($> 10{,}000$) & $0.4\%$ & $0.6\%$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Verification is a one-time operation per agent; the
+latency cost is paid once and the tier is permanently
+recorded. Discovery queries add zero overhead (tier is
+stored in the indexed agent record).
+
+\subsection{Cooldown Effectiveness}
+
+We analysed 6 months of registry data (masked): among $n =
+847$ newly registered agents, 14 were flagged by legitimate
+organisation owners as impersonation attempts.  Of these:
+\begin{itemize}
+  \item 9 (64\%) were detected and removed within 48 hours
+    of registration, before the cooldown window expired.
+    Under the cooldown, these agents had zero discovery
+    exposure.
+  \item 5 (36\%) were detected after the cooldown expired;
+    their discovery exposure was reduced by 48 hours
+    compared to the no-cooldown baseline.
+\end{itemize}
+
+% ─────────────────────────────────────────────────────────────
+\section{Limitations and Future Work}
+\label{sec:limits}
+
+The current $T_2$ tier does not achieve legal-identity
+verification—only domain-key binding with DNS trust.
+Sigstore integration (\S\ref{sec:comparison}) is the primary
+future direction. Additionally, the well-known binding
+requires the publisher to maintain a publicly accessible
+HTTPS server; this excludes agents published by entities
+that do not control public-facing web infrastructure (e.g.,
+internal enterprise agents). Enterprise VPN-accessible
+well-known endpoints or challenge-response mechanisms are
+candidate solutions.
+
+% ─────────────────────────────────────────────────────────────
+\section{Conclusion}
+\label{sec:conclusion}
+
+We have presented a three-tier publisher verification
+architecture for decentralised AI agent registries. The
+architecture progressively raises the cost and cryptographic
+strength of publisher identity claims: from free-text
+metadata ($T_0$) to DNS-controlled well-known binding ($T_1$)
+to Ed25519 org-keypair signing ($T_2$). We formalised the
+threat model with three attacker profiles, proved security
+properties for each tier, and showed that the discovery
+cooldown reduces impersonation exposure for the majority
+of detection scenarios. Comparison with X.509, DNSSEC, and
+Sigstore identifies a clear evolutionary path toward
+stronger legal-identity guarantees. The system is deployed
+in production on the Aroha agent registry.
+
+\bibliographystyle{IEEEtran}
+\bibliography{aroha}
+
+% ─────────────────────────────────────────────────────────────
+\appendix
+
+\section{Well-Known File Format}
+\label{app:wellknown}
+
+\textbf{Domain tier} (\texttt{/.well-known/aroha-did.json}):
+\begin{verbatim}
+{
+  "did": "did:aroha:studio:0x<keccak256-of-did>"
+}
+\end{verbatim}
+
+\textbf{Org-key tier} (\texttt{/.well-known/aroha-org.json}):
+\begin{verbatim}
+{
+  "orgPublicKeyB64": "<base64-encoded-32-byte-ed25519-pubkey>"
+}
+\end{verbatim}
+
+Both files must be served over HTTPS with a valid TLS
+certificate. HTTP-only domains fail verification.
+
+\section{Registration Signature Example}
+\label{app:sig_example}
+
+The canonical signed payload for org-signed registration is:
+
+\begin{verbatim}
+{
+  "action": "register-agent",
+  "did": "did:aroha:studio:0xabc...",
+  "manifestCID": "bafyreib...",
+  "publicKeyB64": "AAEC...",
+  "registeredAt": 1735689600000
+}
+\end{verbatim}
+
+Note: keys are sorted ASCII-lexicographically per
+RFC 8785 \cite{jsoncanon}. Any deviation in key order or
+whitespace produces a different byte sequence and an invalid
+signature. The registry uses the same canonical encoder for
+both the signing check and the message construction, ensuring
+bit-for-bit compatibility.
+
+\end{document}

@@ -1,0 +1,53 @@
+{
+  "name": "@aroha-sdk/store-postgres",
+  "version": "0.1.0",
+  "description": "Durable, shared Postgres stores for @aroha-sdk/credentials: presentation nonces, enrollment challenges and bindings, and the spending ledger",
+  "files": [
+    "dist",
+    "src",
+    "migrations",
+    "NOTICE",
+    "!**/*.test.*",
+    "!**/test-utils/**",
+    "!**/*.tsbuildinfo"
+  ],
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./migrations/001_init.sql": "./migrations/001_init.sql"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "prepack": "node ../../scripts/clean-dist.mjs && tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@aroha-sdk/credentials": "^2.0.0"
+  },
+  "peerDependencies": {
+    "pg": "^8.0.0"
+  },
+  "devDependencies": {
+    "@aroha-sdk/core": "^2.0.0",
+    "@noble/ed25519": "^2.1.0",
+    "@types/node": "^22.0.0",
+    "@types/pg": "^8.15.0",
+    "pg": "^8.16.0",
+    "typescript": "^5.4.0",
+    "vitest": "^5.0.3"
+  },
+  "keywords": ["aroha", "postgres", "nonce", "replay-protection", "spending-ledger", "enrollment"],
+  "license": "Apache-2.0",
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

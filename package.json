@@ -1,0 +1,47 @@
+{
+  "name": "aroha",
+  "version": "1.0.0",
+  "description": "Aroha Protocol — secure, decentralized agent-to-agent protocol",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "agents/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "build": "node scripts/build-ordered.mjs",
+    "dev:mock-provider": "npm run dev --workspace=agents/mock-provider-agent",
+    "test": "npm run test --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "demo:mandate": "node scripts/demo-mandate-chain.mjs",
+    "demo:vc": "node scripts/demo-vc-terminal.mjs",
+    "demo:browser": "node scripts/vc-demo.mjs",
+    "demo:chat": "node scripts/chat-demo.mjs",
+    "demo:fintech": "node scripts/demo-fintech.mjs",
+    "demo:cross-product": "node scripts/demo-cross-product.mjs",
+    "benchmark": "node scripts/benchmark/index.mjs",
+    "benchmark:b1": "node scripts/benchmark/b1-single-hop.mjs",
+    "benchmark:b2": "node scripts/benchmark/b2-discovery.mjs",
+    "benchmark:b5": "node scripts/benchmark/b5-crypto-throughput.mjs",
+    "benchmark:b6": "node scripts/benchmark/b6-mandate-chain.mjs",
+    "smoke": "node scripts/smoke.mjs",
+    "check:readme-examples": "node scripts/check-readme-examples.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "composio-core": "^0.5.0",
+    "eslint": "^9.5.0",
+    "nodemailer": "^10.0.16",
+    "typescript": "^5.4.5",
+    "vitest": "^5.0.3"
+  },
+  "overrides": {
+    "tmp": "^0.2.6",
+    "uuid": "^11.1.1",
+    "zod": "^4.6.7"
+  },
+  "engines": {
+    "node": ">=22.12.0",
+    "npm": ">=10.0.0"
+  }
+}

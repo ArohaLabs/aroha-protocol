@@ -1,0 +1,16 @@
+# Copyright (c) 2026 Aroha Labs
+# SPDX-License-Identifier: Apache-2.0
+
+[profile.default]
+src         = "contracts"
+out         = "out"
+libs        = []
+script      = "script"
+solc_version = "0.8.24"
+optimizer   = true
+optimizer_runs = 200
+
+[profile.default.fmt]
+line_length  = 100
+tab_width    = 4
+bracket_spacing = true

@@ -1,0 +1,48 @@
+{
+  "name": "@aroha-sdk/composio-bridge",
+  "version": "1.2.3",
+  "description": "Aroha ↔ Composio bridge — wraps Aroha capabilities as Composio actions for TrustClaw and any Composio-connected agent",
+  "files": [
+    "dist",
+    "src",
+    "NOTICE",
+    "!**/*.test.*",
+    "!**/test-utils/**",
+    "!**/*.tsbuildinfo"
+  ],
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "prepack": "node ../../scripts/clean-dist.mjs && tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@aroha-sdk/core": "^2.0.0"
+  },
+  "peerDependencies": {
+    "composio-core": ">=0.5.0"
+  },
+  "peerDependenciesMeta": {
+    "composio-core": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5",
+    "vitest": "^5.0.3",
+    "@types/node": "^20.14.0",
+    "composio-core": "^0.5.0"
+  },
+  "license": "Apache-2.0",
+  "engines": {
+    "node": ">=22"
+  }
+}

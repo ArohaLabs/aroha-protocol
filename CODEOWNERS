@@ -1,0 +1,43 @@
+# CODEOWNERS
+# Each line assigns ownership of a path to one or more GitHub users/teams.
+# The last matching rule takes precedence.
+#
+# Every owner is @projectmed99, the only maintainer (MAINTAINERS.md). The
+# @aroha-labs/* teams this file used to name belong to a different GitHub
+# organisation (Aroha-Labs) and could never satisfy a review requirement here.
+# Add a user or an ArohaLabs team when a second maintainer joins.
+# See: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default: the core maintainer reviews everything
+*                                   @projectmed99
+
+# Protocol specification
+docs/spec/                          @projectmed99
+
+# Security docs (Security Maintainer role is vacant; core maintainer reviews)
+docs/security/                      @projectmed99
+SECURITY.md                         @projectmed99
+
+# CI/CD workflows — core maintainers only
+.github/workflows/                  @projectmed99
+
+# Conformance
+docs/conformance/                   @projectmed99
+
+# Ecosystem submissions (Ecosystem Maintainer role is vacant; core maintainer reviews)
+docs/ecosystem.md                   @projectmed99
+community/                          @projectmed99
+docs/ecosystem/                     @projectmed99
+
+
+# Governance docs
+docs/governance.md                  @projectmed99
+CONTRIBUTING.md                     @projectmed99
+MAINTAINERS.md                      @projectmed99
+CODE_OF_CONDUCT.md                  @projectmed99
+
+# Core packages — core maintainers required
+packages/aroha-core/                @projectmed99
+packages/aroha-credentials/         @projectmed99
+packages/aroha-registry/            @projectmed99
+packages/aroha-policy/              @projectmed99

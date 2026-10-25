@@ -1,0 +1,131 @@
+{
+  "description": "Outbound PII screening vectors (design spec §5). Every Aroha implementation MUST produce these results. Screening runs on the question LEAVING an agent, so a divergence means one SDK leaks an identifier its sibling would have caught — and the leak is only visible to the receiving party, who has no reason to report it.",
+  "placeholderFormat": "[REDACTED:<CATEGORY>]",
+  "ruleOrder": ["email", "api_key", "ssn", "credit_card", "ip_address", "phone"],
+  "cases": [
+    {
+      "name": "clean text passes through untouched",
+      "input": "What is our refund window for enterprise customers?",
+      "expectText": "What is our refund window for enterprise customers?",
+      "expectRedactions": []
+    },
+    {
+      "name": "empty string",
+      "input": "",
+      "expectText": "",
+      "expectRedactions": []
+    },
+    {
+      "name": "email address",
+      "input": "Please follow up with dana.k@example.com about the invoice.",
+      "expectText": "Please follow up with [REDACTED:EMAIL] about the invoice.",
+      "expectRedactions": [{ "category": "email", "count": 1 }]
+    },
+    {
+      "name": "two emails count as two",
+      "input": "cc a@example.com and b@example.org",
+      "expectText": "cc [REDACTED:EMAIL] and [REDACTED:EMAIL]",
+      "expectRedactions": [{ "category": "email", "count": 2 }]
+    },
+    {
+      "name": "phone with dashes",
+      "input": "Call 415-555-0142 before noon.",
+      "expectText": "Call [REDACTED:PHONE] before noon.",
+      "expectRedactions": [{ "category": "phone", "count": 1 }]
+    },
+    {
+      "name": "phone with parentheses and spaces",
+      "input": "reach them at (415) 555-0142",
+      "expectText": "reach them at [REDACTED:PHONE]",
+      "expectRedactions": [{ "category": "phone", "count": 1 }]
+    },
+    {
+      "name": "international phone",
+      "input": "dial +1 415 555 0142 now",
+      "expectText": "dial [REDACTED:PHONE] now",
+      "expectRedactions": [{ "category": "phone", "count": 1 }]
+    },
+    {
+      "name": "bare ten digits are NOT a phone number",
+      "input": "order reference 4155550142 shipped",
+      "expectText": "order reference 4155550142 shipped",
+      "expectRedactions": []
+    },
+    {
+      "name": "US social security number",
+      "input": "SSN 123-45-6789 on file",
+      "expectText": "SSN [REDACTED:SSN] on file",
+      "expectRedactions": [{ "category": "ssn", "count": 1 }]
+    },
+    {
+      "name": "credit card passing Luhn is redacted",
+      "input": "card 4111111111111111 was declined",
+      "expectText": "card [REDACTED:CREDIT_CARD] was declined",
+      "expectRedactions": [{ "category": "credit_card", "count": 1 }]
+    },
+    {
+      "name": "credit card with spaces",
+      "input": "card 4111 1111 1111 1111 declined",
+      "expectText": "card [REDACTED:CREDIT_CARD] declined",
+      "expectRedactions": [{ "category": "credit_card", "count": 1 }]
+    },
+    {
+      "name": "sixteen digits failing Luhn is left alone",
+      "input": "order number 1234567890123456 shipped",
+      "expectText": "order number 1234567890123456 shipped",
+      "expectRedactions": []
+    },
+    {
+      "name": "IPv4 address",
+      "input": "the host at 192.168.1.44 is down",
+      "expectText": "the host at [REDACTED:IP_ADDRESS] is down",
+      "expectRedactions": [{ "category": "ip_address", "count": 1 }]
+    },
+    {
+      "name": "three-part version string is not an IP",
+      "input": "we are on Python 3.11.2 in prod",
+      "expectText": "we are on Python 3.11.2 in prod",
+      "expectRedactions": []
+    },
+    {
+      "name": "four-part version string IS treated as an IP (known, accepted false positive)",
+      "input": "build 1.2.3.4 is live",
+      "expectText": "build [REDACTED:IP_ADDRESS] is live",
+      "expectRedactions": [{ "category": "ip_address", "count": 1 }]
+    },
+    {
+      "name": "OpenAI-style secret key",
+      "input": "use sk-abcdefghijklmnopqrstuvwxyz012345 for the call",
+      "expectText": "use [REDACTED:API_KEY] for the call",
+      "expectRedactions": [{ "category": "api_key", "count": 1 }]
+    },
+    {
+      "name": "GitHub personal access token",
+      "input": "token ghp_abcdefghijklmnopqrstuvwxyz0123456789 expired",
+      "expectText": "token [REDACTED:API_KEY] expired",
+      "expectRedactions": [{ "category": "api_key", "count": 1 }]
+    },
+    {
+      "name": "AWS access key id",
+      "input": "key AKIAIOSFODNN7EXAMPLE is rotated",
+      "expectText": "key [REDACTED:API_KEY] is rotated",
+      "expectRedactions": [{ "category": "api_key", "count": 1 }]
+    },
+    {
+      "name": "several categories at once, reported sorted by category",
+      "input": "mail a@example.com or call 415-555-0142 from 10.0.0.7",
+      "expectText": "mail [REDACTED:EMAIL] or call [REDACTED:PHONE] from [REDACTED:IP_ADDRESS]",
+      "expectRedactions": [
+        { "category": "email", "count": 1 },
+        { "category": "ip_address", "count": 1 },
+        { "category": "phone", "count": 1 }
+      ]
+    },
+    {
+      "name": "a personal name is NOT redacted — names are out of scope by design",
+      "input": "ask Dana Kowalski in finance",
+      "expectText": "ask Dana Kowalski in finance",
+      "expectRedactions": []
+    }
+  ]
+}

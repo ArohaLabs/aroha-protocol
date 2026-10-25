@@ -1,0 +1,969 @@
+% ============================================================
+%  Paper 5 — Aroha Labs
+%  "The Aroha Protocol: A Layered Architecture for
+%   Autonomous AI Agent Networks"
+%
+%  Target venues: AAMAS 2027 / WWW 2027 / IEEE Internet Computing
+%  arXiv categories: cs.MA, cs.NI, cs.CR
+% ============================================================
+
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+
+\usepackage{amsmath,amssymb,amsthm,mathtools}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{cite}
+\usepackage{bm}
+\usepackage{listings}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{definition}{Definition}
+\newtheorem{remark}{Remark}
+
+\DeclareMathOperator{\E}{\mathbb{E}}
+\newcommand{\Adv}{\mathcal{A}}
+\newcommand{\Sign}{\mathsf{Sign}}
+\newcommand{\Verify}{\mathsf{Verify}}
+\newcommand{\KeyGen}{\mathsf{KeyGen}}
+\newcommand{\DID}{\mathsf{DID}}
+\newcommand{\TL}{\mathsf{TL}}
+
+\lstset{
+  basicstyle={\ttfamily\scriptsize},
+  breaklines=true,
+  frame=none,
+  columns=fullflexible
+}
+
+\begin{document}
+
+\title{The Aroha Protocol: A Layered Architecture\\
+       for Autonomous AI Agent Networks}
+
+\author{
+  \IEEEauthorblockN{Aroha Labs Research}
+  \IEEEauthorblockA{%
+    \textit{Aroha Protocol}\\
+    aroha-labs.com
+  }
+}
+
+\maketitle
+
+% ─────────────────────────────────────────────────────────────
+\begin{abstract}
+The proliferation of large language model (LLM)-based agents
+creates a demand for open, interoperable infrastructure that
+enables agents published by different organisations to discover,
+authenticate, communicate with, and delegate tasks to one another
+with well-defined security guarantees. Existing agent frameworks
+address single-provider deployments or rely on informal
+conventions; no published work specifies a complete, layered
+protocol for \emph{open} agent networks.
+We present the \textit{Aroha Protocol}: a four-layer stack
+comprising (L1) a content-addressed Decentralised Identifier
+(DID) scheme derived from Ed25519 public keys, (L2) a dual
+registry mechanism supporting both managed HTTP and on-chain
+EVM-compatible registries, (L3) a signed capability manifest
+system with IPFS-pinned content integrity, and (L4) a typed
+envelope transport with a four-stage validation pipeline.
+We formalise a trust-level taxonomy (TL0--TL3) that maps
+cryptographic evidence to actionable trust decisions, prove the
+security of key-rotation and key-revocation procedures, and
+characterise the threat model for each layer. The protocol
+includes bidirectional bridges to the Model Context Protocol
+(MCP) and Agent-to-Agent (A2A) protocol, enabling incremental
+adoption. A single signed envelope incurs approximately 650
+bytes overhead; a three-agent delegation chain costs under 2 KB.
+This paper is the architectural companion to four specialised
+companion papers covering Bayesian reputation (P1), mandate
+chains (P2), publisher verification (P3), and adaptive RAG
+chunking (P4).
+\end{abstract}
+
+\begin{IEEEkeywords}
+autonomous agents, decentralised identifiers, multi-agent
+systems, protocol architecture, Ed25519, trust management,
+agent interoperability, capability manifests
+\end{IEEEkeywords}
+
+% ─────────────────────────────────────────────────────────────
+\section{Introduction}
+\label{sec:intro}
+
+Large language model (LLM)-based agents are rapidly transitioning
+from isolated assistants to participants in collaborative,
+multi-agent workflows~\cite{guo2024agents}. In such workflows an
+agent may delegate sub-tasks to specialist agents, consume
+published capabilities as services, or act as an orchestrator of
+a pipeline spanning organisations and trust domains. This
+transition imposes requirements that no existing framework
+satisfies simultaneously: (i)~strong identity binding that
+prevents impersonation, (ii)~capability advertisement that is
+both machine-readable and tamper-evident, (iii)~a transport layer
+whose security properties are independent of the underlying
+network, and (iv)~interoperability with existing protocol
+ecosystems such as MCP~\cite{anthropic2024mcp} and
+A2A~\cite{google2024a2a}.
+
+Existing work on multi-agent systems largely assumes a trusted
+orchestrator or a closed environment. Reputation and trust models
+for open peer-to-peer networks~\cite{josang2007trust,
+kamvar2003eigentrust, sabater2005review} address agent quality
+but not identity binding. Decentralised Identifiers
+(DIDs)~\cite{w3c2022did} provide an identity layer but specify
+no agent-specific capability model. Blockchain-based systems
+offer tamper-resistant registries~\cite{nakamoto2008bitcoin,
+buterin2014ethereum} but lack the application-level message
+semantics required for agent coordination.
+
+This paper presents the \textit{Aroha Protocol}: a complete,
+layered specification for open AI agent networks. Our
+contributions are:
+
+\begin{enumerate}
+  \item \textbf{A four-layer protocol stack} (DID scheme,
+    registry, manifest, transport) with formal security
+    properties at each layer (\S\ref{sec:stack}).
+  \item \textbf{Theorems on key management security}: rotation
+    cooldown prevents attacker exploitation; revocation
+    self-signatures prove voluntary intent
+    (\S\ref{sec:keymanagement}).
+  \item \textbf{A trust-level taxonomy} (TL0--TL3) mapping
+    cryptographic evidence to decision thresholds
+    (\S\ref{sec:trust}).
+  \item \textbf{A formal threat model} covering six attack
+    classes and their mitigations (\S\ref{sec:security}).
+  \item \textbf{Bidirectional bridges} to MCP and A2A with
+    security downgrade characterisation
+    (\S\ref{sec:bridges}).
+\end{enumerate}
+
+The protocol is designed so that each layer is independently
+deployable; an implementor may adopt only the DID scheme and
+transport layer while using an existing capability registry, or
+adopt all four layers for a fully Aroha-native deployment.
+
+% ─────────────────────────────────────────────────────────────
+\section{Background and Related Work}
+\label{sec:background}
+
+\subsection{Decentralised Identifiers}
+
+W3C DIDs~\cite{w3c2022did} decouple identifiers from
+centralised registries by embedding verification material in a
+DID Document. The \texttt{did:key} method derives a DID from a
+public key, making it content-addressed and self-certifying.
+Aroha adopts this principle but extends it with agent-specific
+service endpoints, a structured capability manifest, and a
+key-history field required for key rotation auditing.
+
+\subsection{Trust and Reputation in Open Networks}
+
+J\o{}sang and Ismail's Beta Reputation System~\cite{josang2002beta}
+and EigenTrust~\cite{kamvar2003eigentrust} provide the
+mathematical foundations for trust inference in open networks.
+Our companion paper P1~\cite{aroha2025p1} extends these
+foundations with asymmetric temporal decay tuned for LLM agents
+whose quality evolves as underlying models are updated. The
+present paper specifies the identity substrate on which the
+reputation system operates.
+
+\subsection{Cryptographic Delegation}
+
+UCAN~\cite{fission2022ucan} and Macaroons~\cite{birgisson2014macaroons}
+support capability delegation via chained tokens. Our companion
+paper P2~\cite{aroha2025p2} defines mandate chains specifically
+for financial delegation in agent workflows, building on the
+Ed25519 primitive~\cite{bernstein2011ed25519,josefsson2017ed25519rfc}
+specified in Aroha's identity layer.
+
+\subsection{Content-Addressed Storage}
+
+IPFS~\cite{ipfs2014whitepaper} provides content-addressed
+immutable storage. Aroha uses IPFS CIDs (SHA-256 digests of
+capability manifests) to bind registry references to manifest
+content, preventing registry substitution attacks without
+requiring on-chain storage of manifest data.
+
+\subsection{Blockchain Registries}
+
+Bitcoin~\cite{nakamoto2008bitcoin} and
+Ethereum~\cite{buterin2014ethereum} demonstrate that distributed
+ledger consensus can replace trusted intermediaries for state
+agreement. Aroha's on-chain registry uses an EVM-compatible
+smart contract, enabling deployment on Polygon PoS for
+low-cost, high-throughput registration.
+
+% ─────────────────────────────────────────────────────────────
+\section{The Aroha Protocol Stack}
+\label{sec:stack}
+
+The Aroha Protocol is organised as four layers, each with a
+defined interface to adjacent layers (Fig.~\ref{fig:stack}).
+Layer dependencies flow upward: each layer assumes correct
+operation of the layer below.
+
+\begin{figure}[t]
+\centering
+\begin{tabular}{|c|}
+\hline
+\textbf{L4: Transport (ArohaEnvelope)} \\
+\hline
+\textbf{L3: Capability Manifest} \\
+\hline
+\textbf{L2: Registry} \\
+\hline
+\textbf{L1: DID Scheme} \\
+\hline
+\end{tabular}
+\caption{The four-layer Aroha Protocol stack.}
+\label{fig:stack}
+\end{figure}
+
+\subsection{Layer 1: DID Scheme}
+\label{sec:l1}
+
+\subsubsection{DID Syntax}
+
+An Aroha DID takes one of three forms:
+
+\begin{itemize}
+  \item \textbf{Base form:}
+    \texttt{did:aroha:\textit{<base58btc(pk)>}} where $pk$ is a
+    32-byte Ed25519 public key encoded in Base58BTC~\cite{w3c2021multibase}.
+  \item \textbf{Namespaced form:}
+    \texttt{did:aroha:\textit{ns}.\textit{agentId}} for tenant
+    isolation; the namespace portion is an organisation-controlled
+    string.
+  \item \textbf{Studio form:}
+    \texttt{did:aroha:studio:\textit{h}} where $h =
+    \mathrm{Keccak256}(\mathit{did\_string})$~\cite{keccak2015},
+    used for agents registered via the Studio web interface.
+\end{itemize}
+
+\begin{definition}[Aroha DID]
+Let $(\mathit{sk}, pk) \leftarrow \KeyGen()$ be an Ed25519
+keypair. The canonical Aroha DID is:
+\[
+  \DID(pk) \;=\;
+  \texttt{"did:aroha:"} \,\|\, \mathrm{Base58BTC}(pk).
+\]
+\end{definition}
+
+Content-addressing ensures that $\DID(pk)$ is collision-free
+under the hardness of discrete logarithm on Curve25519: two
+distinct public keys produce two distinct DIDs.
+
+\subsubsection{DID Document}
+
+A DID Document for an Aroha agent contains:
+(i)~\texttt{@context},
+(ii)~\texttt{id} (the DID string),
+(iii)~\texttt{verificationMethod} (type
+\texttt{Ed25519VerificationKey2020}, \texttt{publicKeyMultibase}
+prefixed with \texttt{z}),
+(iv)~\texttt{authentication}, \texttt{assertionMethod},
+\texttt{keyAgreement} (each referencing the verification method),
+(v)~\texttt{service} (type \texttt{ArohaEndpoint}, pointing to
+an HTTPS URL),
+(vi)~\texttt{created}/\texttt{updated} timestamps, and
+optionally (vii)~\texttt{keyHistory} and
+\texttt{revokedKeys} arrays (see \S\ref{sec:keymanagement}).
+
+\subsection{Layer 2: Registry}
+\label{sec:l2}
+
+\subsubsection{Registry Interface}
+
+The canonical registry interface \texttt{IArohaRegistry}
+provides:
+\begin{itemize}
+  \item \texttt{register(did, manifestCID, pk, opts)} —
+    creates an agent record;
+  \item \texttt{deactivate(did)} — marks the agent inactive;
+  \item \texttt{updateManifest(did, newCID)} — updates the
+    pinned manifest reference;
+  \item \texttt{resolveByDID(did)} $\to$ \texttt{AgentRecord}
+    $\mid$ null;
+  \item \texttt{queryByCapability(ids[])} $\to$
+    \texttt{AgentRecord[]};
+  \item \texttt{onAgentRegistered(callback)} — event hook.
+\end{itemize}
+
+\subsubsection{HTTP Registry}
+
+\texttt{ArohaHttpRegistry} exposes the interface as a managed
+REST API. The registry is a trusted intermediary; clients must
+verify manifest CIDs independently (see \S\ref{sec:l3}) because
+HTTP transport does not provide consensus-based tamper resistance.
+
+\subsubsection{On-Chain Registry}
+
+\texttt{ArohaRegistryContract} is an EVM-compatible Solidity
+smart contract deployed on Polygon PoS. Key design decisions:
+
+\begin{itemize}
+  \item \texttt{hashDID(did)} $\to$ \texttt{bytes32} and
+    \texttt{hashCapability(id)} $\to$ \texttt{bytes32} map
+    variable-length strings to fixed-width on-chain keys.
+  \item A minimum stake requirement, enforced on-chain, raises
+    the cost of Sybil attacks~\cite{douceur2002sybil}.
+  \item The \texttt{AgentRegistered(didHash, owner,
+    manifestCID)} event provides an append-only audit log.
+\end{itemize}
+
+Consensus-based tamper resistance means that modifying a
+registry record requires 51\% of the PoS stake, which is
+economically prohibitive for any single adversary.
+
+\subsection{Layer 3: Capability Manifest}
+\label{sec:l3}
+
+\subsubsection{Manifest Structure}
+
+A \textit{SignedCapabilityManifest} contains:
+\begin{itemize}
+  \item \texttt{agentDID} — the issuing agent's DID;
+  \item \texttt{capabilities[]} — array of
+    \texttt{CapabilityManifestEntry} records, each specifying a
+    \texttt{name}, \texttt{description}, \texttt{inputSchema}
+    (JSON Schema), optional \texttt{outputSchema},
+    \texttt{supportsSaga} (bool), \texttt{defaultPricing}, and
+    \texttt{defaultSLA};
+  \item \texttt{generatedAt} — ISO 8601 timestamp;
+  \item \texttt{signature} — Ed25519 signature over the
+    canonical JSON~\cite{jsoncanon} of the manifest body.
+\end{itemize}
+
+The pricing model is one of \texttt{"per-call"},
+\texttt{"subscription"}, or \texttt{"negotiated"}, with an
+optional \texttt{amount} and \texttt{currency}. The SLA record
+specifies \texttt{maxResponseMs} and an optional
+\texttt{p99Ms} target.
+
+\subsubsection{Content Integrity via IPFS CID}
+
+The \textit{CID} (Content Identifier) of a manifest is:
+\[
+  \mathit{CID} = \mathrm{SHA}\text{-}256(\text{canonical JSON of manifest}).
+\]
+This CID is stored in the registry (both HTTP and on-chain)
+and pinned to IPFS~\cite{ipfs2014whitepaper}. Any consumer
+that resolves a registry record can re-derive the CID from the
+fetched manifest and verify it matches the registry record;
+a discrepancy proves a substitution attack.
+
+\begin{theorem}[Manifest Integrity]
+\label{thm:manifest}
+Under SHA-256 collision resistance, no polynomial-time
+adversary $\Adv$ can produce a manifest $M' \neq M$ such that
+$\mathrm{SHA}\text{-}256(M') = \mathrm{SHA}\text{-}256(M)$.
+Consequently, any manifest that passes CID verification is
+identical to the manifest registered by the agent.
+\end{theorem}
+\begin{proof}
+Immediate from the collision-resistance property of SHA-256
+(standardised in FIPS 180-4 and confirmed by
+NIST~\cite{fips186}).
+\end{proof}
+
+\subsection{Layer 4: Envelope Transport}
+\label{sec:l4}
+
+\subsubsection{ArohaEnvelope Structure}
+
+Every inter-agent message is wrapped in an \textit{ArohaEnvelope}:
+\begin{itemize}
+  \item \texttt{@context}: \texttt{["https://aroha-labs.com/}\allowbreak\texttt{contexts/v1"]}
+  \item \texttt{id}: UUID v4
+  \item \texttt{type}: one of 16 \texttt{ArohaMessageType} values
+  \item \texttt{from}, \texttt{to}: DID strings
+  \item \texttt{created}, \texttt{expires}: ISO 8601 timestamps
+  \item \texttt{nonce}: 128-bit random value (hex string)
+  \item \texttt{correlationId}: links messages in a saga
+  \item \texttt{body}: typed payload (per message type)
+  \item \texttt{proof?}: \texttt{MessageProof} (Ed25519
+    signature over canonical JSON of envelope minus
+    \texttt{proof} field)
+  \item \texttt{traceparent?}: W3C Trace Context Level 1
+    header~\cite{w3c2021tracecontext}
+  \item \texttt{routingHint?}: complexity indicator and optional
+    model suggestion
+\end{itemize}
+
+\subsubsection{Envelope Size}
+
+Fixed overhead fields have bounded sizes: an Ed25519 public key
+in Base58BTC occupies approximately 44 characters; a signature
+approximately 88 characters; a nonce 22 characters; a UUID 36
+characters. A typical \texttt{ArohaRequest} envelope with a
+small body occupies approximately 650 bytes. A three-agent
+delegation chain (orchestrator $\to$ worker $\to$ sub-worker)
+produces three envelopes totalling approximately 1.95 KB,
+which is negligible relative to LLM prompt or response payloads.
+
+\subsubsection{Envelope Validation Pipeline}
+
+Algorithm~\ref{alg:validate} specifies the four-stage sequential
+validation procedure executed by every receiving agent.
+
+\begin{algorithm}[t]
+\caption{Envelope Validation Pipeline}
+\label{alg:validate}
+\begin{algorithmic}[1]
+\Require Envelope $E$, local DID $\mathit{myDID}$,
+         nonce registry $\mathcal{N}$,
+         options $\mathit{opts}$
+\Ensure \textsc{Accept} or \textsc{Reject}
+\State \textbf{Stage 1: Signature Verification}
+\If{$\mathit{opts.bypassSignatureFor}(E.\texttt{from})$}
+  \State proceed \Comment{Trusted Mesh bypass}
+\Else
+  \State $pk \leftarrow \mathrm{resolveKey}(E.\texttt{from})$
+  \State $m \leftarrow \mathrm{canonicalJSON}(E \setminus
+         \{\texttt{proof}\})$
+  \If{$\lnot\,\Verify(pk,\, m,\, E.\texttt{proof.sig})$}
+    \State \Return \textsc{Reject}(\textit{bad-sig})
+  \EndIf
+\EndIf
+\State \textbf{Stage 2: Expiry Check}
+\State $\delta \leftarrow \mathit{opts.clockToleranceMs}$
+       $\!\parallel\! 0$
+\If{$E.\texttt{expires} + \delta \leq \mathrm{now()}$}
+  \State \Return \textsc{Reject}(\textit{expired})
+\EndIf
+\State \textbf{Stage 3: Nonce Freshness}
+\If{$E.\texttt{nonce} \in \mathcal{N}$}
+  \State \Return \textsc{Reject}(\textit{replay})
+\EndIf
+\State $\mathcal{N}.\mathrm{insert}(E.\texttt{nonce})$
+\State \textbf{Stage 4: Recipient Match}
+\If{$E.\texttt{to} \neq \mathit{myDID}$}
+  \State \Return \textsc{Reject}(\textit{misdirected})
+\EndIf
+\State \Return \textsc{Accept}
+\end{algorithmic}
+\end{algorithm}
+
+The four stages are independent and ordered by computational
+cost: recipient-match (O(1) string comparison) is placed last
+because it catches only routing errors, while signature
+verification (the most expensive stage) is placed first to
+avoid committing nonce state for forged envelopes.
+
+% ─────────────────────────────────────────────────────────────
+\section{Key Management}
+\label{sec:keymanagement}
+
+\subsection{Key Rotation}
+
+Key rotation is triggered by the owner via
+$\mathrm{rotateDIDKey}(\mathit{current}, \Delta)$, where
+$\Delta$ is a cooldown duration in hours. The procedure generates
+a new keypair $(\mathit{sk}', pk')$, creates a
+\textit{KeyRotationRecord}:
+{\small\begin{align*}
+\bigl\{\;
+  &\mathit{rotatedAt},\;
+  \mathit{trustAfter} = \mathit{rotatedAt} + \Delta,\;\\
+  &\mathit{predecessorKey},\;
+  \mathit{newKeyHash},\;
+  \sigma_{\mathit{pred}}
+\;\bigr\}
+\end{align*}}
+where $\mathit{newKeyHash} = \mathrm{SHA}\text{-}256(pk')$ and
+the predecessor signature is:
+{\small\begin{align*}
+  \sigma_{\mathit{pred}} = \Sign\bigl(\mathit{sk},\;
+    \mathit{predecessorKey} \,\|\,
+    \mathit{newKeyHash} \,\|\,
+    \mathit{rotatedAt}\bigr).
+\end{align*}}
+The function $\mathrm{extractPublicKey}(\mathit{doc})$ raises an
+exception if $\mathrm{now}() < \mathit{trustAfter}$.
+
+\begin{theorem}[Rotation Cooldown Security]
+\label{thm:rotation}
+Let $\Adv$ be a computationally bounded adversary who obtains
+temporary read access to $\mathit{sk}$ during interval
+$[t_0, t_1]$ and initiates key rotation at time $t_r \in
+[t_0, t_1]$ with cooldown $\Delta > 0$. Then $\Adv$'s new key
+$pk'_{\Adv}$ is untrusted until $t_r + \Delta$, during which
+time the legitimate owner can detect the unauthorised rotation
+(via the $\mathit{keyHistory}$ audit log) and issue an
+emergency revocation. Specifically, if the owner checks
+$\mathit{keyHistory}$ at any time $t \in (t_r, t_r + \Delta)$,
+the adversary's key is never trusted.
+\end{theorem}
+\begin{proof}
+By the protocol, $\mathrm{extractPublicKey}$ enforces
+$\mathrm{now}() \geq \mathit{trustAfter} = t_r + \Delta$ before
+returning the new key. Since the predecessor signature
+$\sigma_{\mathit{pred}}$ is included in the rotation record and
+the \texttt{keyHistory} field is append-only (enforced by the
+registry), the legitimate owner observing any key in
+$\mathit{keyHistory}$ can identify rotation records initiated
+outside their control. Issuing $\mathrm{revokeKey}$ before
+$t_r + \Delta$ permanently invalidates $pk'_{\Adv}$ without a
+cooldown (revocation is immediate by design). Therefore, provided
+the owner monitors $\mathit{keyHistory}$ at frequency
+$f > 1/\Delta$, the adversary's window of trust is the empty set.
+\end{proof}
+
+\subsection{Key Revocation}
+
+Emergency revocation is performed by
+$\mathrm{revokeKey}(\mathit{current}, \mathit{reason})$, which
+creates a \textit{RevokedKeyRecord}:
+\[
+\{
+  \mathit{keyMultibase},\;
+  \mathit{revokedAt},\;
+  \mathit{reason},\;
+  \sigma_{\mathit{self}}
+\}
+\]
+where the self-signature is:
+{\small\begin{align*}
+  \sigma_{\mathit{self}} = \Sign\bigl(\mathit{sk}_{\mathit{rev}},\;
+    \mathit{keyMultibase} \,\|\,
+    \mathit{revokedAt} \,\|\,
+    \mathit{reason}\bigr).
+\end{align*}}
+
+\begin{theorem}[Voluntary Revocation Proof]
+\label{thm:revocation}
+Under the unforgeability of Ed25519 signatures, a valid
+$\sigma_{\mathit{self}}$ over a \textit{RevokedKeyRecord}
+constitutes a proof that the holder of $\mathit{sk}_{\mathit{rev}}$
+voluntarily issued the revocation. No party lacking
+$\mathit{sk}_{\mathit{rev}}$ can produce a valid
+$\sigma_{\mathit{self}}$ with non-negligible probability.
+\end{theorem}
+\begin{proof}
+Follows directly from the existential unforgeability under
+chosen-message attack (EUF-CMA) security of Ed25519 as proved
+in~\cite{bernstein2011ed25519}. An adversary who does not
+possess $\mathit{sk}_{\mathit{rev}}$ cannot produce a valid
+signature on the concatenation
+$\mathit{keyMultibase} \,\|\, \mathit{revokedAt} \,\|\,
+\mathit{reason}$ without breaking the discrete logarithm
+assumption on Curve25519.
+\end{proof}
+
+The self-signature serves a practical purpose: it distinguishes
+a voluntary revocation (issued by the key's owner) from an
+attacker-forced revocation, which the attacker could mount only
+if they already possess the private key. In the latter case the
+attacker's incentive is to \emph{use} the key rather than revoke
+it, so a valid self-signature provides meaningful assurance in
+practice.
+
+% ─────────────────────────────────────────────────────────────
+\section{Trust Level Taxonomy}
+\label{sec:trust}
+
+We formalise a four-level trust taxonomy that maps the
+cryptographic evidence attached to an incoming message to a
+decision threshold. Table~\ref{tab:trustlevels} summarises the
+levels.
+
+\begin{table}[t]
+\centering
+\caption{Aroha Trust Level Taxonomy}
+\label{tab:trustlevels}
+\begin{tabular}{@{}clll@{}}
+\toprule
+\textbf{Level} & \textbf{DID} & \textbf{Signature} &
+  \textbf{Typical Source} \\
+\midrule
+TL0 & None & None & Unauthenticated, A2A bridge \\
+TL1 & Registered & None & Trusted Mesh peers \\
+TL2 & Registered & Verified & Standard Aroha agents \\
+TL3 & Registered & Verified & Verified-publisher (P3) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{definition}[Trust Level]
+Given an incoming envelope $E$, define:
+\begin{align*}
+\TL(E) = \begin{cases}
+  3 & \text{if } \TL(E) \geq 2
+      \text{ and publisher-verified (P3)} \\
+  2 & \text{if DID registered} \land \Verify(\cdot) = \top \\
+  1 & \text{if DID registered} \land \text{no sig or bypassed} \\
+  0 & \text{otherwise}
+\end{cases}
+\end{align*}
+\end{definition}
+
+\begin{remark}
+TL1 applies within Trusted Mesh mode (\S\ref{sec:mesh}), where
+network-level controls (VPC or mTLS service mesh) substitute for
+per-message signatures. Nonce and expiry checks remain enforced
+at TL1; only the signature check is bypassed for explicitly
+allowlisted DIDs.
+\end{remark}
+
+Downstream policy decisions (e.g., whether to honour a financial
+mandate, whether to execute a destructive capability) are
+conditioned on $\TL(E)$ meeting a caller-configured threshold.
+The companion paper P2~\cite{aroha2025p2} requires $\TL \geq 2$
+for mandate chain execution; the publisher verification system
+in P3~\cite{aroha2025p3} grants elevated search ranking only to
+$\TL = 3$ agents.
+
+% ─────────────────────────────────────────────────────────────
+\section{Trusted Mesh Mode}
+\label{sec:mesh}
+
+Within a homogeneous deployment (e.g., all agents in a single
+Kubernetes namespace or VPC), per-message Ed25519 signatures
+impose redundant overhead because the transport layer already
+provides mutual authentication (mTLS) and integrity (TLS
+record-layer MAC). Trusted Mesh mode eliminates this overhead
+for intra-mesh communication.
+
+Calling \texttt{createTrustedMeshOptions} with a set of
+trusted DIDs and optional namespace prefixes returns a
+validation options object
+with:
+{\small\begin{align*}
+  \mathit{bypassSig}(\mathit{did}) &=
+    \mathit{did} \in \mathit{trustedDIDs} \\
+    &\;\lor\;
+    \exists\, p \in \mathit{trustedPrefixes}:\,
+      \mathit{did.startsWith}(p).
+\end{align*}}
+
+The \textit{TrustedMeshClient} sends unsigned envelopes via
+$\mathrm{buildUnsignedEnvelope}()$; receiving agents skip Stage~1
+of Algorithm~\ref{alg:validate} for bypassed DIDs while
+enforcing Stages~2--4. External agents (not in
+$\mathit{trustedDIDs}$) cannot bypass signature verification
+even if they can reach the internal endpoint.
+
+$\mathrm{createTrustedZone}(\mathit{trustedDIDs},
+\mathit{prefixes?})$ packages server-side validation options and
+a pre-configured client factory into a named zone object,
+simplifying mesh topology management.
+
+% ─────────────────────────────────────────────────────────────
+\section{Threat Model and Security Analysis}
+\label{sec:security}
+
+Table~\ref{tab:threats} enumerates the six principal attack
+classes against the Aroha Protocol, the layer at which each is
+mitigated, and the mechanism employed.
+
+\begin{table}[t]
+\centering
+\caption{Aroha Threat Model}
+\label{tab:threats}
+\renewcommand{\arraystretch}{1.1}
+\begin{tabular}{@{}p{2.1cm}p{1.1cm}p{4.5cm}@{}}
+\toprule
+\textbf{Attack} & \textbf{Layer} & \textbf{Mitigation} \\
+\midrule
+DID spoofing &
+  L1 &
+  DID is derived from public key; forging a DID requires
+  finding a key pair with the target public key (DL hardness)
+  \\[2pt]
+Key compromise &
+  L1 &
+  Rotation cooldown + revocation; adversary's new key is
+  untrusted for $\Delta$ hours (Theorem~\ref{thm:rotation})
+  \\[2pt]
+Registry substitution (HTTP) &
+  L3 &
+  Manifest CID re-derived at consumer; mismatch detected
+  (Theorem~\ref{thm:manifest})
+  \\[2pt]
+Registry tampering (chain) &
+  L2 &
+  51\% PoS consensus required; economically prohibitive
+  \\[2pt]
+Replay attack &
+  L4 &
+  Nonce registry rejects duplicate nonces within rolling
+  window; \texttt{expires} provides absolute bound
+  \\[2pt]
+Routing / impersonation &
+  L4 &
+  \texttt{to} field check (Stage~4) rejects envelopes
+  addressed to another DID
+  \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Sybil Resistance}
+
+The on-chain registry's staking requirement raises the cost
+of Sybil attacks~\cite{douceur2002sybil} linearly with the
+number of registered identities. The HTTP registry relies on
+API authentication and rate limiting; operators may impose
+identity verification requirements at registration time, which
+is the mechanism formalised in companion paper
+P3~\cite{aroha2025p3}.
+
+\subsection{Canonical JSON and Signature Malleability}
+
+Signatures are computed over canonical JSON~\cite{jsoncanon}
+(RFC~8785 JCS) to eliminate signature malleability attacks that
+exploit JSON key-ordering ambiguity. All fields in the envelope
+except \texttt{proof} are included; the \texttt{proof} field is
+excluded to avoid circular dependencies.
+
+% ─────────────────────────────────────────────────────────────
+\section{Protocol Bridges}
+\label{sec:bridges}
+
+The Aroha Protocol does not require all participants to be
+Aroha-native. Two bidirectional bridges enable interoperability
+with the dominant existing ecosystems.
+
+\subsection{MCP Bridge}
+
+The Model Context Protocol~\cite{anthropic2024mcp} defines a
+tool-call interface between LLM hosts and tool servers.
+Originally introduced by Anthropic, MCP was donated to the
+Linux Foundation's Agentic AI Foundation in December 2025 and
+has since become the de~facto industry standard for
+LLM--tool integration, making bridge fidelity a first-order
+interoperability requirement rather than a convenience.
+The Aroha--MCP bridge operates in both directions:
+\begin{itemize}
+  \item \textbf{Aroha $\to$ MCP:}
+    $\mathrm{arohaAgentToMcpTools}()$ wraps each entry in an
+    agent's capability manifest as an MCP tool definition.
+    The \texttt{inputSchema} field maps directly to the MCP
+    tool's JSON Schema parameter specification.
+  \item \textbf{MCP $\to$ Aroha:}
+    $\mathrm{mcpToolsToArohaCapabilities}()$ exposes an MCP
+    server as a registered Aroha agent. MCP tool calls are
+    translated to \texttt{ArohaRequest} envelopes and executed
+    against the MCP server.
+\end{itemize}
+
+Because MCP tool calls carry full request semantics and the
+Aroha envelope wraps the call end-to-end, the MCP bridge
+preserves the TL2 trust level of the originating agent.
+
+\subsection{A2A Bridge}
+
+Google's Agent-to-Agent protocol~\cite{google2024a2a} specifies
+an HTTP-based message-passing protocol for LLM agents with its
+own task-tracking semantics. The Aroha--A2A bridge translates:
+\begin{itemize}
+  \item A2A \texttt{messageId} $\leftrightarrow$ Aroha
+    \texttt{id} (UUID v4);
+  \item A2A \texttt{taskId} $\leftrightarrow$ Aroha
+    \texttt{correlationId};
+  \item A2A \texttt{role=user} $\leftrightarrow$ Aroha
+    \texttt{ArohaRequest};
+  \item A2A \texttt{role=agent} $\leftrightarrow$ Aroha
+    \texttt{ArohaResponse}.
+\end{itemize}
+
+\textbf{Security downgrade:} A2A does not carry Ed25519
+signatures. Inbound A2A messages therefore receive trust level
+TL1 (registered DID, signature absent) rather than the TL2
+they would receive as native Aroha messages. Implementations
+MUST NOT execute capabilities that require $\TL \geq 2$ for
+messages originating from the A2A bridge unless an out-of-band
+trust agreement exists.
+
+\subsection{Additional Bridges}
+
+The Aroha SDK includes bridges for LangChain~\cite{harrison2022langchain},
+Hermes, and Composio. These follow the same pattern: map the
+external framework's tool or action abstraction to Aroha
+capability entries, and wrap invocations in
+\texttt{ArohaRequest} envelopes. Trust levels mirror A2A
+(TL0--TL1) unless the external framework provides its own
+signature mechanism.
+
+Table~\ref{tab:bridges} summarises the security properties of
+each bridge.
+
+\begin{table}[t]
+\centering
+\caption{Bridge Security Properties}
+\label{tab:bridges}
+\begin{tabular}{@{}lccl@{}}
+\toprule
+\textbf{Bridge} & \textbf{Bidirectional} &
+  \textbf{Min. TL} & \textbf{Notes} \\
+\midrule
+MCP           & Yes & TL2 & Preserves Ed25519 chain \\
+A2A           & Yes & TL1 & No sig; DID-registered only \\
+LangChain     & Yes & TL0 & Framework-level auth only \\
+Hermes        & Yes & TL0 & Framework-level auth only \\
+Composio      & Yes & TL0 & Framework-level auth only \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% ─────────────────────────────────────────────────────────────
+\section{Integration with Companion Papers}
+\label{sec:companion}
+
+The Aroha Protocol stack is designed so that each companion
+paper adds a vertical cross-cutting concern rather than a new
+layer:
+
+\begin{itemize}
+  \item \textbf{P1 — ArohaRep~\cite{aroha2025p1}:} The
+    reputation engine operates on agent DIDs resolved via L1
+    and L2. Manifest integrity (Theorem~\ref{thm:manifest})
+    provides signal $s_{10}$ in ArohaRep's eleven-signal
+    observation model. Discovery queries are filtered through
+    ArohaRep's Thompson Sampling ranking.
+  \item \textbf{P2 — ArohaMandate~\cite{aroha2025p2}:} Mandate
+    chains are encoded in \texttt{ArohaRequest} envelope bodies
+    and validated at L4 Stage~1. The $\TL \geq 2$ requirement
+    for mandate execution is enforced by the validation pipeline
+    (Algorithm~\ref{alg:validate}).
+  \item \textbf{P3 — Publisher Verification~\cite{aroha2025p3}:}
+    The tiered publisher verification system issues a
+    \textit{publisher credential} that elevates an agent's
+    trust level to TL3. The credential is stored in the agent's
+    DID Document service endpoint and verified at L4
+    Stage~1.
+  \item \textbf{P4 — ArohaChunk~\cite{aroha2025p4}:} The
+    adaptive RAG chunking system~\cite{lewis2020rag} operates
+    on document corpora retrieved via \texttt{ArohaRequest}
+    envelopes. Chunk boundaries and retrieval results are
+    returned as \texttt{ArohaResponse} bodies, subject to the
+    same validation pipeline.
+\end{itemize}
+
+% ─────────────────────────────────────────────────────────────
+\section{Implementation Notes}
+\label{sec:impl}
+
+The reference implementation is a TypeScript/Node.js SDK. Key
+implementation decisions include:
+
+\subsubsection{Nonce Registry}
+The \texttt{NonceRegistry} uses a time-bucketed rolling window
+keyed by nonce (128-bit random hex). Expired buckets are pruned
+lazily on each insertion. For clustered deployments, a shared
+Redis instance provides a distributed nonce store with TTL-based
+expiry.
+
+\subsubsection{Canonical JSON}
+The SDK uses RFC~8785 JCS~\cite{jsoncanon} via a pure-TypeScript
+implementation. The canonicalisation is applied once per
+outbound message and once per inbound signature verification;
+the result is not cached to avoid state-dependent bugs.
+
+\subsubsection{Registry Multiplexing}
+An \texttt{ArohaCompositeRegistry} wraps both HTTP and on-chain
+registries behind the \texttt{IArohaRegistry} interface, routing
+writes to the on-chain registry and reads to whichever registry
+responds first, with CID cross-verification.
+
+\subsubsection{Multibase Encoding}
+Public keys and revocation records use the
+\texttt{z}-prefixed Base58BTC multibase
+encoding~\cite{w3c2021multibase}, consistent with the W3C DID
+Core recommendation~\cite{w3c2022did}. The \texttt{z} prefix
+unambiguously identifies the encoding scheme, enabling
+future algorithm agility.
+
+% ─────────────────────────────────────────────────────────────
+\section{Discussion}
+\label{sec:discussion}
+
+\subsection{Comparison with Existing Agent Protocols}
+
+Unlike MCP~\cite{anthropic2024mcp} and A2A~\cite{google2024a2a},
+the Aroha Protocol specifies a complete identity layer (L1) and
+a capability registry (L2--L3) in addition to a message transport
+(L4). MCP intentionally omits identity; A2A includes task state
+but not cryptographic identity binding. Aroha is complementary:
+it provides the identity and security substrate on which either
+protocol can operate via the bridges in \S\ref{sec:bridges}.
+
+\subsection{Limitations}
+
+\paragraph{Key monitoring obligation.}
+Theorem~\ref{thm:rotation} requires the legitimate owner to
+monitor \texttt{keyHistory} at frequency $f > 1/\Delta$. An
+owner who does not monitor may miss an adversarial rotation
+within the cooldown window. The SDK provides a
+\texttt{KeyRotationMonitor} helper that polls the registry and
+raises an alert for unexpected rotation records; this shifts the
+obligation from passive inspection to active monitoring.
+
+\paragraph{On-chain latency.}
+The Polygon PoS network imposes a confirmation latency of
+approximately 2--5 seconds per block. Applications requiring
+sub-second registration confirmation must use the HTTP registry
+and accept its weaker tamper-resistance guarantees.
+
+\paragraph{Trusted Mesh boundary enforcement.}
+The Trusted Mesh mode relies on the network operator correctly
+configuring access controls so that external agents cannot reach
+internal endpoints. A misconfigured mesh (e.g., a firewall rule
+that inadvertently exposes the internal endpoint to the internet)
+would allow external agents to send unsigned envelopes that
+receive TL1 treatment.
+
+\subsection{Future Work}
+
+Several directions extend the Aroha Protocol:
+(i)~post-quantum signature algorithms (CRYSTALS-Dilithium)
+as a drop-in replacement for Ed25519, requiring only a
+new \texttt{verificationMethod} type;
+(ii)~zero-knowledge proofs of capability possession to enable
+privacy-preserving discovery;
+(iii)~threshold signatures for multi-party agent governance,
+where a capability manifest requires $k$-of-$n$ organisational
+signatures before activation.
+
+% ─────────────────────────────────────────────────────────────
+\section{Conclusion}
+\label{sec:conclusion}
+
+We have presented the Aroha Protocol: a four-layer architecture
+for open AI agent networks comprising a content-addressed DID
+scheme, dual HTTP/on-chain registry implementations, a
+IPFS-pinned capability manifest system, and a typed envelope
+transport with a four-stage validation pipeline. We proved that
+key rotation with a cooldown parameter mitigates temporary key
+compromise (Theorem~\ref{thm:rotation}), that Ed25519
+self-signatures on revocation records provide voluntary-intent
+proofs (Theorem~\ref{thm:revocation}), and that SHA-256 CID
+verification provides manifest integrity against substitution
+attacks (Theorem~\ref{thm:manifest}). We formalised a
+four-level trust taxonomy (TL0--TL3) and characterised the
+security properties of bidirectional bridges to MCP and A2A.
+
+The Aroha Protocol addresses a gap in the current ecosystem: no
+prior specification provides a complete, layered, cryptographically
+grounded identity and communication substrate for open AI agent
+networks. We believe the protocol—and its companion papers
+covering reputation (P1), financial delegation (P2), publisher
+verification (P3), and document intelligence (P4)—form a
+coherent, deployable foundation for the next generation of
+autonomous agent infrastructure.
+
+% ─────────────────────────────────────────────────────────────
+\bibliographystyle{IEEEtran}
+\bibliography{aroha}
+
+\end{document}

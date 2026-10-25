@@ -1,0 +1,417 @@
+# Copyright (c) 2026 Aroha Labs
+# SPDX-License-Identifier: Apache-2.0
+
+name: CI
+
+on:
+  push:
+    branches: [main, "feat/**", "fix/**"]
+    # Skip runs for changes that cannot affect build/test/lint/readme-check
+    # outcomes. **.md was here too until readme-examples (below) started
+    # type-checking README code blocks against the built packages — a README
+    # edit can now fail CI on its own, so it can no longer be ignored.
+    paths-ignore:
+      - "papers/**"
+      - "community/**"
+      - "*.png"
+      - "*.jpeg"
+  pull_request:
+    branches: [main]
+    paths-ignore:
+      - "papers/**"
+      - "community/**"
+      - "*.png"
+      - "*.jpeg"
+
+# Superseded runs on branches and PRs are cancelled to save minutes; runs on
+# main are never cancelled, so every commit on main keeps a complete result.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+# Read-only token for every job; no job here needs to write.
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    name: Build & Test
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [22.x]
+
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build all packages
+        run: npm run build
+
+      - name: Run tests
+        run: npm test
+
+  # ── Durable stores against real backends ──────────────────────────────────
+  # @aroha-sdk/store-postgres and @aroha-sdk/store-redis skip their backend
+  # suites when the URLs below are unset (so `npm test` passes without
+  # Docker). This job sets them, so the shared store contract — including
+  # the concurrency, restart and fail-closed cases — runs against real
+  # Postgres 16 and Redis 7. The "Verify" step fails the job if any test was
+  # skipped, because a skipped suite would otherwise show as a green tick.
+  durable-stores:
+    name: Durable stores (Postgres 16, Redis 7)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: aroha
+          POSTGRES_PASSWORD: aroha
+          POSTGRES_DB: aroha_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U aroha -d aroha_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      AROHA_TEST_POSTGRES_URL: postgres://aroha:aroha@127.0.0.1:5432/aroha_test
+      AROHA_TEST_REDIS_URL: redis://127.0.0.1:6379
+
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: 22.x
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build all packages
+        run: npm run build
+
+      - name: Test the Postgres stores
+        working-directory: packages/aroha-store-postgres
+        run: npx vitest run --reporter=default --reporter=json --outputFile="$RUNNER_TEMP/store-postgres.json"
+
+      - name: Test the Redis stores
+        working-directory: packages/aroha-store-redis
+        run: npx vitest run --reporter=default --reporter=json --outputFile="$RUNNER_TEMP/store-redis.json"
+
+      # Only the in-memory reference suite may skip (it cannot restart or go
+      # offline): 5 cases in the Postgres package, none in the Redis package.
+      - name: Verify the backend suites ran
+        run: |
+          node -e '
+            const fs = require("fs");
+            const expected = { "store-postgres": 5, "store-redis": 0 };
+            let bad = false;
+            for (const [name, maxSkipped] of Object.entries(expected)) {
+              const r = JSON.parse(fs.readFileSync(`${process.env.RUNNER_TEMP}/${name}.json`, "utf8"));
+              const skipped = r.numPendingTests + r.numTodoTests;
+              console.log(`${name}: ${r.numPassedTests} passed, ${skipped} skipped, ${r.numFailedTests} failed`);
+              if (skipped > maxSkipped || r.numPassedTests === 0) { console.log(`::error::${name}: backend suite did not run`); bad = true; }
+            }
+            process.exit(bad ? 1 : 0);
+          '
+
+      # The Python stores share the same tables and keys, so they run against
+      # the same services. psycopg-pool is optional for users; installed here
+      # so the pooled-connection path is exercised too.
+      - name: Setup Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.11"
+
+      - name: Install the Python SDK with store extras (pinned constraints)
+        working-directory: sdks/aroha-py
+        run: pip install -e ".[dev,postgres,redis]" "psycopg-pool==3.3.3" -c requirements-ci.txt
+
+      # Fails on any skip: a skip here means a backend or driver was missing.
+      - name: Test the Python stores
+        working-directory: sdks/aroha-py
+        run: |
+          python -m pytest tests/test_durable_stores.py -q -rs --junitxml="$RUNNER_TEMP/py-stores.xml"
+          python -c "import sys,xml.etree.ElementTree as E; s=E.parse(sys.argv[1]).getroot().iter('testsuite'); s=next(s); sk=int(s.get('skipped')); print('python stores:', s.get('tests'), 'tests,', sk, 'skipped'); sys.exit(1 if sk else 0)" "$RUNNER_TEMP/py-stores.xml"
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: 22.x
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint all packages
+        run: npm run lint
+
+  typecheck:
+    name: TypeScript
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: 22.x
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npx tsc --noEmit -p tsconfig.json
+
+  readme-examples:
+    name: README examples type-check against built packages
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: 22.x
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build all packages
+        run: npm run build
+
+      - name: Type-check README code blocks against built packages
+        run: node scripts/check-readme-examples.mjs
+
+  # ── Polyglot SDKs ─────────────────────────────────────────────────────────
+  # The Python, Go and Java SDKs live outside the npm workspace, so the jobs
+  # above never touched them. Each SDK gets its own job.
+  python-sdk:
+    name: Python SDK (pytest)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: sdks/aroha-py
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+
+      - name: Setup Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.11"
+
+      # requirements-ci.txt pins every resolved dependency (pyproject.toml keeps
+      # ranges), so an upstream release cannot change this job unreviewed.
+      - name: Install SDK with dev extras (pinned constraints)
+        run: pip install -e ".[dev]" -c requirements-ci.txt
+
+      - name: Run tests
+        run: python -m pytest -q
+
+  go-sdk:
+    name: Go SDK (go test)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: sdks/go
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+
+      - name: Setup Go
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
+        with:
+          go-version-file: sdks/go/go.mod
+          cache: false
+
+      # go.sum is committed. Verify downloaded modules against it, then build
+      # in the default -mod=readonly mode: a dependency change not recorded in
+      # go.mod/go.sum fails here instead of being silently resolved.
+      - name: Verify module checksums
+        run: go mod verify
+
+      - name: Vet
+        run: go vet ./...
+
+      # `go test ./...` exits 0 when no package has a test file, so assert
+      # that at least one test actually passed.
+      - name: Run tests
+        run: |
+          set -euo pipefail
+          go test -count=1 -v ./... | tee "$RUNNER_TEMP/go-test.log"
+          if ! grep -q -- '--- PASS' "$RUNNER_TEMP/go-test.log"; then
+            echo "::error::go test reported no passing test — the suite did not run"
+            exit 1
+          fi
+
+  java-sdk:
+    name: Java SDK (mvn test)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: sdks/java
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+
+      - name: Setup Java
+        uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4.9.1
+        with:
+          java-version: 21
+          distribution: temurin
+          cache: maven
+
+      # failIfNoTests: a green tick must mean tests ran, not that the test
+      # phase found nothing to run.
+      - name: Compile and test
+        run: mvn -B test -DfailIfNoTests=true
+
+  # ── Deployment examples ───────────────────────────────────────────────────
+  # The examples install the PUBLISHED @aroha-sdk packages, as a user would,
+  # so they use `npm install` rather than `npm ci`: they are standalone
+  # projects outside the workspace and carry no lockfile (a lockfile would pin
+  # the example to whatever was current when it was written, which is not what
+  # a new user gets). To keep the run reproducible anyway, the published SDK
+  # version is pinned exactly below. AROHA_CORE_VERSION is the latest
+  # @aroha-sdk/core on npm that satisfies the examples' range (^1.9.0); the
+  # workspace's 2.0.0 is not published yet. Bump it when a release ships.
+  # Neither step needs credentials: tsc only typechecks, and wrangler's
+  # --dry-run bundles without contacting Cloudflare.
+  examples:
+    name: Deployment examples (Vercel, Cloudflare)
+    runs-on: ubuntu-latest
+    env:
+      AROHA_CORE_VERSION: "1.9.0"
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: 22.x
+
+      - name: Vercel example — install and typecheck
+        working-directory: examples/vercel
+        run: |
+          npm install --no-package-lock --no-audit --no-fund --no-save "@aroha-sdk/core@${AROHA_CORE_VERSION}"
+          npx tsc --noEmit -p tsconfig.json
+
+      - name: Cloudflare example — typecheck and wrangler dry-run
+        working-directory: examples/cloudflare
+        run: |
+          npm install --no-package-lock --no-audit --no-fund --no-save "@aroha-sdk/core@${AROHA_CORE_VERSION}"
+          npx tsc --noEmit -p tsconfig.json
+          npx wrangler deploy --dry-run --outdir dist
+
+  # ── Dependency audit ──────────────────────────────────────────────────────
+  # `npm audit --audit-level=high --omit=dev` over the root lockfile (all
+  # workspaces). Findings listed in .github/audit-allowlist.json (each with a
+  # reason, owner and expiry) are accepted; anything else at high/critical
+  # fails the job — once AUDIT_MODE is "block".
+  #
+  # AUDIT_MODE is "block": production dependencies were brought to zero
+  # high/critical advisories on 2026-10-09. Dev tooling is outside --omit=dev
+  # and is handled by Dependabot.
+  npm-audit:
+    name: npm audit (high, production deps)
+    runs-on: ubuntu-latest
+    env:
+      AUDIT_MODE: block
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: 22.x
+
+      - name: Audit production dependencies
+        run: node .github/scripts/npm-audit-gate.mjs
+
+  # ── Link checking ─────────────────────────────────────────────────────────
+  # Shared settings (excluded paths such as docs/reports/ and docs/superpowers/,
+  # accepted status codes) live in lychee.toml; URLs that must never be
+  # fetched (links into the still-private ArohaLabs repositories) live in
+  # .lycheeignore, which lychee reads from the working directory.
+  # Internal (relative) links are checked --offline and BLOCK the build.
+  # spec-public/ is excluded here only: it is a mirror whose links target the
+  # docs-site layout.
+  links-internal:
+    name: Links (internal, blocking)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+
+      - name: Check relative links in markdown
+        uses: lycheeverse/lychee-action@e7477775783ea5526144ba13e8db5eec57747ce8 # v2.9.0
+        with:
+          fail: true
+          args: >-
+            --config lychee.toml
+            --offline
+            --exclude-path spec-public
+            './**/*.md'
+
+  # External links are reported but do not fail the build yet: third-party
+  # sites rate-limit CI runners too often for this to be a reliable gate.
+  links-external:
+    name: Links (external, report only)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+
+      - name: Check external links in markdown
+        uses: lycheeverse/lychee-action@e7477775783ea5526144ba13e8db5eec57747ce8 # v2.9.0
+        with:
+          fail: false
+          args: >-
+            --config lychee.toml
+            './**/*.md'
+
+  # The ReSpec HTML specs are hand-authored copies of the Markdown specs in
+  # spec-public/spec (the source of truth). Fail when the HTML is missing a
+  # heading or RFC 2119 sentence the Markdown has, or when docs/spec/*.html
+  # has drifted from spec-public/spec/*.html. No dependencies to install.
+  spec-parity:
+    name: Spec parity (Markdown vs ReSpec HTML)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: 22.x
+
+      - name: Check spec HTML parity
+        run: node scripts/check-spec-parity.mjs

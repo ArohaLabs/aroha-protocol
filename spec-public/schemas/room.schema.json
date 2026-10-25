@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aroha-labs.com/schemas/room-v1.json",
+  "title": "Aroha Room record (aroha-1.0 §12.1)",
+  "description": "Signed by ownerDid's current person key: Ed25519 over UTF-8(JCS(record without signature)), base64url. Rules this schema cannot express (exactly one host, host = ownerDid and a person, leftEpoch in (joinedEpoch, epoch], joinedEpoch <= epoch, unique member DIDs, consentRef required for a person guest) are normative in §12.1.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["v", "purpose", "roomId", "threadId", "ownerDid", "epoch", "members", "historyVisibility", "invocation", "memoryPolicy", "disclosure", "updatedAt", "signature"],
+  "properties": {
+    "v": { "const": 1 },
+    "purpose": { "const": "aroha.room/v1" },
+    "roomId": { "type": "string", "minLength": 1 },
+    "threadId": { "type": "string", "minLength": 1 },
+    "ownerDid": { "type": "string", "pattern": "^did:" },
+    "epoch": { "type": "integer", "minimum": 0 },
+    "members": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["did", "kind", "displayName", "role", "joinedEpoch"],
+        "properties": {
+          "did": { "type": "string", "pattern": "^did:" },
+          "kind": { "enum": ["person", "agent"] },
+          "principalId": { "type": "string", "minLength": 1 },
+          "displayName": { "type": "string" },
+          "role": { "enum": ["host", "guest", "own", "invited", "delegated"] },
+          "joinedEpoch": { "type": "integer", "minimum": 0 },
+          "leftEpoch": { "type": "integer", "minimum": 1 },
+          "consentRef": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "historyVisibility": { "enum": ["joined", "shared"] },
+    "invocation": { "enum": ["explicit", "implicit"] },
+    "memoryPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["personalRead", "personalWrite", "roomMemory"],
+      "properties": {
+        "personalRead": { "type": "boolean" },
+        "personalWrite": { "type": "boolean" },
+        "roomMemory": { "enum": ["off", "consented"] },
+        "agentRead": { "enum": ["none", "members"] }
+      }
+    },
+    "disclosure": { "$ref": "disclosure.schema.json" },
+    "updatedAt": { "type": "string", "format": "date-time" },
+    "signature": { "type": "string", "pattern": "^[A-Za-z0-9_-]+$" }
+  }
+}

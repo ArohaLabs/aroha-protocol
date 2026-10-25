@@ -1,0 +1,1530 @@
+\documentclass[11pt,a4paper]{article}
+
+% --- Packages ---
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage[margin=1.1in, top=1.3in, bottom=1.3in]{geometry}
+\usepackage[colorlinks=true, linkcolor=black, urlcolor=blue, citecolor=black]{hyperref}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{longtable}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage{parskip}
+\usepackage{array}
+\usepackage{amsmath}
+
+% --- Page style ---
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{\small Aroha Whitepaper v1.0}
+\rhead{\small April 28, 2026 --- DRAFT}
+\cfoot{\thepage}
+\setlength{\headheight}{14pt}
+
+% --- Section formatting ---
+\titleformat{\section}{\large\bfseries}{\thesection.}{0.6em}{}[\vspace{2pt}\hrule\vspace{4pt}]
+\titleformat{\subsection}{\normalsize\bfseries}{\thesubsection}{0.6em}{}
+\titleformat{\subsubsection}{\normalsize\itshape}{\thesubsubsection}{0.6em}{}
+
+% --- Code listings ---
+\definecolor{codebg}{RGB}{248,248,248}
+\definecolor{codecomment}{RGB}{100,100,100}
+\definecolor{codekw}{RGB}{0,0,180}
+\definecolor{codestr}{RGB}{160,20,20}
+\definecolor{rulecolor}{RGB}{200,200,200}
+
+\lstset{
+  backgroundcolor=\color{codebg},
+  basicstyle=\ttfamily\small,
+  breaklines=true,
+  breakatwhitespace=true,
+  captionpos=b,
+  commentstyle=\color{codecomment}\itshape,
+  keywordstyle=\color{codekw}\bfseries,
+  stringstyle=\color{codestr},
+  frame=single,
+  rulecolor=\color{rulecolor},
+  showstringspaces=false,
+  columns=flexible,
+  keepspaces=true,
+  tabsize=2,
+  xleftmargin=12pt,
+  xrightmargin=8pt,
+  aboveskip=10pt,
+  belowskip=6pt
+}
+
+% --- Title ---
+\title{
+  \vspace{-1cm}
+  \textbf{\LARGE Aroha: Aroha Protocol} \\[0.6em]
+  \large Whitepaper --- Specification v1.0 --- Draft
+}
+\author{
+  Aroha Working Group \\
+  \small Draft --- not submitted to any standards body
+}
+\date{April 28, 2026}
+
+% ================================================================================
+\begin{document}
+% ================================================================================
+
+\maketitle
+\thispagestyle{fancy}
+
+\begin{abstract}
+Aroha (Aroha Protocol) is an open, decentralized, vendor-neutral
+protocol for agent-to-agent communication, discovery, and atomic multi-agent
+transactions. It defines how AI agents from different organizations discover each
+other, establish cryptographic identity and trust, exchange messages securely, and
+coordinate complex multi-step tasks that either fully succeed or fully roll back.
+Aroha is language-agnostic and framework-agnostic. Any agent that correctly implements
+these rules can interoperate with any other Aroha agent --- across vendors, clouds,
+and programming languages. The protocol includes a deterministic policy engine for
+prompt-injection defence, a semantic cache layer for inference cost reduction,
+W3C Trace Context distributed tracing, and a no-flag-day migration path to NIST
+post-quantum cryptography standards.
+\end{abstract}
+
+\tableofcontents
+\newpage
+
+% ================================================================================
+\section{Introduction and Motivation}
+% ================================================================================
+
+\subsection{The Emerging Agent Economy}
+
+AI agents are being deployed everywhere. Every enterprise, every startup, and every
+developer team is building them. But today, every agent is an island. An agent built
+by Salesforce cannot natively talk to an agent built by SAP. An agent running on
+Anthropic's SDK cannot atomically transact with one running on OpenAI's. This is
+the same structural problem the internet had before HTTP, that email had before SMTP,
+and that payments had before ISO 8583.
+
+\textbf{The agent economy is being built right now. If the interoperability problem
+is not solved at the protocol layer, it will be solved by monopoly.}
+
+\subsection{The Three Infrastructure Failures}
+
+Building cross-vendor agent systems today results in three systematic failures:
+
+\begin{table}[ht]
+  \centering
+  \renewcommand{\arraystretch}{1.6}
+  \begin{tabularx}{\textwidth}{@{} >{\bfseries}p{2.5cm} p{5.0cm} X @{}}
+    \toprule
+    Failure & Phenomenon & Systemic Impact \\
+    \midrule
+    1. Discovery
+      & No standard way for an agent to advertise what it can do, or for another
+        agent to find it. Every connection is hardcoded by a human.
+      & Multi-agent systems become brittle point-to-point integrations that do
+        not scale. Humans become the bottleneck for agent coordination. \\
+    2. Verification
+      & No cryptographic proof of identity. Any message can be forged, replayed,
+        or tampered with. Standard APIs trust callers implicitly via shared API keys.
+      & Vulnerable to impersonation, replay, and man-in-the-middle attacks.
+        Enterprises cannot safely deploy agents that communicate externally. \\
+    3. Transactions
+      & No standard rollback. When one step of a multi-agent saga fails,
+        there is no compensation mechanism.
+      & Multi-provider workflows leave partial state, duplicate charges, and
+        disputes with no audit trail. \\
+    \bottomrule
+  \end{tabularx}
+  \caption{The three dimensions of multi-agent infrastructure failure}
+\end{table}
+
+\subsection{Why Existing Solutions Fall Short}
+
+\begin{table}[ht]
+  \centering
+  \renewcommand{\arraystretch}{1.4}
+  \begin{tabularx}{\textwidth}{@{} l p{4.5cm} X @{}}
+    \toprule
+    \textbf{Solution} & \textbf{What it solves} & \textbf{What it misses} \\
+    \midrule
+    REST / OpenAPI      & HTTP call description       & No agent identity, no discovery, no transactions \\
+    OAuth 2.0           & Delegated access for humans & Not designed for autonomous multi-agent flows \\
+    MCP (Anthropic)     & LLM tool calling            & No agent-to-agent trust, no discovery, no saga \\
+    A2A (Google)        & Agent-to-agent messaging    & No commerce layer, no capability-level reputation \\
+    LangGraph / CrewAI  & In-framework orchestration  & Framework-local; no cross-vendor interoperability \\
+    Blockchain alone    & Immutable records           & No application-layer protocol on top \\
+    \bottomrule
+  \end{tabularx}
+  \caption{Gaps in existing agent communication solutions}
+\end{table}
+
+Aroha covers all four dimensions simultaneously:
+\textbf{discovery + verification + transactions + commerce}.
+
+% ================================================================================
+\section{Design Principles}
+% ================================================================================
+
+Aroha is governed by six non-negotiable design principles:
+
+\begin{enumerate}[leftmargin=*, label=\textbf{\arabic*.}]
+  \item \textbf{Decentralized} --- No central authority controls agent discovery or
+        registration. Any operator can run a conformant registry.
+  \item \textbf{Self-sovereign identity} --- Every agent owns its cryptographic
+        identity; no third party can revoke it.
+  \item \textbf{Composable} --- Complex tasks are assembled from atomic,
+        single-purpose agents that each do one thing well.
+  \item \textbf{Atomic} --- Multi-agent transactions either fully succeed or fully
+        roll back (saga pattern). Partial execution is structurally impossible.
+  \item \textbf{Open standards} --- Built on W3C DIDs, JSON-LD, Ed25519, and
+        optionally EVM smart contracts. No proprietary components.
+  \item \textbf{Protocol-application separation} --- The protocol defines envelopes
+        and handshakes. Applications decide what to do with messages. The kernel
+        never imports extension packages.
+\end{enumerate}
+
+% ================================================================================
+\section{Protocol Architecture}
+% ================================================================================
+
+\subsection{The Six-Layer Stack}
+
+Aroha is a six-layer protocol stack. The core kernel (Layers 0--5) covers exactly
+two things: \textit{agent discoverability} and \textit{agent verifiability}.
+Everything else is a pluggable extension injected via middleware.
+
+\begin{verbatim}
++------------------------------------------------------------------+
+|  PROTOCOL EXTENSIONS  (never imported by kernel)                 |
+|                                                                  |
+|  @aroha-sdk/credentials    RBAC middleware, human credential issuance |
+|  @aroha-sdk/settlement     NullSettlement | ApiKey | Quota | Escrow   |
+|  @aroha-sdk/commerce       B2B agreements, B2C consent, C2B feedback  |
++------------------------------------------------------------------+
+                          ^ mount via middleware / inject
++--------------------------------------------------+
+|  Layer 5  Preference Context                     |
+|           budget, consent tokens, constraints    |
++--------------------------------------------------+
+|  Layer 4  Orchestration                          |
+|           saga state machine: reserve/commit/cancel              |
++--------------------------------------------------+
+|  Layer 3  Messaging                              |
+|           signed JSON-LD envelopes, 15 types     |
++--------------------------------------------------+
+|  Layer 2  Registry                               |
+|           pluggable: HTTP | in-memory | EVM      |
+|           + IPFS capability manifests            |
++--------------------------------------------------+
+|  Layer 1  Identity and Auth                      |
+|           did:aroha DIDs, Ed25519, W3C VCs        |
++--------------------------------------------------+
+|  Layer 0  Transport                              |
+|           HTTPS, WebSocket (wss://), TLS 1.3+    |
++--------------------------------------------------+
+\end{verbatim}
+
+\subsection{Agent Roles}
+
+Aroha distinguishes two participant roles. A single agent may occupy both
+simultaneously.
+
+\begin{table}[ht]
+  \centering
+  \renewcommand{\arraystretch}{1.4}
+  \begin{tabularx}{\textwidth}{@{} l X @{}}
+    \toprule
+    \textbf{Role} & \textbf{Responsibilities} \\
+    \midrule
+    \textbf{Orchestrator}
+      & Receives user intents. Discovers providers via the registry. Drives the
+        saga (sends Reserve, Commit, Cancel). Handles rollback on failure. \\
+    \textbf{Provider}
+      & Exposes one or more capabilities in a signed manifest. Participates in
+        sagas by holding reservations and executing commits. \\
+    \bottomrule
+  \end{tabularx}
+  \caption{Aroha agent roles}
+\end{table}
+
+\subsubsection{Message Flow Example}
+
+\begin{verbatim}
+User / UI
+    |
+    | POST /task  { "goal": "book NYC to Tokyo + 3 nights hotel" }
+    v
+Personal Agent (Orchestrator)
+    |         |
+    |         | ArohaRequest (signed envelope)
+    |         +----> Flight Agent (Provider)
+    |                   <---- ArohaResponse { flights: [...] }
+    |
+    | ArohaReserve { capabilityId: "hold-seat", params: {...} }
+    +----> Hotel Agent (Provider)
+    |         <---- ArohaReserveAck { reservationToken: "tok_abc" }
+    |
+    | ArohaCommit { reservationToken: "tok_abc" }
+    +----> Hotel Agent
+              <---- ArohaCommitAck { result: { confirmationId: "H-123" } }
+\end{verbatim}
+
+% ================================================================================
+\section{Layer 0 --- Transport}
+% ================================================================================
+
+Every Aroha agent \textbf{MUST} expose three HTTP endpoints:
+
+\begin{table}[ht]
+  \centering
+  \renewcommand{\arraystretch}{1.3}
+  \begin{tabularx}{\textwidth}{@{} l l X @{}}
+    \toprule
+    \textbf{Method} & \textbf{Path} & \textbf{Purpose} \\
+    \midrule
+    \texttt{GET}  & \texttt{/.well-known/aroha-agent.json} & DID Document (public identity) \\
+    \texttt{POST} & \texttt{/aroha/v1}                     & Inbound signed message endpoint \\
+    \texttt{WS}   & \texttt{/aroha/stream?cid=<id>}        & Async streaming (ArohaStream) \\
+    \bottomrule
+  \end{tabularx}
+  \caption{Required HTTP endpoints}
+\end{table}
+
+\textbf{Transport security requirements:}
+\begin{itemize}[noitemsep]
+  \item All connections \textbf{MUST} use TLS 1.3 or higher.
+  \item Provider agents \textbf{SHOULD} use mutual TLS (mTLS).
+  \item Plain HTTP \textbf{MUST NOT} be used in production.
+  \item Localhost HTTP is permitted for development and automated testing only.
+\end{itemize}
+
+% ================================================================================
+\section{Layer 1 --- Identity (did:aroha)}
+% ================================================================================
+
+\subsection{DID Method}
+
+Every agent \textbf{MUST} have a W3C Decentralised Identifier:
+\begin{center}
+  \texttt{did:aroha:<unique-id>}
+\end{center}
+
+where \texttt{<unique-id>} matches \texttt{[a-z0-9][a-z0-9-]\{1,62\}}.
+Examples: \texttt{did:aroha:flight-booking-agent}, \texttt{did:aroha:personal-agent-alice}.
+
+\subsection{DID Document}
+
+Served at \texttt{GET /.well-known/aroha-agent.json} and signed by the agent's
+Ed25519 private key:
+
+\begin{lstlisting}[caption=DID Document structure]
+{
+  "@context": [
+    "https://www.w3.org/ns/did/v1",
+    "https://w3id.org/security/suites/ed25519-2020/v1"
+  ],
+  "id": "did:aroha:my-agent",
+  "verificationMethod": [{
+    "id": "did:aroha:my-agent#key-1",
+    "type": "Ed25519VerificationKey2020",
+    "controller": "did:aroha:my-agent",
+    "publicKeyMultibase": "z<base58btc-encoded-32-bytes>"
+  }],
+  "authentication":  ["did:aroha:my-agent#key-1"],
+  "assertionMethod": ["did:aroha:my-agent#key-1"],
+  "service": [{
+    "id": "did:aroha:my-agent#aroha",
+    "type": "ArohaEndpoint",
+    "serviceEndpoint": "https://my-agent.example.com/aroha/v1"
+  }],
+  "created": "2026-04-28T00:00:00Z"
+}
+\end{lstlisting}
+
+\subsection{Trust Levels}
+
+\begin{table}[ht]
+  \centering
+  \renewcommand{\arraystretch}{1.3}
+  \begin{tabularx}{\textwidth}{@{} >{\bfseries}l p{5.5cm} X @{}}
+    \toprule
+    Level & How to achieve & Permitted operations \\
+    \midrule
+    0 & None                                        & Read manifests, query registry \\
+    1 & On-chain registration + minimum stake       & Search, negotiate \\
+    2 & W3C VC (CorporateIdentityCredential)        & Reserve (low-value) \\
+    3 & On-chain reputation score >= 8000 / 10000   & Reserve + commit (high-value) \\
+    4 & CapabilityAuthorizationCredential           & Full access + payments \\
+    \bottomrule
+  \end{tabularx}
+  \caption{Agent trust levels and permitted operations}
+\end{table}
+
+\subsection{Verifiable Credentials}
+
+Agents \textbf{MAY} carry W3C Verifiable Credentials to prove claims beyond their DID:
+
+\begin{table}[ht]
+  \centering
+  \renewcommand{\arraystretch}{1.3}
+  \begin{tabularx}{\textwidth}{@{} l l X @{}}
+    \toprule
+    \textbf{VC Type} & \textbf{Required Trust Level} & \textbf{Purpose} \\
+    \midrule
+    \texttt{CorporateIdentityCredential}       & 2 & Proves corporate operator \\
+    \texttt{ComplianceCertificationCredential} & 2 & Proves regulatory compliance \\
+    \texttt{CapabilityAuthorizationCredential} & 4 & Authorizes capabilities and payments \\
+    \bottomrule
+  \end{tabularx}
+  \caption{W3C Verifiable Credential types used in Aroha}
+\end{table}
+
+% ================================================================================
+\section{Layer 2 --- Registry}
+% ================================================================================
+
+\subsection{Registry Backends}
+
+Any conformant registry implements \texttt{IArohaRegistry}. Four backends are
+defined and are interchangeable at the SDK level:
+
+\begin{table}[ht]
+  \centering
+  \renewcommand{\arraystretch}{1.4}
+  \begin{tabularx}{\textwidth}{@{} l l X @{}}
+    \toprule
+    \textbf{Implementation} & \textbf{Backend} & \textbf{Use case} \\
+    \midrule
+    Managed HTTP Registry     & REST API (SaaS or self-hosted) & Enterprise default. No blockchain required. \\
+    Self-hosted HTTP Registry & REST API (operator-run)        & Regulated industries (healthcare, finance). \\
+    In-Memory Registry        & In-process Maps                & Local dev, tests, intra-enterprise networks. \\
+    Blockchain Registry       & EVM smart contract             & Trustless, permissionless open ecosystems. \\
+    \bottomrule
+  \end{tabularx}
+  \caption{Pluggable registry implementations}
+\end{table}
+
+\subsection{HTTP Registry REST Endpoints}
+
+\begin{table}[ht]
+  \centering
+  \renewcommand{\arraystretch}{1.3}
+  \begin{tabularx}{\textwidth}{@{} l l X @{}}
+    \toprule
+    \textbf{Method} & \textbf{Path} & \textbf{Purpose} \\
+    \midrule
+    \texttt{POST}   & \texttt{/v1/agents}                   & Register an agent \\
+    \texttt{DELETE} & \texttt{/v1/agents/:didHash}          & Deactivate an agent \\
+    \texttt{PUT}    & \texttt{/v1/agents/:didHash/manifest} & Update capability manifest CID \\
+    \texttt{GET}    & \texttt{/v1/agents/:didHash}          & Resolve agent record by DID \\
+    \texttt{GET}    & \texttt{/v1/agents?capabilities=a,b}  & Query agents by capability IDs \\
+    \bottomrule
+  \end{tabularx}
+  \caption{HTTP registry REST endpoints}
+\end{table}
+
+\subsection{Capability Manifest}
+
+Published to IPFS; CID anchored in the registry. The manifest is Ed25519-signed.
+Any manifest with an invalid signature is silently rejected by \texttt{ArohaDiscovery}:
+
+\begin{lstlisting}[caption=Capability manifest format]
+{
+  "aroha": "1.0",
+  "did": "did:aroha:flight-agent",
+  "name": "FlightBookingAgent",
+  "version": "2.1.0",
+  "endpoint": "https://flights.example.com/aroha/v1",
+  "capabilities": [
+    {
+      "id": "book-flight",
+      "version": "1.0.0",
+      "async": false,
+      "maxResponseMs": 5000,
+      "requiredTrustLevel": 3,
+      "pricing": {
+        "model": "per-transaction",
+        "amount": 0.05,
+        "currency": "USD"
+      },
+      "sagaRole": "participant",
+      "reserveCapabilityId": "hold-seat",
+      "cancelCapabilityId": "release-seat"
+    }
+  ],
+  "protocols": ["aroha/1.0"],
+  "signature": "<base64url-Ed25519-signature>"
+}
+\end{lstlisting}
+
+\subsection{Reputation Oracle}
+
+Reputation scores (0--10000) are maintained by the \texttt{ArohaReputation} oracle.
+The exponential moving average formula ensures recent behavior dominates:
+
+\[
+  \text{newScore} = \left\lfloor \text{oldScore} \times 0.85 + \text{signal} \times 0.15 \right\rfloor
+\]
+
+\begin{table}[ht]
+  \centering
+  \renewcommand{\arraystretch}{1.3}
+  \begin{tabularx}{\textwidth}{@{} l l X @{}}
+    \toprule
+    \textbf{Outcome} & \textbf{Signal value} & \textbf{Notes} \\
+    \midrule
+    \texttt{SUCCESS}        & 10000 & Committed and result delivered \\
+    \texttt{COMPENSATED}    &  3000 & Saga rolled back cleanly \\
+    \texttt{FAILURE}        &  1000 & Timed out or returned error \\
+    \texttt{DISPUTE\_LOST}  &     0 & Provider found at fault \\
+    \bottomrule
+  \end{tabularx}
+  \caption{Reputation signal values. New agents start at 5000 (neutral).}
+\end{table}
+
+% ================================================================================
+\section{Layer 3 --- Messaging}
+% ================================================================================
+
+\subsection{Envelope Structure}
+
+Every Aroha message uses the same outer signed envelope:
+
+\begin{lstlisting}[caption=Standard Aroha signed envelope]
+{
+  "@context": [
+    "https://aroha-labs.com/contexts/v1",
+    "https://w3id.org/security/suites/ed25519-2020/v1"
+  ],
+  "id":            "urn:uuid:<uuid-v4>",
+  "type":          "<MessageType>",
+  "from":          "did:aroha:<sender>",
+  "to":            "did:aroha:<recipient>",
+  "created":       "2026-04-28T08:00:00Z",
+  "expires":       "2026-04-28T08:05:00Z",
+  "nonce":         "<cryptographically-random-32-byte-hex>",
+  "correlationId": "<string>",
+  "body": { },
+  "proof": {
+    "type":               "Ed25519Signature2020",
+    "created":            "2026-04-28T08:00:00Z",
+    "verificationMethod": "did:aroha:<sender>#key-1",
+    "proofPurpose":       "authentication",
+    "proofValue":         "<base64url-Ed25519-signature>"
+  }
+}
+\end{lstlisting}
+
+\texttt{expires} defaults to \texttt{created + 300s}. Nonces are validated against
+a rolling 5-minute window; replay is structurally impossible.
+
+\subsection{The 15 Message Types}
+
+Aroha defines exactly 15 message types. Applications \textbf{MUST NOT} invent new
+top-level types --- extension is done through the \texttt{body} field only.
+
+\begin{longtable}{@{} l l c X @{}}
+  \toprule
+  \textbf{Type} & \textbf{Direction} & \textbf{Saga} & \textbf{Description} \\
+  \midrule
+  \endhead
+  \texttt{ArohaRequest}            & Orch $\to$ Prov  &   & Invoke a read-only capability \\
+  \texttt{ArohaResponse}           & Prov $\to$ Orch  &   & Capability result \\
+  \texttt{ArohaStream}             & Prov $\to$ Orch  &   & Async streaming (WebSocket) \\
+  \texttt{ArohaNegotiate}          & Orch $\to$ Prov  &   & Open a price negotiation \\
+  \texttt{ArohaCounterOffer}       & Prov $\to$ Orch  &   & Provider counter-proposes price \\
+  \texttt{ArohaAccept}             & Orch $\to$ Prov  &   & Accept current offer \\
+  \texttt{ArohaReserve}            & Orch $\to$ Prov  & Y & Hold inventory \\
+  \texttt{ArohaReserveAck}         & Prov $\to$ Orch  & Y & Reservation token confirmed \\
+  \texttt{ArohaCommit}             & Orch $\to$ Prov  & Y & Finalize reservation (idempotent) \\
+  \texttt{ArohaCommitAck}          & Prov $\to$ Orch  & Y & Commitment confirmed + result \\
+  \texttt{ArohaCancel}             & Orch $\to$ Prov  & Y & Compensating transaction / rollback \\
+  \texttt{ArohaCancelAck}          & Prov $\to$ Orch  & Y & Cancellation confirmed \\
+  \texttt{ArohaDelegate}           & Orch $\to$ Orch  &   & Forward to sub-orchestrator \\
+  \texttt{ArohaError}              & Prov $\to$ Orch  &   & Typed, retryable error \\
+  \texttt{ArohaSatisfactionSignal} & Orch $\to$ Prov  &   & Post-saga reputation feedback \\
+  \bottomrule
+  \caption{Complete Aroha message type reference}
+\end{longtable}
+
+% ================================================================================
+\section{Layer 4 --- Orchestration and the Saga Pattern}
+% ================================================================================
+
+\subsection{The Saga State Machine}
+
+The saga pattern is a Aroha protocol primitive. Every multi-step transaction passes
+through the following finite-state machine:
+
+\begin{verbatim}
+                          ArohaReserve sent
+[*] --> [IDLE] --------------------------> [RESERVING]
+                                                |
+                                 ArohaReserveAck +---> timeout / ArohaError
+                                    |                        |
+                               [RESERVED]              [FAILED] --> [*]
+                                    |
+                      +-------------+------------------+
+                      |                                |
+              ArohaCommit sent                  orchestrator aborts
+                      |                                |
+                [COMMITTING]              [COMPENSATING] <--.
+                      |                       |              |
+          ArohaCommitAck                ArohaCancelAck         |
+                  |                          |          commit fails
+           [COMMITTED]               [COMPENSATED]           |
+               [*]                       [*]                 |
+                            +--------------------------------+
+\end{verbatim}
+
+\subsection{Execution Phases}
+
+\begin{enumerate}[label=\textbf{Phase \arabic*:}]
+  \item \textbf{RESERVE (parallel)} --- The orchestrator sends \texttt{ArohaReserve}
+        to all participants simultaneously. Each provider holds the requested
+        resource for \texttt{holdDurationMs} milliseconds. Any failure aborts and
+        triggers LIFO compensation immediately.
+
+  \item \textbf{AWAITING APPROVAL (optional)} --- If a \texttt{HumanApprovalGate}
+        is configured, the saga pauses after all reserves succeed. A human decision
+        is polled via webhook. Rejection triggers LIFO compensation; no money moves.
+
+  \item \textbf{COMMIT (sequential)} --- The orchestrator sends \texttt{ArohaCommit}
+        to each participant in order. Providers \textbf{MUST} implement commit
+        idempotently using \texttt{reservationToken} as the database key.
+
+  \item \textbf{COMPENSATE (LIFO, on failure)} --- If any commit fails, the
+        orchestrator sends \texttt{ArohaCancel} to all previously committed
+        participants in reverse order. Cancel handlers \textbf{MUST} always succeed.
+\end{enumerate}
+
+\subsection{Read-Only Steps}
+
+Steps marked \texttt{readOnly: true} use \texttt{ArohaRequest} and are skipped
+entirely during commit and compensation. Useful for enrichment queries, sentiment
+lookups, and price checks that should not hold reservations.
+
+\subsection{Human-in-the-Loop Approval}
+
+The \texttt{WebhookApprovalGate} pauses the saga after all reserves succeed, posts
+a signed JSON payload to any webhook (Slack, Teams, or custom UI), and polls for
+a decision. Rejection triggers full LIFO compensation instantly.
+
+% ================================================================================
+\section{Layer 5 --- Preference Context}
+% ================================================================================
+
+Every \texttt{ArohaRequest} and \texttt{ArohaReserve} \textbf{MAY} carry a
+\texttt{preferenceContext} block encoding user constraints into the protocol payload:
+
+\begin{lstlisting}[caption=Preference context block inside a ArohaRequest or ArohaReserve body]
+"preferenceContext": {
+  "budget":       { "max": 500, "currency": "USD"         },
+  "quality":      { "minRating": 4.0                      },
+  "constraints":  [ "non-stop-only", "window-seat"        ],
+  "consentToken": "<signed-GDPR-consent-token>"
+}
+\end{lstlisting}
+
+Providers \textbf{MUST} respect \texttt{budget.max}. A provider that returns a
+result exceeding the declared budget \textbf{MUST} return
+\texttt{ArohaError\{code: Aroha\_BUDGET\_EXCEEDED\}}.
+
+% ================================================================================
+\section{Security Model}
+% ================================================================================
+
+Aroha is designed for zero-trust agent communication. Every claim is
+cryptographically verifiable before any application code runs.
+
+\subsection{Threat Model}
+
+\begin{table}[ht]
+  \centering
+  \renewcommand{\arraystretch}{1.5}
+  \begin{tabularx}{\textwidth}{@{} l X @{}}
+    \toprule
+    \textbf{Threat} & \textbf{Mitigation} \\
+    \midrule
+    Message impersonation     & Ed25519 signature on every envelope \\
+    Replay attacks            & 32-byte random nonce + \texttt{expires} TTL; rolling 5-min store \\
+    Message tampering         & Signature covers canonicalized body (sorted keys, proof omitted) \\
+    Wrong recipient           & \texttt{to} DID validated before \texttt{onMessage} fires \\
+    MITM / eavesdropping      & TLS 1.3+ mandatory on all connections \\
+    Privilege escalation      & RBAC enforced before application code \\
+    Credential forgery        & Credentials signed by issuer's Ed25519 key \\
+    Stale credentials         & \texttt{expiresAt} enforced; registry credentials are revocable \\
+    Registry manipulation     & Manifest signature verified against public key \\
+    Partial saga / dirty state& LIFO compensation guarantees no partial commits \\
+    \bottomrule
+  \end{tabularx}
+  \caption{Zero-trust threat model and mitigations}
+\end{table}
+
+\subsection{Message Signing Algorithm}
+
+\begin{lstlisting}[caption=Ed25519 signing and verification]
+// --- Signing (sender side) ---
+signingInput = UTF8(
+  JSON.stringify(
+    sortedKeys(message, omit="proof")  // canonical form
+  )
+)
+proofValue = base64url(
+  Ed25519Sign(signingInput, agentPrivateKey)
+)
+
+// --- Verification (receiver side) ---
+isValid = await ed.verifyAsync(
+  fromBase64url(envelope.proof.proofValue), // signature bytes
+  new TextEncoder().encode(                  // message bytes
+    JSON.stringify(sortKeys(bodyWithoutProof))
+  ),
+  senderPublicKey  // resolved from registry or DID Document
+)
+\end{lstlisting}
+
+\subsection{RBAC Enforcement Order}
+
+When \texttt{@aroha-sdk/credentials} is mounted, the server evaluates in this order
+before \texttt{onMessage} is called:
+
+\begin{enumerate}[noitemsep]
+  \item If \texttt{body.credentialId} present: resolve from \texttt{CredentialRegistry},
+        verify signature, extract roles.
+  \item If \texttt{body.credentialToken} present: verify inline credential signature,
+        extract roles.
+  \item Else: resolve from \texttt{rbacPolicy} options, use agent roles.
+\end{enumerate}
+
+\subsection{Role--Action Permission Matrix}
+
+\begin{table}[ht]
+  \centering
+  \renewcommand{\arraystretch}{1.3}
+  \begin{tabularx}{\textwidth}{@{} l X l @{}}
+    \toprule
+    \textbf{Role} & \textbf{Permitted actions} & \textbf{Notes} \\
+    \midrule
+    \texttt{human:admin}        & ALL                                            & Full access \\
+    \texttt{human:user}         & query, reserve, commit, cancel, negotiate      & Standard user \\
+    \texttt{human:readonly}     & query                                          & Read-only \\
+    \texttt{agent:orchestrator} & query, reserve, commit, cancel, delegate, negotiate & Cross-agent \\
+    \texttt{agent:provider}     & receive only                                   & No restriction \\
+    \texttt{agent:observer}     & query                                          & Monitoring \\
+    \bottomrule
+  \end{tabularx}
+  \caption{RBAC role-action permission matrix}
+\end{table}
+
+\subsection{Production Security Checklist}
+
+\begin{itemize}[noitemsep]
+  \item[$\square$] TLS 1.3 on all endpoints
+  \item[$\square$] mTLS between known peer agents
+  \item[$\square$] Private key in HSM or secrets manager, never in env vars or source
+  \item[$\square$] Credential TTLs $\leq$ 1 hour for \texttt{human:user}
+  \item[$\square$] Registry-based credentials for all production sessions (enables revocation)
+  \item[$\square$] Rate limiter in front of \texttt{ArohaServer}
+  \item[$\square$] Monitor for \texttt{Aroha\_UNAUTHORIZED} spikes
+\end{itemize}
+
+% ================================================================================
+\section{Extension: Settlement (@aroha-sdk/settlement)}
+% ================================================================================
+
+The settlement layer is entirely optional. The protocol kernel has no opinion on
+whether agent interactions are free, metered, or settled via smart contracts.
+Settlement strategies hook into the saga via \texttt{onReserve}, \texttt{onCommit},
+\texttt{onCancel}, and \texttt{onSagaComplete}.
+
+\subsection{Settlement Strategies}
+
+\begin{table}[ht]
+  \centering
+  \renewcommand{\arraystretch}{1.4}
+  \begin{tabularx}{\textwidth}{@{} l X X @{}}
+    \toprule
+    \textbf{Strategy} & \textbf{Mechanism} & \textbf{Best for} \\
+    \midrule
+    \texttt{NullSettlement}     & No-op. All operations free.
+      & Internal networks, development \\
+    \texttt{ApiKeySettlement}   & Validates API keys per provider.
+      & SaaS provider integration \\
+    \texttt{QuotaSettlement}    & Holds quota on Reserve; deducts on Commit; releases on Cancel.
+      & Rate-limited enterprise APIs \\
+    \texttt{EscrowSettlement}   & Opens on-chain escrow on Reserve; approves on Commit; refunds on Cancel.
+      & Trustless cross-org payments \\
+    \texttt{PostgresSettlement} & Tracks saga lifecycle in Postgres.
+      & Enterprise Web2 deployments \\
+    \texttt{StripeSettlement}   & Stripe manual-capture PaymentIntent per saga step.
+      & SaaS consumer billing \\
+    \bottomrule
+  \end{tabularx}
+  \caption{Built-in settlement strategies}
+\end{table}
+
+\subsection{Escrow Settlement --- Invisible Web3}
+
+\begin{enumerate}[noitemsep]
+  \item Developer calls \texttt{wallet.buyData(providerDID, \{budget, capability\})}
+  \item \texttt{WalletService} generates ephemeral session key; Paymaster sponsors gas
+  \item \texttt{ArohaReserve} sent; \texttt{onReserve} opens escrow with funds held
+  \item \texttt{ArohaCommit} sent; \texttt{onCommit} approves split for provider
+  \item \texttt{onSagaComplete(SUCCESS)} releases funds to provider
+  \item On failure: \texttt{onSagaComplete(COMPENSATED)} refunds orchestrator in full
+\end{enumerate}
+
+\subsection{Stripe Settlement Lifecycle}
+
+\begin{table}[ht]
+  \centering
+  \renewcommand{\arraystretch}{1.3}
+  \begin{tabularx}{\textwidth}{@{} l l X @{}}
+    \toprule
+    \textbf{Saga phase} & \textbf{Stripe action} & \textbf{Effect} \\
+    \midrule
+    \texttt{ArohaReserve} & PaymentIntent created (\texttt{capture\_method: "manual"}) & Authorization only; no charge \\
+    \texttt{ArohaCommit}  & PaymentIntent captured                                     & Money moves \\
+    \texttt{ArohaCancel}  & PaymentIntent cancelled                                    & Hold released; zero charge \\
+    \bottomrule
+  \end{tabularx}
+  \caption{Stripe settlement lifecycle}
+\end{table}
+
+% ================================================================================
+\section{Extension: Commerce (@aroha-sdk/commerce)}
+% ================================================================================
+
+\begin{table}[ht]
+  \centering
+  \renewcommand{\arraystretch}{1.4}
+  \begin{tabularx}{\textwidth}{@{} l l X @{}}
+    \toprule
+    \textbf{Pattern} & \textbf{Relationship} & \textbf{Example} \\
+    \midrule
+    B2B & Org $\leftrightarrow$ Org
+      & Logistics agent consumes freight-pricing agent under quarterly contract + SLA \\
+    B2C & Org $\to$ Consumer
+      & Travel agent serves personal agent under monthly subscription + GDPR consent \\
+    C2B & Consumer $\to$ Org
+      & Personal agent submits quality feedback; recorded on-chain for reputation \\
+    \bottomrule
+  \end{tabularx}
+  \caption{Commerce relationship patterns}
+\end{table}
+
+\subsection{B2B Agreement Lifecycle}
+
+\begin{enumerate}[noitemsep, label=\textbf{\arabic*.}]
+  \item Provider creates draft with capabilities, billing terms, and SLA terms
+  \item Provider signs with Ed25519 private key
+  \item Consumer countersigns --- agreement becomes active
+  \item Both parties can \texttt{verifyAgreement()} at any time
+  \item \texttt{B2BBillingSettlement} enforces quotas and SLA per call
+  \item \texttt{generateInvoice()} produces a line-item invoice from billing records
+\end{enumerate}
+
+\subsection{B2C Consent (GDPR-aligned)}
+
+Every consent record is signed by the consumer's Ed25519 key. Providers
+\textbf{MUST} verify the signature before using data for any declared purpose.
+Allowed use purposes, retention days, cross-border transfer flags, and GDPR
+applicability are encoded in the signed record.
+
+% ================================================================================
+\section{Extension: Credentials and RBAC (@aroha-sdk/credentials)}
+% ================================================================================
+
+Human users authenticate out-of-band (password, OAuth, passkey) and receive a
+signed \texttt{HumanCredential} with a short TTL. Two delivery modes:
+
+\begin{itemize}[noitemsep]
+  \item \textbf{Inline token} (\texttt{credentialToken}): attached to the message
+        body. Cannot be revoked before \texttt{expiresAt}. Use TTL $\leq$ 1 hour.
+  \item \textbf{Registry reference} (\texttt{credentialId}): only the UUID is sent;
+        the agent resolves it from the \texttt{CredentialRegistry} API. Supports
+        instant revocation via \texttt{DELETE /aroha/credentials/:id}.
+\end{itemize}
+
+\begin{table}[ht]
+  \centering
+  \renewcommand{\arraystretch}{1.3}
+  \begin{tabularx}{\textwidth}{@{} l l X l @{}}
+    \toprule
+    \textbf{Method} & \textbf{Path} & \textbf{Purpose} & \textbf{Auth} \\
+    \midrule
+    \texttt{POST}   & \texttt{/aroha/credentials}         & Register credential & Signature \\
+    \texttt{GET}    & \texttt{/aroha/credentials/:id}     & Resolve by ID       & Public \\
+    \texttt{GET}    & \texttt{/aroha/credentials?userId=} & List by user        & Public \\
+    \texttt{DELETE} & \texttt{/aroha/credentials/:id}     & Revoke              & Revoke proof \\
+    \bottomrule
+  \end{tabularx}
+  \caption{Credential Registry HTTP endpoints}
+\end{table}
+
+% ================================================================================
+\section{Error Codes}
+% ================================================================================
+
+All Aroha errors are returned as a \texttt{ArohaError} envelope with a typed
+\texttt{code}, a human-readable \texttt{message}, and a \texttt{retryable} boolean.
+Callers \textbf{MUST NOT} retry a non-retryable error without fixing the root cause.
+
+\begin{longtable}{@{} l c X @{}}
+  \toprule
+  \textbf{Code} & \textbf{Retryable} & \textbf{Meaning} \\
+  \midrule
+  \endhead
+  \texttt{Aroha\_UNAUTHORIZED}         & no  & No credential supplied or signature verification failed \\
+  \texttt{Aroha\_FORBIDDEN}            & no  & Credential valid but role lacks the required permission \\
+  \texttt{Aroha\_CREDENTIAL\_EXPIRED}  & no  & \texttt{HumanCredential.expiresAt} is in the past \\
+  \texttt{Aroha\_CREDENTIAL\_REVOKED}  & no  & Credential has been revoked via \texttt{DELETE /aroha/credentials/:id} \\
+  \texttt{Aroha\_INVALID\_SIGNATURE}   & no  & Ed25519 proof verification failed \\
+  \texttt{Aroha\_REPLAY\_DETECTED}     & no  & Nonce already seen within the rolling 5-minute window \\
+  \texttt{Aroha\_MESSAGE\_EXPIRED}     & no  & \texttt{envelope.expires} is in the past \\
+  \texttt{Aroha\_WRONG\_RECIPIENT}     & no  & \texttt{to} DID does not match this agent's DID \\
+  \texttt{Aroha\_UNKNOWN\_CAPABILITY}  & no  & Capability ID is not supported by this provider \\
+  \texttt{Aroha\_INVALID\_TOKEN}       & no  & Reservation token is unknown or has already been cancelled \\
+  \texttt{Aroha\_RESERVATION\_EXPIRED} & no  & \texttt{holdDurationMs} elapsed before commit was received \\
+  \texttt{Aroha\_NO\_INVENTORY}        & yes & Capability is temporarily unavailable; safe to retry later \\
+  \texttt{Aroha\_ALREADY\_COMMITTED}   & no  & Commit received for a reservation that was already cancelled \\
+  \texttt{Aroha\_UPSTREAM\_ERROR}      & yes & Provider failed to reach an upstream dependency \\
+  \texttt{Aroha\_INTERNAL\_ERROR}      & yes & Unexpected internal error; check provider logs \\
+  \texttt{Aroha\_RATE\_LIMITED}        & yes & Rate limit exceeded; respect \texttt{Retry-After} in \texttt{details} \\
+  \bottomrule
+  \caption{Complete Aroha error code reference}
+\end{longtable}
+
+% ================================================================================
+\section{SDK Package Reference}
+% ================================================================================
+
+The Aroha SDK is a TypeScript-first monorepo. Every package is independently
+installable via npm. The kernel packages (\texttt{@aroha-sdk/core} through
+\texttt{@aroha-sdk/preferences}) have zero runtime dependencies on extension packages.
+
+\begin{table}[ht]
+  \centering
+  \renewcommand{\arraystretch}{1.4}
+  \begin{tabularx}{\textwidth}{@{} l l X @{}}
+    \toprule
+    \textbf{Package} & \textbf{Layer} & \textbf{Provides} \\
+    \midrule
+    \texttt{@aroha-sdk/core}             & 0--3 & Transport, DID identity, Ed25519 crypto, signed messaging \\
+    \texttt{@aroha-sdk/registry}         & 2    & HTTP, in-memory, and EVM registry clients; IPFS pinning; capability discovery \\
+    \texttt{@aroha-sdk/orchestrator}     & 4    & \texttt{SagaEngine}, \texttt{WebhookApprovalGate}, read-only step support \\
+    \texttt{@aroha-sdk/preferences}      & 5    & Preference context builders, validators, consent token issuance \\
+    \texttt{@aroha-sdk/credentials}      & ext  & RBAC server middleware, \texttt{HumanCredential} issuance, credential registry \\
+    \texttt{@aroha-sdk/settlement}       & ext  & \texttt{NullSettlement}, \texttt{ApiKeySettlement}, \texttt{QuotaSettlement}, \texttt{EscrowSettlement}, \texttt{PostgresSettlement}, \texttt{StripeSettlement} \\
+    \texttt{@aroha-sdk/commerce}         & ext  & B2B signed agreements, B2C subscriptions and GDPR consent, C2B feedback, audit log \\
+    \texttt{@aroha-sdk/telemetry}        & ext  & W3C Trace Context propagation, distributed saga tracing, OpenTelemetry integration \\
+    \texttt{@aroha-sdk/policy}           & ext  & Deterministic JSON policy enforcement; prompt-injection surface closure \\
+    \texttt{@aroha-sdk/cache}            & ext  & SHA-256 content-addressed semantic cache; in-memory and Redis backends \\
+    \texttt{@aroha-sdk/trusted-mesh}     & ext  & Bypass Ed25519 verification for allowlisted DIDs inside a VPC or mTLS mesh \\
+    \texttt{@aroha-sdk/mcp-bridge}       & ext  & Expose any MCP server's tools as typed Aroha capability providers \\
+    \texttt{@aroha-sdk/a2a-bridge}       & ext  & Bidirectional translation between Google A2A messages and Aroha envelopes \\
+    \texttt{@aroha-sdk/langchain-bridge} & ext  & Expose Aroha capabilities as LangChain tools; wrap LangChain agents as providers \\
+    \bottomrule
+  \end{tabularx}
+  \caption{Aroha SDK package reference (14 packages)}
+\end{table}
+
+% ================================================================================
+\section{Interoperability and Bridges}
+% ================================================================================
+
+Aroha is designed to complement, not replace, existing agent ecosystems. All bridges
+present a standard Aroha interface outward, so orchestrators do not need to know which
+underlying framework a provider uses.
+
+\begin{itemize}[leftmargin=*, itemsep=4pt]
+  \item \textbf{MCP Bridge} (\texttt{@aroha-sdk/mcp-bridge}): Wraps any Model Context
+        Protocol server as a Aroha capability provider. MCP tool calls arrive wrapped
+        in a standard signed Aroha envelope, enabling per-call micro-payments and
+        capability-level reputation scoring for MCP data sources --- with zero changes
+        to the MCP server itself.
+
+  \item \textbf{A2A Bridge} (\texttt{@aroha-sdk/a2a-bridge}): Translates Google's
+        Agent-to-Agent (A2A) task and message objects into Aroha signed envelopes and
+        vice versa. An A2A agent can participate as a provider in a Aroha saga without
+        modification.
+
+  \item \textbf{LangChain Bridge} (\texttt{@aroha-sdk/langchain-bridge}): Exposes
+        Aroha capabilities as \texttt{StructuredTool} instances for LangChain agents,
+        and wraps LangChain \texttt{AgentExecutor} instances as Aroha providers. Minimal
+        changes to existing LangChain code are required.
+
+  \item \textbf{Trusted Mesh} (\texttt{@aroha-sdk/trusted-mesh}): For agents that
+        communicate exclusively within a private Kubernetes cluster or VPC behind
+        mutual TLS, the \texttt{TrustedMeshMiddleware} can skip Ed25519 signature
+        verification for a configurable allowlist of DIDs. Nonce deduplication
+        and message expiry checks are always enforced regardless of trust mode.
+\end{itemize}
+
+% ================================================================================
+\section{Specification Revision History}
+% ================================================================================
+
+\begin{table}[ht]
+  \centering
+  \renewcommand{\arraystretch}{1.4}
+  \begin{tabularx}{\textwidth}{@{} l X @{}}
+    \toprule
+    \textbf{Date} & \textbf{Changes} \\
+    \midrule
+    2026-04-14
+      & Initial draft (not submitted to the W3C or any other body). Core kernel (Layers 0--5)
+        specified. \texttt{did:aroha} method defined. 15 message types enumerated.
+        Saga FSM formalized. \\
+    2026-04-21
+      & \texttt{@aroha-sdk/commerce} extension finalized (B2B agreements, B2C consent,
+        C2B feedback). \texttt{@aroha-sdk/credentials} extracted from kernel into
+        separate extension package. \texttt{IArohaRegistry} pluggable backend
+        interface finalized with four implementations. \\
+    2026-04-28
+      & Kernel hardening: \texttt{auth/} directory removed from \texttt{@aroha-sdk/core};
+        no extension package is imported by the kernel. \texttt{WalletService}
+        relocated to \texttt{@aroha-sdk/settlement/payments}. Ed25519$\to$X25519 ECDH
+        key conversion algorithm corrected. Full Vitest test suite added
+        (100+ tests across all 10 packages). SDK documentation complete. \\
+    \bottomrule
+  \end{tabularx}
+  \caption{Specification revision history}
+\end{table}
+
+% ================================================================================
+\section{Extension: Policy Engine (@aroha-sdk/policy)}
+% ================================================================================
+
+\subsection{Motivation: The LLM Security Boundary Problem}
+
+LLMs are probabilistic. A sufficiently crafted prompt can cause a model to
+construct a \texttt{transfer-funds} request for an amount orders of magnitude
+above the operator's policy limit, embed a prompt-injection string inside a
+structured parameter to manipulate a downstream agent, or add an unexpected
+\texttt{admin: true} field to a capability that only allows read access.
+
+\texttt{@aroha-sdk/policy} closes this surface by enforcing deterministic, rule-based
+constraints \textit{after} Ed25519 signature verification and \textit{before}
+the \texttt{onMessage} handler dispatches to any LLM or application code.
+No reasoning is involved in policy evaluation --- rules are pure JSON predicates.
+
+\subsection{Policy Rule Types}
+
+\begin{table}[ht]
+  \centering
+  \renewcommand{\arraystretch}{1.4}
+  \begin{tabularx}{\textwidth}{@{} l X @{}}
+    \toprule
+    \textbf{Rule} & \textbf{Enforcement} \\
+    \midrule
+    \texttt{maxSpendPerCall}
+      & Reject requests where a numeric parameter exceeds a configured limit.
+        Returns \texttt{Aroha\_FORBIDDEN} with the limit and actual value. \\
+    \texttt{allowedParamKeys}
+      & Reject requests containing any parameter key not on an explicit whitelist.
+        Prevents undocumented or injected fields from reaching application code. \\
+    \texttt{blockedParamValues}
+      & Reject requests containing specific key/value combinations
+        (e.g.\ \texttt{action=delete}, \texttt{admin=true}). \\
+    \texttt{requiredParamKeys}
+      & Reject requests missing mandatory fields. Prevents incomplete
+        or LLM-hallucinated partial requests from executing. \\
+    \texttt{paramAllowedValues}
+      & Allowlist enforcement for enum-style parameters
+        (e.g.\ \texttt{env} must be \texttt{staging} or \texttt{production}). \\
+    \texttt{rateLimitPerMinute}
+      & Sliding-window rate limit per sender DID per capability. \\
+    \texttt{requiresHITLApproval}
+      & Marks a capability as always requiring human sign-off, independent
+        of \texttt{SagaEngine} configuration. \\
+    \bottomrule
+  \end{tabularx}
+  \caption{Policy rule types supported by \texttt{ArohaPolicyEngine}}
+\end{table}
+
+\subsection{Prompt-Injection Surface Closure}
+
+The companion \texttt{createStructuredPayloadMiddleware} rejects messages
+containing string parameters longer than a configured maximum (default 512
+characters) or nested parameter objects deeper than a configured depth (default 3
+levels). This structurally prevents prompt-injection strings from reaching any
+downstream LLM call while imposing no burden on well-formed agent requests.
+
+Policy evaluation order: \textbf{signature} $\to$ \textbf{RBAC}
+$\to$ \textbf{policy engine} $\to$ \textbf{structured payload check}
+$\to$ \textbf{onMessage}.
+
+% ================================================================================
+\section{Extension: Semantic Cache (@aroha-sdk/cache)}
+% ================================================================================
+
+\subsection{The Agent Token-Cost Problem}
+
+Agent-to-agent networks amplify inference costs. A saga involving five agents,
+each making two inter-agent calls, incurs ten times the inference cost of a
+single-agent workflow. Repeated lookups --- open issues, product availability,
+flight prices, reputation scores --- spend tokens on questions whose answers have
+not changed since the previous call.
+
+\texttt{@aroha-sdk/cache} eliminates redundant inference by caching
+\texttt{ArohaRequest}$\to$\texttt{ArohaResponse} pairs with content-addressed
+keys. The second through \textit{n}th calls for the same capability with the
+same canonical parameters return instantly from cache, with zero LLM invocations.
+
+\subsection{Caching Mechanics}
+
+\begin{itemize}[noitemsep]
+  \item \textbf{Cache key}: SHA-256 of
+        \texttt{capabilityId + canonical JSON of params} (key-order independent).
+        Identical requests from different orchestrators, with different nonces or
+        correlation IDs, hash to the same key.
+  \item \textbf{Client-side} (\texttt{CachingArohaClient}): Intercepts
+        \texttt{send()} before the network. Cache hit returns a synthesized
+        \texttt{ArohaResponse} immediately.
+  \item \textbf{Server-side} (\texttt{withCaching}): Wraps \texttt{onMessage}.
+        Cache hit builds and signs a fresh \texttt{ArohaResponse} from stored data.
+  \item \textbf{Saga safety}: Only \texttt{ArohaRequest} messages are cached.
+        \texttt{ArohaReserve}, \texttt{ArohaCommit}, and \texttt{ArohaCancel} always
+        pass through --- they carry side effects that must not be replayed from cache.
+  \item \textbf{Backends}: \texttt{InMemorySemanticCache} (development) and
+        \texttt{RedisSemanticCache} (production). Both implement the same
+        \texttt{ISemanticCache} interface.
+  \item \textbf{TTL}: Configurable per capability. Example: 60 seconds for
+        \texttt{search-flights}, 10 minutes for \texttt{get-issue}.
+  \item \textbf{Invalidation}: \texttt{cache.invalidate(capabilityId)} after any
+        write operation that would stale the cached result.
+\end{itemize}
+
+% ================================================================================
+\section{Extension: Distributed Tracing (@aroha-sdk/telemetry)}
+% ================================================================================
+
+\subsection{The Cross-Vendor Observability Problem}
+
+When a saga spans five agents across three vendors, a 500\,ms latency spike is
+impossible to diagnose from individual agent logs alone. The only solution is
+distributed tracing: every message in the saga correlated under a single trace ID,
+with each agent-to-agent hop recorded as a child span.
+
+\texttt{@aroha-sdk/telemetry} implements the W3C Trace Context standard
+(\texttt{traceparent}) as a first-class envelope field, propagated and signed
+alongside every Aroha message.
+
+\subsection{Trace Context Propagation}
+
+The W3C \texttt{traceparent} format:
+\begin{center}
+  \texttt{00-\{traceId:32hex\}-\{spanId:16hex\}-\{flags:2hex\}}
+\end{center}
+
+The \texttt{traceparent} field is included in every \texttt{ArohaEnvelope} and
+covered by the Ed25519 proof, so it cannot be tampered with or spoofed in transit.
+Each receiving agent:
+\begin{enumerate}[noitemsep]
+  \item Extracts \texttt{traceparent} from the incoming envelope.
+  \item Starts a child span (same \texttt{traceId}, new \texttt{spanId}).
+  \item Propagates the same \texttt{traceId} on every outbound message for
+        the duration of the saga.
+\end{enumerate}
+
+The result is a single distributed trace visible in Datadog, Grafana Tempo,
+Jaeger, Honeycomb, or any OpenTelemetry-compatible backend --- with no custom
+instrumentation beyond dropping the \texttt{createTracingMiddleware} into the
+server's middleware chain.
+
+\subsection{OpenTelemetry Integration}
+
+When \texttt{@opentelemetry/api} is present in the host application,
+\texttt{@aroha-sdk/telemetry} automatically propagates context into the OTel
+\texttt{ContextAPI}, so Aroha spans appear as children of any existing application
+traces. This requires zero additional configuration.
+
+% ================================================================================
+\section{Multi-Cloud Interoperability}
+% ================================================================================
+
+\subsection{The Vendor-Lock-In Gap}
+
+Every major cloud vendor ships an agent protocol:
+
+\begin{table}[ht]
+  \centering
+  \renewcommand{\arraystretch}{1.4}
+  \begin{tabularx}{\textwidth}{@{} l l X @{}}
+    \toprule
+    \textbf{Vendor} & \textbf{Protocol} & \textbf{Structural limitation} \\
+    \midrule
+    Microsoft  & Azure Agent Protocol / A2A & Azure and M365 ecosystem only \\
+    Google     & Agent-to-Agent (A2A)       & Vertex AI ecosystem only \\
+    Amazon     & Bedrock Agents             & AWS ecosystem only \\
+    Salesforce & AgentForce                 & Salesforce ecosystem only \\
+    \bottomrule
+  \end{tabularx}
+  \caption{Major cloud agent protocols and their ecosystem scope}
+\end{table}
+
+These protocols are excellent within their ecosystems but share a structural
+flaw: they are designed to maximise platform retention, not cross-vendor
+interoperability. An Azure Copilot Studio agent has no standard way to discover
+a Bedrock agent in a customer's AWS account, verify its identity without a
+shared trust root, or execute an atomic saga that spans both.
+
+\subsection{Aroha as the Inter-Cloud Trust Layer}
+
+Aroha is positioned as the \textbf{inter-cloud trust spine} --- not a replacement
+for any vendor's agent platform, but the layer that lets all of them talk to each
+other.
+
+\begin{itemize}[noitemsep]
+  \item Each cloud's agent keeps its existing reasoning framework (LangChain,
+        Semantic Kernel, Bedrock Converse API) unchanged.
+  \item A Aroha bridge wrapper gives it a \texttt{did:aroha:} identity, a signed
+        capability manifest, and the ability to participate in cross-vendor sagas.
+  \item The \texttt{@aroha-sdk/a2a-bridge} handles Google A2A translation;
+        \texttt{@aroha-sdk/mcp-bridge} handles Anthropic MCP;
+        \texttt{@aroha-sdk/langchain-bridge} handles LangChain/Semantic Kernel agents.
+\end{itemize}
+
+\begin{table}[ht]
+  \centering
+  \renewcommand{\arraystretch}{1.4}
+  \begin{tabularx}{\textwidth}{@{} l X @{}}
+    \toprule
+    \textbf{Claim} & \textbf{How Aroha delivers it} \\
+    \midrule
+    Vendor-neutral
+      & Apache 2.0 license, W3C CG charter drafted (not yet proposed), no vendor controls the spec \\
+    Cloud-agnostic identity
+      & \texttt{did:aroha:} DIDs are not tied to any cloud IAM system \\
+    No blockchain required
+      & \texttt{InMemoryRegistry} + \texttt{PostgresSettlement} --- zero
+        external dependencies \\
+    Runs everywhere
+      & Node.js 22+; deploys on Vercel, Cloudflare Workers, AWS Lambda,
+        Azure Functions, GCP Cloud Run \\
+    Existing agents unchanged
+      & Bridge packages require zero modifications to the wrapped agent \\
+    \bottomrule
+  \end{tabularx}
+  \caption{Aroha multi-cloud positioning}
+\end{table}
+
+% ================================================================================
+\section{Post-Quantum Cryptography Roadmap}
+% ================================================================================
+
+\subsection{Design for No-Flag-Day Migration}
+
+Aroha is designed for a zero-disruption migration to NIST post-quantum standards.
+The entire signing surface is isolated to two source files:
+\texttt{aroha-core/src/crypto/signing.ts} (Ed25519 sign/verify) and
+\texttt{aroha-core/src/identity/did.ts} (keypair generation). All callers ---
+\texttt{buildEnvelope}, \texttt{validateEnvelope}, credential issuance ---
+are unchanged during migration.
+
+\subsection{Algorithm Comparison}
+
+\begin{table}[ht]
+  \centering
+  \renewcommand{\arraystretch}{1.4}
+  \begin{tabularx}{\textwidth}{@{} l r r l @{}}
+    \toprule
+    \textbf{Algorithm} & \textbf{Public key} & \textbf{Signature} & \textbf{Security level} \\
+    \midrule
+    Ed25519 (current)       &     32 bytes &      64 bytes & 128-bit classical \\
+    ML-DSA-44 (FIPS 204)    &  1,312 bytes &   2,420 bytes & NIST Level 2 (128-bit PQ) \\
+    ML-DSA-65 (FIPS 204)    &  1,952 bytes &   3,293 bytes & NIST Level 3 (192-bit PQ) \\
+    SLH-DSA-128s (FIPS 205) &     32 bytes &   7,856 bytes & NIST Level 1 (128-bit PQ, small key) \\
+    \bottomrule
+  \end{tabularx}
+  \caption{Signing algorithm comparison. ML-DSA-44 is the recommended migration target.}
+\end{table}
+
+ML-DSA-44 (FIPS 204) is the recommended target: it provides NIST Level 2
+post-quantum security at a key/signature size acceptable for HTTPS headers.
+
+\subsection{Migration Procedure}
+
+Migration proceeds in five steps with no mandatory flag day:
+
+\begin{enumerate}[label=\textbf{Step \arabic*:}, leftmargin=*]
+  \item \textbf{Dual key in DID Document} --- Add a second
+        \texttt{verificationMethod} of type \texttt{Mldsa44VerificationKey2025}
+        alongside the existing Ed25519 key. Legacy agents ignore unknown key types.
+
+  \item \textbf{Dual-sign envelopes} --- During the transition window, sign each
+        envelope with both keys. Place the Ed25519 proof in the \texttt{proof}
+        field and the ML-DSA-44 proof in a \texttt{proofs} array. Legacy agents
+        verify \texttt{proof} only; upgraded agents verify \texttt{proofs[0]}.
+
+  \item \textbf{Swap signing module} --- Replace the Ed25519 import in
+        \texttt{signing.ts} with \texttt{ml\_dsa44} from
+        \texttt{@noble/post-quantum/ml-dsa}. No call-site changes required.
+
+  \item \textbf{Transition window} --- Run dual-signing for a minimum of 7 days,
+        or until all known peer agents confirm ML-DSA-44 support. New agents verify
+        PQ signatures when present; legacy agents fall back to Ed25519.
+
+  \item \textbf{Deprecate Ed25519} --- Remove the Ed25519 key from the DID
+        Document, stop dual-signing, and remove Ed25519 verification from
+        \texttt{ArohaServer}.
+\end{enumerate}
+
+% ================================================================================
+\section{Conformance}
+% ================================================================================
+
+This section defines what constitutes a conformant Aroha implementation.
+The key words \textbf{MUST}, \textbf{MUST NOT}, \textbf{SHOULD}, \textbf{MAY}
+are used as defined in RFC 2119.
+
+\begin{table}[ht]
+  \centering
+  \renewcommand{\arraystretch}{1.5}
+  \begin{tabularx}{\textwidth}{@{} >{\bfseries}l X @{}}
+    \toprule
+    Requirement & Description \\
+    \midrule
+    MUST
+      & Expose \texttt{GET /.well-known/aroha-agent.json} returning a valid
+        DID Document signed by the agent's Ed25519 private key. \\
+    MUST
+      & Expose \texttt{POST /aroha/v1} accepting signed Aroha envelopes. \\
+    MUST
+      & Verify the Ed25519 signature on every inbound envelope before dispatching
+        to application code. \\
+    MUST
+      & Validate \texttt{envelope.to} matches the agent's own DID. \\
+    MUST
+      & Validate \texttt{envelope.expires} and reject expired messages. \\
+    MUST
+      & Maintain a nonce store for the rolling 5-minute window and reject
+        duplicate nonces. \\
+    MUST
+      & Implement \texttt{ArohaReserve}/\texttt{ArohaCommit}/\texttt{ArohaCancel}
+        idempotently when acting as a saga participant. \\
+    SHOULD
+      & Use TLS 1.3 or higher on all connections. \\
+    SHOULD
+      & Register capability manifests with a Aroha-conformant registry. \\
+    SHOULD
+      & Sign capability manifests with the agent's Ed25519 private key. \\
+    MAY
+      & Support the \texttt{@aroha-sdk/credentials} RBAC extension. \\
+    MAY
+      & Support the \texttt{@aroha-sdk/settlement} payment extension. \\
+    MAY
+      & Support the \texttt{@aroha-sdk/commerce} commerce extension. \\
+    MAY
+      & Support streaming via \texttt{WebSocket} at \texttt{/aroha/stream}. \\
+    MUST NOT
+      & Define new top-level message types. Extension is done via the
+        \texttt{body} field only. \\
+    MUST NOT
+      & Skip signature verification for any message, including messages from
+        trusted-mesh peers (nonce and expiry checks are always enforced). \\
+    \bottomrule
+  \end{tabularx}
+  \caption{Aroha conformance requirements}
+\end{table}
+
+% ================================================================================
+\section{Governance}
+% ================================================================================
+
+\subsection{Specification Ownership}
+
+Aroha is intended for a \textbf{W3C Community Group} as an open, royalty-free
+specification; no Community Group has been proposed or joined yet, and nothing has been submitted. No single vendor owns the specification. Changes would require consensus
+among Working Group participants as defined by the W3C Community Group Process.
+
+\subsection{How to Contribute}
+
+\begin{itemize}[noitemsep]
+  \item \textbf{Specification issues}: Open a GitHub issue in the
+        \texttt{aroha-spec} repository with the \texttt{spec} label.
+  \item \textbf{New message types or layer changes}: Submit a GitHub Discussion
+        tagged \texttt{proposal} before opening a pull request. Major changes require
+        a two-week comment period.
+  \item \textbf{Extension packages}: Extensions do not require Working Group
+        approval. Publish to npm under any namespace; register with the community
+        extension registry.
+  \item \textbf{SDK contributions}: Standard open-source pull request process
+        against the \texttt{aroha-sdk} monorepo. All PRs require passing CI and two
+        reviewer approvals.
+\end{itemize}
+
+\subsection{Versioning Policy}
+
+Aroha uses \textbf{semantic versioning} at the specification level:
+\begin{itemize}[noitemsep]
+  \item \textbf{Patch} versions (\texttt{1.0.x}): Non-normative clarifications,
+        editorial corrections, errata.
+  \item \textbf{Minor} versions (\texttt{1.x.0}): Backwards-compatible additions
+        (new \textit{MAY} conformance items, new extension packages).
+  \item \textbf{Major} versions (\texttt{x.0.0}): Backwards-incompatible changes
+        to the kernel (message format, signing algorithm, DID method). Major versions
+        require a 90-day deprecation window and dual-version support in all reference
+        implementations.
+\end{itemize}
+
+% ================================================================================
+\section{Glossary}
+% ================================================================================
+
+\begin{description}[labelwidth=5cm, leftmargin=!, font=\ttfamily]
+  \item[Agent]           An autonomous software process that can send and receive
+                         Aroha messages, expose capabilities, and participate in sagas.
+  \item[CID]             Content Identifier. An IPFS self-describing hash used to
+                         anchor capability manifests in a content-addressed store.
+  \item[DID]             Decentralized Identifier. A W3C standard for
+                         self-sovereign, cryptographically verifiable identifiers
+                         (W3C DID Core 1.0, \texttt{did:aroha:} method).
+  \item[DID Document]    The JSON-LD document at
+                         \texttt{/.well-known/aroha-agent.json} containing an
+                         agent's public key, service endpoint, and metadata.
+  \item[EMA]             Exponential Moving Average. The formula used by the
+                         \texttt{ArohaReputation} oracle:
+                         $\text{score} = \lfloor\text{old} \times 0.85 +
+                         \text{signal} \times 0.15\rfloor$.
+  \item[EVM]             Ethereum Virtual Machine. The execution environment for
+                         EVM-compatible smart contracts used by
+                         \texttt{ArohaRegistry.sol} and \texttt{ArohaEscrow.sol}.
+  \item[IPFS]            InterPlanetary File System. A content-addressed
+                         distributed storage network used for capability manifest
+                         hosting.
+  \item[JSON-LD]         JSON Linked Data. A W3C standard for embedding semantic
+                         context into JSON documents; used for Aroha envelopes and
+                         DID Documents.
+  \item[Orchestrator]    An agent that drives a saga: discovers providers,
+                         issues Reserve/Commit/Cancel, and handles rollback.
+  \item[Provider]        An agent that exposes capabilities in a signed manifest
+                         and participates in sagas as a participant.
+  \item[Saga]            A multi-step distributed transaction where each step is
+                         reversible via a compensating action. Aroha implements the
+                         saga pattern as a first-class protocol primitive.
+  \item[VC]              Verifiable Credential. A W3C standard for tamper-evident
+                         cryptographic credential exchange (W3C VC Data Model 2.0).
+  \item[W3C CG]          W3C Community Group. An open-participation group that
+                         develops specifications outside the formal W3C
+                         Recommendation track. Aroha has not yet been submitted to one.
+  \item[ZKP]             Zero-Knowledge Proof. A cryptographic technique allowing
+                         one party to prove a statement is true without revealing
+                         underlying data. Aroha VCs \textit{MAY} carry ZKP proofs
+                         for privacy-preserving credential presentation.
+\end{description}
+
+% ================================================================================
+\section{References}
+% ================================================================================
+
+\begin{enumerate}[label={[\arabic*]}, leftmargin=*, itemsep=4pt]
+  \item W3C DID Working Group. \textit{Decentralized Identifiers (DIDs) v1.0}.
+        W3C Recommendation. July 2022.
+        \url{https://www.w3.org/TR/did-core/}
+
+  \item W3C Verifiable Credentials Working Group. \textit{Verifiable Credentials
+        Data Model v2.0}. W3C Candidate Recommendation. May 2024.
+        \url{https://www.w3.org/TR/vc-data-model-2.0/}
+
+  \item W3C JSON-LD Working Group. \textit{JSON-LD 1.1}.
+        W3C Recommendation. July 2020.
+        \url{https://www.w3.org/TR/json-ld11/}
+
+  \item Bernstein, D. J. \textit{Ed25519: High-speed high-security signatures}.
+        IACR ePrint 2011/368. Also specified as RFC 8032.
+        \url{https://tools.ietf.org/html/rfc8032}
+
+  \item NIST. \textit{FIPS 204 --- Module-Lattice-Based Digital Signature
+        Standard (ML-DSA)}. August 2024.
+        \url{https://csrc.nist.gov/pubs/fips/204/final}
+
+  \item NIST. \textit{FIPS 205 --- Stateless Hash-Based Digital Signature
+        Standard (SLH-DSA)}. August 2024.
+        \url{https://csrc.nist.gov/pubs/fips/205/final}
+
+  \item W3C. \textit{W3C Trace Context Level 1}.
+        W3C Recommendation. February 2020.
+        \url{https://www.w3.org/TR/trace-context/}
+
+  \item Hohpe, G.; Woolf, B. \textit{Enterprise Integration Patterns}.
+        Addison-Wesley, 2003. Saga pattern originally described by
+        Garcia-Molina, H.; Salem, K. ``Sagas.'' ACM SIGMOD 1987.
+
+  \item OASIS. \textit{PKCE --- Proof Key for Code Exchange by OAuth Public
+        Clients}. RFC 7636. September 2015.
+        \url{https://tools.ietf.org/html/rfc7636}
+
+  \item Buterin, V. et al. \textit{Ethereum Yellow Paper}.
+        \url{https://ethereum.github.io/yellowpaper/paper.pdf}
+
+  \item Bradner, S. \textit{Key words for use in RFCs to Indicate Requirement
+        Levels}. RFC 2119. March 1997.
+        \url{https://tools.ietf.org/html/rfc2119}
+\end{enumerate}
+
+% ================================================================================
+\section{Conclusion}
+% ================================================================================
+
+The autonomous agent economy is not a future possibility --- it is being assembled
+right now, one proprietary API at a time. Without an open protocol, agent
+interoperability will consolidate around whichever vendor reaches critical mass
+first, creating a new form of platform lock-in at the infrastructure layer.
+
+Aroha addresses this at the source. The six-layer stack provides a complete,
+self-contained answer to the three infrastructure failures that make cross-vendor
+agent systems unsafe today: agents can \textbf{discover} each other without
+hardcoded URLs, \textbf{verify} each other without trusting platform-level claims,
+and \textbf{transact} atomically without the risk of partial state or stranded funds.
+
+The protocol is deliberately minimal at the kernel level. Layers 0--5 define
+only what every conformant agent must implement: transport endpoints, a
+\texttt{did:aroha} identity, a signed capability manifest, 15 message types, the
+saga state machine, and preference context. Everything else --- payments,
+permissions, commerce contracts, telemetry, bridge compatibility --- lives in
+opt-in extension packages that the kernel never imports.
+
+This design means Aroha is incrementally adoptable. An engineering team can ship
+a \texttt{@aroha-sdk/core} provider in a single afternoon and connect it to the open
+ecosystem immediately. They can add \texttt{@aroha-sdk/credentials} RBAC and
+\texttt{@aroha-sdk/settlement} billing the following week. When commercial scale
+demands it, they can graduate to on-chain escrow or Stripe settlement --- the
+provider code does not change; only the injected strategy does.
+
+The specification is built entirely on open standards: W3C Decentralised
+Identifiers, W3C Verifiable Credentials, JSON-LD, Ed25519 cryptography, and
+optionally EVM-compatible smart contracts. There are no proprietary formats,
+no required SaaS registries, and no mandatory blockchain. Any operator can run
+the full stack --- including a private HTTP registry, a private credential
+registry, and the \texttt{@aroha-sdk/trusted-mesh} middleware for internal meshes ---
+without any dependence on external infrastructure.
+
+A W3C Community Group charter for Aroha is drafted but not yet proposed, and the
+local runtime is not yet released. The reference TypeScript SDK covers all 12 packages
+with complete documentation and over 100 automated tests. Multi-language SDKs
+for Python, Go, and Java are available for teams that do not use TypeScript.
+
+The window to establish open standards in a fast-moving ecosystem is always
+short. Aroha is ready. The specification is open. The implementation is available.
+
+\vspace{1.2cm}
+\hrule
+\vspace{0.5cm}
+\noindent\small\textit{%
+  Aroha Specification v1.0 --- Draft.
+  Status: draft; not submitted to the W3C or any other standards body.
+  Date: April 28, 2026.
+  Authors: Aroha Working Group.
+  License: Apache License 2.0 (see LICENSE and NOTICE in the repository).%
+}
+
+\end{document}

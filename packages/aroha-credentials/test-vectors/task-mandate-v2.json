@@ -1,0 +1,1713 @@
+{
+  "description": "Aroha task-mandate v2 conformance vectors. Canonicalisation is RFC 8785 (JCS). A v2 task-mandate signature is Ed25519(privateKey, UTF-8(JCS({\"mandate\": <body>, \"purpose\": \"aroha.task-mandate/v2\", \"v\": 2}))), base64url without padding; a legacy v1 signature covers JSON.stringify(sortKeys(body)). Tokens are base64url(JSON({v: 2, mandate, signature})) and carry one link. Every verdict, reason and code below was computed by the TypeScript reference (verifyTaskMandate with options.now, checkTaskNarrowing, checkTaskConstraints). Public keys resolve from content-addressed DIDs (did:aroha:z<base58btc(pubkey)>). Keys are the RFC 8032 section 7.1 test keys - never use them for anything real.",
+  "generatedBy": "packages/aroha-credentials/scripts/gen-task-mandate-vectors.ts",
+  "keys": {
+    "human": {
+      "privateKeyHex": "9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60",
+      "publicKeyHex": "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a",
+      "did": "did:aroha:zFVen3X669xLzsi6N2V91DoiyzHzg1uAgqiT8jZ9nS96Z"
+    },
+    "agent": {
+      "privateKeyHex": "4ccd089b28ff96da9db6c346ec114e0f5b8a319f35aba624da8cf6ed4fb8a6fb",
+      "publicKeyHex": "3d4017c3e843895a92b70aa74d1b7ebc9c982ccf2ec4968cc0cd55f12af4660c",
+      "did": "did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5"
+    },
+    "provider": {
+      "privateKeyHex": "c5aa8df43f9f837bedb7442f31dcb7b166d38535076f094b85ce3a2e0b4458f7",
+      "publicKeyHex": "fc51cd8e6218a1a38da47ed00230f0580816ed13ba3303ac5deb911548908025",
+      "did": "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr"
+    }
+  },
+  "clockToleranceMs": 30000,
+  "mandates": [
+    {
+      "name": "root",
+      "signer": "human",
+      "mandate": {
+        "mandateType": "task",
+        "mandateTier": "intent",
+        "allowed": [
+          "search",
+          "draft-email",
+          "send-email",
+          "read-calendar",
+          "export-data"
+        ],
+        "blocked": [
+          "export-data"
+        ],
+        "taskConstraints": {
+          "actionLimits": {
+            "send-email": 3,
+            "search": 50
+          },
+          "computeLimit": {
+            "llmTokens": 100000,
+            "webRequests": 200,
+            "executionTimeMs": 600000
+          },
+          "dataAccess": {
+            "calendar": "read",
+            "email": "read-write",
+            "drafts": "write"
+          },
+          "outputHandling": "user-only",
+          "humanGates": [
+            "send-email"
+          ],
+          "checkpointIntervalMs": 60000,
+          "requireSandbox": true,
+          "maxDelegationDepth": 2
+        },
+        "grantee": "did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5",
+        "grantor": "did:aroha:zFVen3X669xLzsi6N2V91DoiyzHzg1uAgqiT8jZ9nS96Z",
+        "issuedAt": "2026-10-01T09:00:00.000Z",
+        "expiresAt": "2026-10-01T21:00:00.000Z",
+        "parentMandateId": null,
+        "mandateId": "task-root-0001"
+      },
+      "expectedSigningPayload": "{\"mandate\":{\"allowed\":[\"search\",\"draft-email\",\"send-email\",\"read-calendar\",\"export-data\"],\"blocked\":[\"export-data\"],\"expiresAt\":\"2026-10-01T21:00:00.000Z\",\"grantee\":\"did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5\",\"grantor\":\"did:aroha:zFVen3X669xLzsi6N2V91DoiyzHzg1uAgqiT8jZ9nS96Z\",\"issuedAt\":\"2026-10-01T09:00:00.000Z\",\"mandateId\":\"task-root-0001\",\"mandateTier\":\"intent\",\"mandateType\":\"task\",\"parentMandateId\":null,\"taskConstraints\":{\"actionLimits\":{\"search\":50,\"send-email\":3},\"checkpointIntervalMs\":60000,\"computeLimit\":{\"executionTimeMs\":600000,\"llmTokens\":100000,\"webRequests\":200},\"dataAccess\":{\"calendar\":\"read\",\"drafts\":\"write\",\"email\":\"read-write\"},\"humanGates\":[\"send-email\"],\"maxDelegationDepth\":2,\"outputHandling\":\"user-only\",\"requireSandbox\":true}},\"purpose\":\"aroha.task-mandate/v2\",\"v\":2}",
+      "expectedSignature": "EdIC4cnTFnxoe2TwnED3HmoJGmCOEi69q7QJZ_l71kSs21FFcE5yVjlXT3tp_6nS7Gl5uXo12Siwzy07k3j0Bg",
+      "token": "eyJ2IjoyLCJtYW5kYXRlIjp7Im1hbmRhdGVUeXBlIjoidGFzayIsIm1hbmRhdGVUaWVyIjoiaW50ZW50IiwiYWxsb3dlZCI6WyJzZWFyY2giLCJkcmFmdC1lbWFpbCIsInNlbmQtZW1haWwiLCJyZWFkLWNhbGVuZGFyIiwiZXhwb3J0LWRhdGEiXSwiYmxvY2tlZCI6WyJleHBvcnQtZGF0YSJdLCJ0YXNrQ29uc3RyYWludHMiOnsiYWN0aW9uTGltaXRzIjp7InNlbmQtZW1haWwiOjMsInNlYXJjaCI6NTB9LCJjb21wdXRlTGltaXQiOnsibGxtVG9rZW5zIjoxMDAwMDAsIndlYlJlcXVlc3RzIjoyMDAsImV4ZWN1dGlvblRpbWVNcyI6NjAwMDAwfSwiZGF0YUFjY2VzcyI6eyJjYWxlbmRhciI6InJlYWQiLCJlbWFpbCI6InJlYWQtd3JpdGUiLCJkcmFmdHMiOiJ3cml0ZSJ9LCJvdXRwdXRIYW5kbGluZyI6InVzZXItb25seSIsImh1bWFuR2F0ZXMiOlsic2VuZC1lbWFpbCJdLCJjaGVja3BvaW50SW50ZXJ2YWxNcyI6NjAwMDAsInJlcXVpcmVTYW5kYm94Ijp0cnVlLCJtYXhEZWxlZ2F0aW9uRGVwdGgiOjJ9LCJncmFudGVlIjoiZGlkOmFyb2hhOno1ODZaN0gydnBYOXFOaE4yVDRlOVV0dWdpZTNvZ2pieHpHYU10TTNFNkhSNSIsImdyYW50b3IiOiJkaWQ6YXJvaGE6ekZWZW4zWDY2OXhMenNpNk4yVjkxRG9peXpIemcxdUFncWlUOGpaOW5TOTZaIiwiaXNzdWVkQXQiOiIyMDI2LTEwLTAxVDA5OjAwOjAwLjAwMFoiLCJleHBpcmVzQXQiOiIyMDI2LTEwLTAxVDIxOjAwOjAwLjAwMFoiLCJwYXJlbnRNYW5kYXRlSWQiOm51bGwsIm1hbmRhdGVJZCI6InRhc2stcm9vdC0wMDAxIn0sInNpZ25hdHVyZSI6IkVkSUM0Y25URm54b2UyVHduRUQzSG1vSkdtQ09FaTY5cTdRSlpfbDcxa1NzMjFGRmNFNXlWamxYVDN0cF82blM3R2w1dVhvMTJTaXd6eTA3azNqMEJnIn0"
+    },
+    {
+      "name": "child",
+      "signer": "agent",
+      "mandate": {
+        "mandateType": "task",
+        "mandateTier": "cart",
+        "allowed": [
+          "search",
+          "send-email"
+        ],
+        "blocked": [
+          "export-data"
+        ],
+        "taskConstraints": {
+          "actionLimits": {
+            "send-email": 1,
+            "search": 10
+          },
+          "computeLimit": {
+            "llmTokens": 5000,
+            "webRequests": 20,
+            "executionTimeMs": 60000
+          },
+          "dataAccess": {
+            "email": "write"
+          },
+          "outputHandling": "internal-only",
+          "humanGates": [
+            "send-email"
+          ],
+          "checkpointIntervalMs": 30000,
+          "requireSandbox": true,
+          "maxDelegationDepth": 1
+        },
+        "grantee": "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr",
+        "grantor": "did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5",
+        "issuedAt": "2026-10-01T09:00:00.000Z",
+        "expiresAt": "2026-10-01T15:00:00.000Z",
+        "parentMandateId": "task-root-0001",
+        "mandateId": "task-child-0002"
+      },
+      "expectedSigningPayload": "{\"mandate\":{\"allowed\":[\"search\",\"send-email\"],\"blocked\":[\"export-data\"],\"expiresAt\":\"2026-10-01T15:00:00.000Z\",\"grantee\":\"did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr\",\"grantor\":\"did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5\",\"issuedAt\":\"2026-10-01T09:00:00.000Z\",\"mandateId\":\"task-child-0002\",\"mandateTier\":\"cart\",\"mandateType\":\"task\",\"parentMandateId\":\"task-root-0001\",\"taskConstraints\":{\"actionLimits\":{\"search\":10,\"send-email\":1},\"checkpointIntervalMs\":30000,\"computeLimit\":{\"executionTimeMs\":60000,\"llmTokens\":5000,\"webRequests\":20},\"dataAccess\":{\"email\":\"write\"},\"humanGates\":[\"send-email\"],\"maxDelegationDepth\":1,\"outputHandling\":\"internal-only\",\"requireSandbox\":true}},\"purpose\":\"aroha.task-mandate/v2\",\"v\":2}",
+      "expectedSignature": "RsJzmqcfd-IkCZHKYKWV9F_tiJHZSua5jtvzdXR7aVs1btd5t8ROFg2UIqypiP72IHnvPH621W-eP9Nxlc8eAQ",
+      "token": "eyJ2IjoyLCJtYW5kYXRlIjp7Im1hbmRhdGVUeXBlIjoidGFzayIsIm1hbmRhdGVUaWVyIjoiY2FydCIsImFsbG93ZWQiOlsic2VhcmNoIiwic2VuZC1lbWFpbCJdLCJibG9ja2VkIjpbImV4cG9ydC1kYXRhIl0sInRhc2tDb25zdHJhaW50cyI6eyJhY3Rpb25MaW1pdHMiOnsic2VuZC1lbWFpbCI6MSwic2VhcmNoIjoxMH0sImNvbXB1dGVMaW1pdCI6eyJsbG1Ub2tlbnMiOjUwMDAsIndlYlJlcXVlc3RzIjoyMCwiZXhlY3V0aW9uVGltZU1zIjo2MDAwMH0sImRhdGFBY2Nlc3MiOnsiZW1haWwiOiJ3cml0ZSJ9LCJvdXRwdXRIYW5kbGluZyI6ImludGVybmFsLW9ubHkiLCJodW1hbkdhdGVzIjpbInNlbmQtZW1haWwiXSwiY2hlY2twb2ludEludGVydmFsTXMiOjMwMDAwLCJyZXF1aXJlU2FuZGJveCI6dHJ1ZSwibWF4RGVsZWdhdGlvbkRlcHRoIjoxfSwiZ3JhbnRlZSI6ImRpZDphcm9oYTp6SHl4NjJ3UFFHeXZYQ29paFpxMUJyYlVqQlJoMkx1TnhXaWlxTWtmQXVTWnIiLCJncmFudG9yIjoiZGlkOmFyb2hhOno1ODZaN0gydnBYOXFOaE4yVDRlOVV0dWdpZTNvZ2pieHpHYU10TTNFNkhSNSIsImlzc3VlZEF0IjoiMjAyNi0xMC0wMVQwOTowMDowMC4wMDBaIiwiZXhwaXJlc0F0IjoiMjAyNi0xMC0wMVQxNTowMDowMC4wMDBaIiwicGFyZW50TWFuZGF0ZUlkIjoidGFzay1yb290LTAwMDEiLCJtYW5kYXRlSWQiOiJ0YXNrLWNoaWxkLTAwMDIifSwic2lnbmF0dXJlIjoiUnNKem1xY2ZkLUlrQ1pIS1lLV1Y5Rl90aUpIWlN1YTVqdHZ6ZFhSN2FWczFidGQ1dDhST0ZnMlVJcXlwaVA3MklIbnZQSDYyMVctZVA5TnhsYzhlQVEifQ"
+    },
+    {
+      "name": "guest",
+      "signer": "human",
+      "mandate": {
+        "mandateType": "task",
+        "mandateTier": "intent",
+        "allowed": [
+          "search",
+          "draft-email"
+        ],
+        "taskConstraints": {
+          "onBehalfOf": "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr",
+          "roomId": "room-01JA0TASK",
+          "reversibleOnly": true,
+          "humanGates": [
+            "draft-email"
+          ]
+        },
+        "grantee": "did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5",
+        "grantor": "did:aroha:zFVen3X669xLzsi6N2V91DoiyzHzg1uAgqiT8jZ9nS96Z",
+        "issuedAt": "2026-10-01T09:00:00.000Z",
+        "expiresAt": "2026-10-01T21:00:00.000Z",
+        "parentMandateId": null,
+        "mandateId": "task-guest-0003"
+      },
+      "expectedSigningPayload": "{\"mandate\":{\"allowed\":[\"search\",\"draft-email\"],\"expiresAt\":\"2026-10-01T21:00:00.000Z\",\"grantee\":\"did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5\",\"grantor\":\"did:aroha:zFVen3X669xLzsi6N2V91DoiyzHzg1uAgqiT8jZ9nS96Z\",\"issuedAt\":\"2026-10-01T09:00:00.000Z\",\"mandateId\":\"task-guest-0003\",\"mandateTier\":\"intent\",\"mandateType\":\"task\",\"parentMandateId\":null,\"taskConstraints\":{\"humanGates\":[\"draft-email\"],\"onBehalfOf\":\"did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr\",\"reversibleOnly\":true,\"roomId\":\"room-01JA0TASK\"}},\"purpose\":\"aroha.task-mandate/v2\",\"v\":2}",
+      "expectedSignature": "Nt3oID_b_HB-Wnj8zIks0M6JzhADE4nWf1bjHJK5U6UQN6I6hv6q0MjtS6p4vszkFr-Bf0KRXBzzBP_a15xYCw",
+      "token": "eyJ2IjoyLCJtYW5kYXRlIjp7Im1hbmRhdGVUeXBlIjoidGFzayIsIm1hbmRhdGVUaWVyIjoiaW50ZW50IiwiYWxsb3dlZCI6WyJzZWFyY2giLCJkcmFmdC1lbWFpbCJdLCJ0YXNrQ29uc3RyYWludHMiOnsib25CZWhhbGZPZiI6ImRpZDphcm9oYTp6SHl4NjJ3UFFHeXZYQ29paFpxMUJyYlVqQlJoMkx1TnhXaWlxTWtmQXVTWnIiLCJyb29tSWQiOiJyb29tLTAxSkEwVEFTSyIsInJldmVyc2libGVPbmx5Ijp0cnVlLCJodW1hbkdhdGVzIjpbImRyYWZ0LWVtYWlsIl19LCJncmFudGVlIjoiZGlkOmFyb2hhOno1ODZaN0gydnBYOXFOaE4yVDRlOVV0dWdpZTNvZ2pieHpHYU10TTNFNkhSNSIsImdyYW50b3IiOiJkaWQ6YXJvaGE6ekZWZW4zWDY2OXhMenNpNk4yVjkxRG9peXpIemcxdUFncWlUOGpaOW5TOTZaIiwiaXNzdWVkQXQiOiIyMDI2LTEwLTAxVDA5OjAwOjAwLjAwMFoiLCJleHBpcmVzQXQiOiIyMDI2LTEwLTAxVDIxOjAwOjAwLjAwMFoiLCJwYXJlbnRNYW5kYXRlSWQiOm51bGwsIm1hbmRhdGVJZCI6InRhc2stZ3Vlc3QtMDAwMyJ9LCJzaWduYXR1cmUiOiJOdDNvSURfYl9IQi1Xbmo4eklrczBNNkp6aEFERTRuV2YxYmpISks1VTZVUU42STZodjZxME1qdFM2cDR2c3prRnItQmYwS1JYQnp6QlBfYTE1eFlDdyJ9"
+    },
+    {
+      "name": "hybrid",
+      "signer": "human",
+      "mandate": {
+        "mandateType": "hybrid",
+        "mandateTier": "intent",
+        "allowed": [
+          "book-flight"
+        ],
+        "taskConstraints": {
+          "actionLimits": {
+            "book-flight": 1
+          }
+        },
+        "spendingConstraints": {
+          "spendLimitUsd": 500,
+          "currency": "USD",
+          "allowedMerchants": [
+            "did:aroha:airline-a"
+          ]
+        },
+        "invariants": {
+          "payee": [
+            "did:aroha:airline-a"
+          ],
+          "parameters": {
+            "destination": "JFK",
+            "passengers": 1
+          },
+          "maxAmount": {
+            "amount": 450,
+            "currency": "USD"
+          }
+        },
+        "grantee": "did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5",
+        "grantor": "did:aroha:zFVen3X669xLzsi6N2V91DoiyzHzg1uAgqiT8jZ9nS96Z",
+        "issuedAt": "2026-10-01T09:00:00.000Z",
+        "expiresAt": "2026-10-01T21:00:00.000Z",
+        "parentMandateId": null,
+        "mandateId": "task-hybrid-0004"
+      },
+      "expectedSigningPayload": "{\"mandate\":{\"allowed\":[\"book-flight\"],\"expiresAt\":\"2026-10-01T21:00:00.000Z\",\"grantee\":\"did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5\",\"grantor\":\"did:aroha:zFVen3X669xLzsi6N2V91DoiyzHzg1uAgqiT8jZ9nS96Z\",\"invariants\":{\"maxAmount\":{\"amount\":450,\"currency\":\"USD\"},\"parameters\":{\"destination\":\"JFK\",\"passengers\":1},\"payee\":[\"did:aroha:airline-a\"]},\"issuedAt\":\"2026-10-01T09:00:00.000Z\",\"mandateId\":\"task-hybrid-0004\",\"mandateTier\":\"intent\",\"mandateType\":\"hybrid\",\"parentMandateId\":null,\"spendingConstraints\":{\"allowedMerchants\":[\"did:aroha:airline-a\"],\"currency\":\"USD\",\"spendLimitUsd\":500},\"taskConstraints\":{\"actionLimits\":{\"book-flight\":1}}},\"purpose\":\"aroha.task-mandate/v2\",\"v\":2}",
+      "expectedSignature": "fr2hcuFtrS0cnUiUNodeKgUUQOkXGQ-6VP4OH8VP_NjIqiLEBRa0rIeRDpnMdbxVld95ghUun1dW2TOcmoVvAw",
+      "token": "eyJ2IjoyLCJtYW5kYXRlIjp7Im1hbmRhdGVUeXBlIjoiaHlicmlkIiwibWFuZGF0ZVRpZXIiOiJpbnRlbnQiLCJhbGxvd2VkIjpbImJvb2stZmxpZ2h0Il0sInRhc2tDb25zdHJhaW50cyI6eyJhY3Rpb25MaW1pdHMiOnsiYm9vay1mbGlnaHQiOjF9fSwic3BlbmRpbmdDb25zdHJhaW50cyI6eyJzcGVuZExpbWl0VXNkIjo1MDAsImN1cnJlbmN5IjoiVVNEIiwiYWxsb3dlZE1lcmNoYW50cyI6WyJkaWQ6YXJvaGE6YWlybGluZS1hIl19LCJpbnZhcmlhbnRzIjp7InBheWVlIjpbImRpZDphcm9oYTphaXJsaW5lLWEiXSwicGFyYW1ldGVycyI6eyJkZXN0aW5hdGlvbiI6IkpGSyIsInBhc3NlbmdlcnMiOjF9LCJtYXhBbW91bnQiOnsiYW1vdW50Ijo0NTAsImN1cnJlbmN5IjoiVVNEIn19LCJncmFudGVlIjoiZGlkOmFyb2hhOno1ODZaN0gydnBYOXFOaE4yVDRlOVV0dWdpZTNvZ2pieHpHYU10TTNFNkhSNSIsImdyYW50b3IiOiJkaWQ6YXJvaGE6ekZWZW4zWDY2OXhMenNpNk4yVjkxRG9peXpIemcxdUFncWlUOGpaOW5TOTZaIiwiaXNzdWVkQXQiOiIyMDI2LTEwLTAxVDA5OjAwOjAwLjAwMFoiLCJleHBpcmVzQXQiOiIyMDI2LTEwLTAxVDIxOjAwOjAwLjAwMFoiLCJwYXJlbnRNYW5kYXRlSWQiOm51bGwsIm1hbmRhdGVJZCI6InRhc2staHlicmlkLTAwMDQifSwic2lnbmF0dXJlIjoiZnIyaGN1RnRyUzBjblVpVU5vZGVLZ1VVUU9rWEdRLTZWUDRPSDhWUF9OaklxaUxFQlJhMHJJZVJEcG5NZGJ4VmxkOTVnaFV1bjFkVzJUT2Ntb1Z2QXcifQ"
+    }
+  ],
+  "tokens": [
+    {
+      "name": "root-valid",
+      "token": "eyJ2IjoyLCJtYW5kYXRlIjp7Im1hbmRhdGVUeXBlIjoidGFzayIsIm1hbmRhdGVUaWVyIjoiaW50ZW50IiwiYWxsb3dlZCI6WyJzZWFyY2giLCJkcmFmdC1lbWFpbCIsInNlbmQtZW1haWwiLCJyZWFkLWNhbGVuZGFyIiwiZXhwb3J0LWRhdGEiXSwiYmxvY2tlZCI6WyJleHBvcnQtZGF0YSJdLCJ0YXNrQ29uc3RyYWludHMiOnsiYWN0aW9uTGltaXRzIjp7InNlbmQtZW1haWwiOjMsInNlYXJjaCI6NTB9LCJjb21wdXRlTGltaXQiOnsibGxtVG9rZW5zIjoxMDAwMDAsIndlYlJlcXVlc3RzIjoyMDAsImV4ZWN1dGlvblRpbWVNcyI6NjAwMDAwfSwiZGF0YUFjY2VzcyI6eyJjYWxlbmRhciI6InJlYWQiLCJlbWFpbCI6InJlYWQtd3JpdGUiLCJkcmFmdHMiOiJ3cml0ZSJ9LCJvdXRwdXRIYW5kbGluZyI6InVzZXItb25seSIsImh1bWFuR2F0ZXMiOlsic2VuZC1lbWFpbCJdLCJjaGVja3BvaW50SW50ZXJ2YWxNcyI6NjAwMDAsInJlcXVpcmVTYW5kYm94Ijp0cnVlLCJtYXhEZWxlZ2F0aW9uRGVwdGgiOjJ9LCJncmFudGVlIjoiZGlkOmFyb2hhOno1ODZaN0gydnBYOXFOaE4yVDRlOVV0dWdpZTNvZ2pieHpHYU10TTNFNkhSNSIsImdyYW50b3IiOiJkaWQ6YXJvaGE6ekZWZW4zWDY2OXhMenNpNk4yVjkxRG9peXpIemcxdUFncWlUOGpaOW5TOTZaIiwiaXNzdWVkQXQiOiIyMDI2LTEwLTAxVDA5OjAwOjAwLjAwMFoiLCJleHBpcmVzQXQiOiIyMDI2LTEwLTAxVDIxOjAwOjAwLjAwMFoiLCJwYXJlbnRNYW5kYXRlSWQiOm51bGwsIm1hbmRhdGVJZCI6InRhc2stcm9vdC0wMDAxIn0sInNpZ25hdHVyZSI6IkVkSUM0Y25URm54b2UyVHduRUQzSG1vSkdtQ09FaTY5cTdRSlpfbDcxa1NzMjFGRmNFNXlWamxYVDN0cF82blM3R2w1dVhvMTJTaXd6eTA3azNqMEJnIn0",
+      "signer": "human",
+      "now": "2026-10-01T10:00:00.000Z",
+      "valid": true
+    },
+    {
+      "name": "child-valid",
+      "token": "eyJ2IjoyLCJtYW5kYXRlIjp7Im1hbmRhdGVUeXBlIjoidGFzayIsIm1hbmRhdGVUaWVyIjoiY2FydCIsImFsbG93ZWQiOlsic2VhcmNoIiwic2VuZC1lbWFpbCJdLCJibG9ja2VkIjpbImV4cG9ydC1kYXRhIl0sInRhc2tDb25zdHJhaW50cyI6eyJhY3Rpb25MaW1pdHMiOnsic2VuZC1lbWFpbCI6MSwic2VhcmNoIjoxMH0sImNvbXB1dGVMaW1pdCI6eyJsbG1Ub2tlbnMiOjUwMDAsIndlYlJlcXVlc3RzIjoyMCwiZXhlY3V0aW9uVGltZU1zIjo2MDAwMH0sImRhdGFBY2Nlc3MiOnsiZW1haWwiOiJ3cml0ZSJ9LCJvdXRwdXRIYW5kbGluZyI6ImludGVybmFsLW9ubHkiLCJodW1hbkdhdGVzIjpbInNlbmQtZW1haWwiXSwiY2hlY2twb2ludEludGVydmFsTXMiOjMwMDAwLCJyZXF1aXJlU2FuZGJveCI6dHJ1ZSwibWF4RGVsZWdhdGlvbkRlcHRoIjoxfSwiZ3JhbnRlZSI6ImRpZDphcm9oYTp6SHl4NjJ3UFFHeXZYQ29paFpxMUJyYlVqQlJoMkx1TnhXaWlxTWtmQXVTWnIiLCJncmFudG9yIjoiZGlkOmFyb2hhOno1ODZaN0gydnBYOXFOaE4yVDRlOVV0dWdpZTNvZ2pieHpHYU10TTNFNkhSNSIsImlzc3VlZEF0IjoiMjAyNi0xMC0wMVQwOTowMDowMC4wMDBaIiwiZXhwaXJlc0F0IjoiMjAyNi0xMC0wMVQxNTowMDowMC4wMDBaIiwicGFyZW50TWFuZGF0ZUlkIjoidGFzay1yb290LTAwMDEiLCJtYW5kYXRlSWQiOiJ0YXNrLWNoaWxkLTAwMDIifSwic2lnbmF0dXJlIjoiUnNKem1xY2ZkLUlrQ1pIS1lLV1Y5Rl90aUpIWlN1YTVqdHZ6ZFhSN2FWczFidGQ1dDhST0ZnMlVJcXlwaVA3MklIbnZQSDYyMVctZVA5TnhsYzhlQVEifQ",
+      "signer": "agent",
+      "now": "2026-10-01T10:00:00.000Z",
+      "valid": true
+    },
+    {
+      "name": "guest-valid",
+      "token": "eyJ2IjoyLCJtYW5kYXRlIjp7Im1hbmRhdGVUeXBlIjoidGFzayIsIm1hbmRhdGVUaWVyIjoiaW50ZW50IiwiYWxsb3dlZCI6WyJzZWFyY2giLCJkcmFmdC1lbWFpbCJdLCJ0YXNrQ29uc3RyYWludHMiOnsib25CZWhhbGZPZiI6ImRpZDphcm9oYTp6SHl4NjJ3UFFHeXZYQ29paFpxMUJyYlVqQlJoMkx1TnhXaWlxTWtmQXVTWnIiLCJyb29tSWQiOiJyb29tLTAxSkEwVEFTSyIsInJldmVyc2libGVPbmx5Ijp0cnVlLCJodW1hbkdhdGVzIjpbImRyYWZ0LWVtYWlsIl19LCJncmFudGVlIjoiZGlkOmFyb2hhOno1ODZaN0gydnBYOXFOaE4yVDRlOVV0dWdpZTNvZ2pieHpHYU10TTNFNkhSNSIsImdyYW50b3IiOiJkaWQ6YXJvaGE6ekZWZW4zWDY2OXhMenNpNk4yVjkxRG9peXpIemcxdUFncWlUOGpaOW5TOTZaIiwiaXNzdWVkQXQiOiIyMDI2LTEwLTAxVDA5OjAwOjAwLjAwMFoiLCJleHBpcmVzQXQiOiIyMDI2LTEwLTAxVDIxOjAwOjAwLjAwMFoiLCJwYXJlbnRNYW5kYXRlSWQiOm51bGwsIm1hbmRhdGVJZCI6InRhc2stZ3Vlc3QtMDAwMyJ9LCJzaWduYXR1cmUiOiJOdDNvSURfYl9IQi1Xbmo4eklrczBNNkp6aEFERTRuV2YxYmpISks1VTZVUU42STZodjZxME1qdFM2cDR2c3prRnItQmYwS1JYQnp6QlBfYTE1eFlDdyJ9",
+      "signer": "human",
+      "now": "2026-10-01T10:00:00.000Z",
+      "valid": true
+    },
+    {
+      "name": "hybrid-valid",
+      "token": "eyJ2IjoyLCJtYW5kYXRlIjp7Im1hbmRhdGVUeXBlIjoiaHlicmlkIiwibWFuZGF0ZVRpZXIiOiJpbnRlbnQiLCJhbGxvd2VkIjpbImJvb2stZmxpZ2h0Il0sInRhc2tDb25zdHJhaW50cyI6eyJhY3Rpb25MaW1pdHMiOnsiYm9vay1mbGlnaHQiOjF9fSwic3BlbmRpbmdDb25zdHJhaW50cyI6eyJzcGVuZExpbWl0VXNkIjo1MDAsImN1cnJlbmN5IjoiVVNEIiwiYWxsb3dlZE1lcmNoYW50cyI6WyJkaWQ6YXJvaGE6YWlybGluZS1hIl19LCJpbnZhcmlhbnRzIjp7InBheWVlIjpbImRpZDphcm9oYTphaXJsaW5lLWEiXSwicGFyYW1ldGVycyI6eyJkZXN0aW5hdGlvbiI6IkpGSyIsInBhc3NlbmdlcnMiOjF9LCJtYXhBbW91bnQiOnsiYW1vdW50Ijo0NTAsImN1cnJlbmN5IjoiVVNEIn19LCJncmFudGVlIjoiZGlkOmFyb2hhOno1ODZaN0gydnBYOXFOaE4yVDRlOVV0dWdpZTNvZ2pieHpHYU10TTNFNkhSNSIsImdyYW50b3IiOiJkaWQ6YXJvaGE6ekZWZW4zWDY2OXhMenNpNk4yVjkxRG9peXpIemcxdUFncWlUOGpaOW5TOTZaIiwiaXNzdWVkQXQiOiIyMDI2LTEwLTAxVDA5OjAwOjAwLjAwMFoiLCJleHBpcmVzQXQiOiIyMDI2LTEwLTAxVDIxOjAwOjAwLjAwMFoiLCJwYXJlbnRNYW5kYXRlSWQiOm51bGwsIm1hbmRhdGVJZCI6InRhc2staHlicmlkLTAwMDQifSwic2lnbmF0dXJlIjoiZnIyaGN1RnRyUzBjblVpVU5vZGVLZ1VVUU9rWEdRLTZWUDRPSDhWUF9OaklxaUxFQlJhMHJJZVJEcG5NZGJ4VmxkOTVnaFV1bjFkVzJUT2Ntb1Z2QXcifQ",
+      "signer": "human",
+      "now": "2026-10-01T10:00:00.000Z",
+      "valid": true
+    },
+    {
+      "name": "root-expected-grantee",
+      "token": "eyJ2IjoyLCJtYW5kYXRlIjp7Im1hbmRhdGVUeXBlIjoidGFzayIsIm1hbmRhdGVUaWVyIjoiaW50ZW50IiwiYWxsb3dlZCI6WyJzZWFyY2giLCJkcmFmdC1lbWFpbCIsInNlbmQtZW1haWwiLCJyZWFkLWNhbGVuZGFyIiwiZXhwb3J0LWRhdGEiXSwiYmxvY2tlZCI6WyJleHBvcnQtZGF0YSJdLCJ0YXNrQ29uc3RyYWludHMiOnsiYWN0aW9uTGltaXRzIjp7InNlbmQtZW1haWwiOjMsInNlYXJjaCI6NTB9LCJjb21wdXRlTGltaXQiOnsibGxtVG9rZW5zIjoxMDAwMDAsIndlYlJlcXVlc3RzIjoyMDAsImV4ZWN1dGlvblRpbWVNcyI6NjAwMDAwfSwiZGF0YUFjY2VzcyI6eyJjYWxlbmRhciI6InJlYWQiLCJlbWFpbCI6InJlYWQtd3JpdGUiLCJkcmFmdHMiOiJ3cml0ZSJ9LCJvdXRwdXRIYW5kbGluZyI6InVzZXItb25seSIsImh1bWFuR2F0ZXMiOlsic2VuZC1lbWFpbCJdLCJjaGVja3BvaW50SW50ZXJ2YWxNcyI6NjAwMDAsInJlcXVpcmVTYW5kYm94Ijp0cnVlLCJtYXhEZWxlZ2F0aW9uRGVwdGgiOjJ9LCJncmFudGVlIjoiZGlkOmFyb2hhOno1ODZaN0gydnBYOXFOaE4yVDRlOVV0dWdpZTNvZ2pieHpHYU10TTNFNkhSNSIsImdyYW50b3IiOiJkaWQ6YXJvaGE6ekZWZW4zWDY2OXhMenNpNk4yVjkxRG9peXpIemcxdUFncWlUOGpaOW5TOTZaIiwiaXNzdWVkQXQiOiIyMDI2LTEwLTAxVDA5OjAwOjAwLjAwMFoiLCJleHBpcmVzQXQiOiIyMDI2LTEwLTAxVDIxOjAwOjAwLjAwMFoiLCJwYXJlbnRNYW5kYXRlSWQiOm51bGwsIm1hbmRhdGVJZCI6InRhc2stcm9vdC0wMDAxIn0sInNpZ25hdHVyZSI6IkVkSUM0Y25URm54b2UyVHduRUQzSG1vSkdtQ09FaTY5cTdRSlpfbDcxa1NzMjFGRmNFNXlWamxYVDN0cF82blM3R2w1dVhvMTJTaXd6eTA3azNqMEJnIn0",
+      "signer": "human",
+      "now": "2026-10-01T10:00:00.000Z",
+      "expectedGrantee": "did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5",
+      "valid": true
+    },
+    {
+      "name": "legacy-v1",
+      "token": "eyJtYW5kYXRlIjp7Im1hbmRhdGVUeXBlIjoidGFzayIsIm1hbmRhdGVUaWVyIjoiaW50ZW50IiwiYWxsb3dlZCI6WyJzZWFyY2giLCJkcmFmdC1lbWFpbCIsInNlbmQtZW1haWwiLCJyZWFkLWNhbGVuZGFyIiwiZXhwb3J0LWRhdGEiXSwiYmxvY2tlZCI6WyJleHBvcnQtZGF0YSJdLCJ0YXNrQ29uc3RyYWludHMiOnsiYWN0aW9uTGltaXRzIjp7InNlbmQtZW1haWwiOjMsInNlYXJjaCI6NTB9LCJjb21wdXRlTGltaXQiOnsibGxtVG9rZW5zIjoxMDAwMDAsIndlYlJlcXVlc3RzIjoyMDAsImV4ZWN1dGlvblRpbWVNcyI6NjAwMDAwfSwiZGF0YUFjY2VzcyI6eyJjYWxlbmRhciI6InJlYWQiLCJlbWFpbCI6InJlYWQtd3JpdGUiLCJkcmFmdHMiOiJ3cml0ZSJ9LCJvdXRwdXRIYW5kbGluZyI6InVzZXItb25seSIsImh1bWFuR2F0ZXMiOlsic2VuZC1lbWFpbCJdLCJjaGVja3BvaW50SW50ZXJ2YWxNcyI6NjAwMDAsInJlcXVpcmVTYW5kYm94Ijp0cnVlLCJtYXhEZWxlZ2F0aW9uRGVwdGgiOjJ9LCJncmFudGVlIjoiZGlkOmFyb2hhOno1ODZaN0gydnBYOXFOaE4yVDRlOVV0dWdpZTNvZ2pieHpHYU10TTNFNkhSNSIsImdyYW50b3IiOiJkaWQ6YXJvaGE6ekZWZW4zWDY2OXhMenNpNk4yVjkxRG9peXpIemcxdUFncWlUOGpaOW5TOTZaIiwiaXNzdWVkQXQiOiIyMDI2LTEwLTAxVDA5OjAwOjAwLjAwMFoiLCJleHBpcmVzQXQiOiIyMDI2LTEwLTAxVDIxOjAwOjAwLjAwMFoiLCJwYXJlbnRNYW5kYXRlSWQiOm51bGwsIm1hbmRhdGVJZCI6InRhc2stcm9vdC0wMDAxIn0sInNpZ25hdHVyZSI6ImRTclBCbjE4Q3lxSm1KbW4wbXBRclc5UmRCY29nekVaVlEwazlvamlFNUROajBaTWpaXzZHT2Q2STNyckdqSEl5aUlvMFBBVy1VVDJDRHdvTVJXbUF3In0",
+      "signer": "human",
+      "now": "2026-10-01T10:00:00.000Z",
+      "valid": true
+    },
+    {
+      "name": "tampered-allowed-widened",
+      "token": "eyJ2IjoyLCJtYW5kYXRlIjp7Im1hbmRhdGVUeXBlIjoidGFzayIsIm1hbmRhdGVUaWVyIjoiaW50ZW50IiwiYWxsb3dlZCI6WyJzZWFyY2giLCJkcmFmdC1lbWFpbCIsInNlbmQtZW1haWwiLCJyZWFkLWNhbGVuZGFyIiwiZXhwb3J0LWRhdGEiLCJkZWxldGUtYWNjb3VudCJdLCJibG9ja2VkIjpbImV4cG9ydC1kYXRhIl0sInRhc2tDb25zdHJhaW50cyI6eyJhY3Rpb25MaW1pdHMiOnsic2VuZC1lbWFpbCI6Mywic2VhcmNoIjo1MH0sImNvbXB1dGVMaW1pdCI6eyJsbG1Ub2tlbnMiOjEwMDAwMCwid2ViUmVxdWVzdHMiOjIwMCwiZXhlY3V0aW9uVGltZU1zIjo2MDAwMDB9LCJkYXRhQWNjZXNzIjp7ImNhbGVuZGFyIjoicmVhZCIsImVtYWlsIjoicmVhZC13cml0ZSIsImRyYWZ0cyI6IndyaXRlIn0sIm91dHB1dEhhbmRsaW5nIjoidXNlci1vbmx5IiwiaHVtYW5HYXRlcyI6WyJzZW5kLWVtYWlsIl0sImNoZWNrcG9pbnRJbnRlcnZhbE1zIjo2MDAwMCwicmVxdWlyZVNhbmRib3giOnRydWUsIm1heERlbGVnYXRpb25EZXB0aCI6Mn0sImdyYW50ZWUiOiJkaWQ6YXJvaGE6ejU4Nlo3SDJ2cFg5cU5oTjJUNGU5VXR1Z2llM29namJ4ekdhTXRNM0U2SFI1IiwiZ3JhbnRvciI6ImRpZDphcm9oYTp6RlZlbjNYNjY5eEx6c2k2TjJWOTFEb2l5ekh6ZzF1QWdxaVQ4alo5blM5NloiLCJpc3N1ZWRBdCI6IjIwMjYtMTAtMDFUMDk6MDA6MDAuMDAwWiIsImV4cGlyZXNBdCI6IjIwMjYtMTAtMDFUMjE6MDA6MDAuMDAwWiIsInBhcmVudE1hbmRhdGVJZCI6bnVsbCwibWFuZGF0ZUlkIjoidGFzay1yb290LTAwMDEifSwic2lnbmF0dXJlIjoiRWRJQzRjblRGbnhvZTJUd25FRDNIbW9KR21DT0VpNjlxN1FKWl9sNzFrU3MyMUZGY0U1eVZqbFhUM3RwXzZuUzdHbDV1WG8xMlNpd3p5MDdrM2owQmcifQ",
+      "signer": "human",
+      "now": "2026-10-01T10:00:00.000Z",
+      "valid": false,
+      "reason": "Invalid signature"
+    },
+    {
+      "name": "tampered-action-limit-raised",
+      "token": "eyJ2IjoyLCJtYW5kYXRlIjp7Im1hbmRhdGVUeXBlIjoidGFzayIsIm1hbmRhdGVUaWVyIjoiaW50ZW50IiwiYWxsb3dlZCI6WyJzZWFyY2giLCJkcmFmdC1lbWFpbCIsInNlbmQtZW1haWwiLCJyZWFkLWNhbGVuZGFyIiwiZXhwb3J0LWRhdGEiXSwiYmxvY2tlZCI6WyJleHBvcnQtZGF0YSJdLCJ0YXNrQ29uc3RyYWludHMiOnsiYWN0aW9uTGltaXRzIjp7InNlbmQtZW1haWwiOjMwMCwic2VhcmNoIjo1MH0sImNvbXB1dGVMaW1pdCI6eyJsbG1Ub2tlbnMiOjEwMDAwMCwid2ViUmVxdWVzdHMiOjIwMCwiZXhlY3V0aW9uVGltZU1zIjo2MDAwMDB9LCJkYXRhQWNjZXNzIjp7ImNhbGVuZGFyIjoicmVhZCIsImVtYWlsIjoicmVhZC13cml0ZSIsImRyYWZ0cyI6IndyaXRlIn0sIm91dHB1dEhhbmRsaW5nIjoidXNlci1vbmx5IiwiaHVtYW5HYXRlcyI6WyJzZW5kLWVtYWlsIl0sImNoZWNrcG9pbnRJbnRlcnZhbE1zIjo2MDAwMCwicmVxdWlyZVNhbmRib3giOnRydWUsIm1heERlbGVnYXRpb25EZXB0aCI6Mn0sImdyYW50ZWUiOiJkaWQ6YXJvaGE6ejU4Nlo3SDJ2cFg5cU5oTjJUNGU5VXR1Z2llM29namJ4ekdhTXRNM0U2SFI1IiwiZ3JhbnRvciI6ImRpZDphcm9oYTp6RlZlbjNYNjY5eEx6c2k2TjJWOTFEb2l5ekh6ZzF1QWdxaVQ4alo5blM5NloiLCJpc3N1ZWRBdCI6IjIwMjYtMTAtMDFUMDk6MDA6MDAuMDAwWiIsImV4cGlyZXNBdCI6IjIwMjYtMTAtMDFUMjE6MDA6MDAuMDAwWiIsInBhcmVudE1hbmRhdGVJZCI6bnVsbCwibWFuZGF0ZUlkIjoidGFzay1yb290LTAwMDEifSwic2lnbmF0dXJlIjoiRWRJQzRjblRGbnhvZTJUd25FRDNIbW9KR21DT0VpNjlxN1FKWl9sNzFrU3MyMUZGY0U1eVZqbFhUM3RwXzZuUzdHbDV1WG8xMlNpd3p5MDdrM2owQmcifQ",
+      "signer": "human",
+      "now": "2026-10-01T10:00:00.000Z",
+      "valid": false,
+      "reason": "Invalid signature"
+    },
+    {
+      "name": "tampered-expiry-extended",
+      "token": "eyJ2IjoyLCJtYW5kYXRlIjp7Im1hbmRhdGVUeXBlIjoidGFzayIsIm1hbmRhdGVUaWVyIjoiaW50ZW50IiwiYWxsb3dlZCI6WyJzZWFyY2giLCJkcmFmdC1lbWFpbCIsInNlbmQtZW1haWwiLCJyZWFkLWNhbGVuZGFyIiwiZXhwb3J0LWRhdGEiXSwiYmxvY2tlZCI6WyJleHBvcnQtZGF0YSJdLCJ0YXNrQ29uc3RyYWludHMiOnsiYWN0aW9uTGltaXRzIjp7InNlbmQtZW1haWwiOjMsInNlYXJjaCI6NTB9LCJjb21wdXRlTGltaXQiOnsibGxtVG9rZW5zIjoxMDAwMDAsIndlYlJlcXVlc3RzIjoyMDAsImV4ZWN1dGlvblRpbWVNcyI6NjAwMDAwfSwiZGF0YUFjY2VzcyI6eyJjYWxlbmRhciI6InJlYWQiLCJlbWFpbCI6InJlYWQtd3JpdGUiLCJkcmFmdHMiOiJ3cml0ZSJ9LCJvdXRwdXRIYW5kbGluZyI6InVzZXItb25seSIsImh1bWFuR2F0ZXMiOlsic2VuZC1lbWFpbCJdLCJjaGVja3BvaW50SW50ZXJ2YWxNcyI6NjAwMDAsInJlcXVpcmVTYW5kYm94Ijp0cnVlLCJtYXhEZWxlZ2F0aW9uRGVwdGgiOjJ9LCJncmFudGVlIjoiZGlkOmFyb2hhOno1ODZaN0gydnBYOXFOaE4yVDRlOVV0dWdpZTNvZ2pieHpHYU10TTNFNkhSNSIsImdyYW50b3IiOiJkaWQ6YXJvaGE6ekZWZW4zWDY2OXhMenNpNk4yVjkxRG9peXpIemcxdUFncWlUOGpaOW5TOTZaIiwiaXNzdWVkQXQiOiIyMDI2LTEwLTAxVDA5OjAwOjAwLjAwMFoiLCJleHBpcmVzQXQiOiIyMDI3LTEwLTAxVDIxOjAwOjAwLjAwMFoiLCJwYXJlbnRNYW5kYXRlSWQiOm51bGwsIm1hbmRhdGVJZCI6InRhc2stcm9vdC0wMDAxIn0sInNpZ25hdHVyZSI6IkVkSUM0Y25URm54b2UyVHduRUQzSG1vSkdtQ09FaTY5cTdRSlpfbDcxa1NzMjFGRmNFNXlWamxYVDN0cF82blM3R2w1dVhvMTJTaXd6eTA3azNqMEJnIn0",
+      "signer": "human",
+      "now": "2026-10-01T10:00:00.000Z",
+      "valid": false,
+      "reason": "Invalid signature"
+    },
+    {
+      "name": "wrong-key",
+      "token": "eyJ2IjoyLCJtYW5kYXRlIjp7Im1hbmRhdGVUeXBlIjoidGFzayIsIm1hbmRhdGVUaWVyIjoiaW50ZW50IiwiYWxsb3dlZCI6WyJzZWFyY2giLCJkcmFmdC1lbWFpbCIsInNlbmQtZW1haWwiLCJyZWFkLWNhbGVuZGFyIiwiZXhwb3J0LWRhdGEiXSwiYmxvY2tlZCI6WyJleHBvcnQtZGF0YSJdLCJ0YXNrQ29uc3RyYWludHMiOnsiYWN0aW9uTGltaXRzIjp7InNlbmQtZW1haWwiOjMsInNlYXJjaCI6NTB9LCJjb21wdXRlTGltaXQiOnsibGxtVG9rZW5zIjoxMDAwMDAsIndlYlJlcXVlc3RzIjoyMDAsImV4ZWN1dGlvblRpbWVNcyI6NjAwMDAwfSwiZGF0YUFjY2VzcyI6eyJjYWxlbmRhciI6InJlYWQiLCJlbWFpbCI6InJlYWQtd3JpdGUiLCJkcmFmdHMiOiJ3cml0ZSJ9LCJvdXRwdXRIYW5kbGluZyI6InVzZXItb25seSIsImh1bWFuR2F0ZXMiOlsic2VuZC1lbWFpbCJdLCJjaGVja3BvaW50SW50ZXJ2YWxNcyI6NjAwMDAsInJlcXVpcmVTYW5kYm94Ijp0cnVlLCJtYXhEZWxlZ2F0aW9uRGVwdGgiOjJ9LCJncmFudGVlIjoiZGlkOmFyb2hhOno1ODZaN0gydnBYOXFOaE4yVDRlOVV0dWdpZTNvZ2pieHpHYU10TTNFNkhSNSIsImdyYW50b3IiOiJkaWQ6YXJvaGE6ekZWZW4zWDY2OXhMenNpNk4yVjkxRG9peXpIemcxdUFncWlUOGpaOW5TOTZaIiwiaXNzdWVkQXQiOiIyMDI2LTEwLTAxVDA5OjAwOjAwLjAwMFoiLCJleHBpcmVzQXQiOiIyMDI2LTEwLTAxVDIxOjAwOjAwLjAwMFoiLCJwYXJlbnRNYW5kYXRlSWQiOm51bGwsIm1hbmRhdGVJZCI6InRhc2stcm9vdC0wMDAxIn0sInNpZ25hdHVyZSI6IkVkSUM0Y25URm54b2UyVHduRUQzSG1vSkdtQ09FaTY5cTdRSlpfbDcxa1NzMjFGRmNFNXlWamxYVDN0cF82blM3R2w1dVhvMTJTaXd6eTA3azNqMEJnIn0",
+      "signer": "agent",
+      "now": "2026-10-01T10:00:00.000Z",
+      "valid": false,
+      "reason": "Invalid signature"
+    },
+    {
+      "name": "expired",
+      "token": "eyJ2IjoyLCJtYW5kYXRlIjp7Im1hbmRhdGVUeXBlIjoidGFzayIsIm1hbmRhdGVUaWVyIjoiaW50ZW50IiwiYWxsb3dlZCI6WyJzZWFyY2giLCJkcmFmdC1lbWFpbCIsInNlbmQtZW1haWwiLCJyZWFkLWNhbGVuZGFyIiwiZXhwb3J0LWRhdGEiXSwiYmxvY2tlZCI6WyJleHBvcnQtZGF0YSJdLCJ0YXNrQ29uc3RyYWludHMiOnsiYWN0aW9uTGltaXRzIjp7InNlbmQtZW1haWwiOjMsInNlYXJjaCI6NTB9LCJjb21wdXRlTGltaXQiOnsibGxtVG9rZW5zIjoxMDAwMDAsIndlYlJlcXVlc3RzIjoyMDAsImV4ZWN1dGlvblRpbWVNcyI6NjAwMDAwfSwiZGF0YUFjY2VzcyI6eyJjYWxlbmRhciI6InJlYWQiLCJlbWFpbCI6InJlYWQtd3JpdGUiLCJkcmFmdHMiOiJ3cml0ZSJ9LCJvdXRwdXRIYW5kbGluZyI6InVzZXItb25seSIsImh1bWFuR2F0ZXMiOlsic2VuZC1lbWFpbCJdLCJjaGVja3BvaW50SW50ZXJ2YWxNcyI6NjAwMDAsInJlcXVpcmVTYW5kYm94Ijp0cnVlLCJtYXhEZWxlZ2F0aW9uRGVwdGgiOjJ9LCJncmFudGVlIjoiZGlkOmFyb2hhOno1ODZaN0gydnBYOXFOaE4yVDRlOVV0dWdpZTNvZ2pieHpHYU10TTNFNkhSNSIsImdyYW50b3IiOiJkaWQ6YXJvaGE6ekZWZW4zWDY2OXhMenNpNk4yVjkxRG9peXpIemcxdUFncWlUOGpaOW5TOTZaIiwiaXNzdWVkQXQiOiIyMDI2LTEwLTAxVDA5OjAwOjAwLjAwMFoiLCJleHBpcmVzQXQiOiIyMDI2LTEwLTAxVDIxOjAwOjAwLjAwMFoiLCJwYXJlbnRNYW5kYXRlSWQiOm51bGwsIm1hbmRhdGVJZCI6InRhc2stcm9vdC0wMDAxIn0sInNpZ25hdHVyZSI6IkVkSUM0Y25URm54b2UyVHduRUQzSG1vSkdtQ09FaTY5cTdRSlpfbDcxa1NzMjFGRmNFNXlWamxYVDN0cF82blM3R2w1dVhvMTJTaXd6eTA3azNqMEJnIn0",
+      "signer": "human",
+      "now": "2026-10-01T21:00:00.001Z",
+      "valid": false,
+      "reason": "Task mandate expired"
+    },
+    {
+      "name": "issued-in-future",
+      "token": "eyJ2IjoyLCJtYW5kYXRlIjp7Im1hbmRhdGVUeXBlIjoidGFzayIsIm1hbmRhdGVUaWVyIjoiaW50ZW50IiwiYWxsb3dlZCI6WyJzZWFyY2giLCJkcmFmdC1lbWFpbCIsInNlbmQtZW1haWwiLCJyZWFkLWNhbGVuZGFyIiwiZXhwb3J0LWRhdGEiXSwiYmxvY2tlZCI6WyJleHBvcnQtZGF0YSJdLCJ0YXNrQ29uc3RyYWludHMiOnsiYWN0aW9uTGltaXRzIjp7InNlbmQtZW1haWwiOjMsInNlYXJjaCI6NTB9LCJjb21wdXRlTGltaXQiOnsibGxtVG9rZW5zIjoxMDAwMDAsIndlYlJlcXVlc3RzIjoyMDAsImV4ZWN1dGlvblRpbWVNcyI6NjAwMDAwfSwiZGF0YUFjY2VzcyI6eyJjYWxlbmRhciI6InJlYWQiLCJlbWFpbCI6InJlYWQtd3JpdGUiLCJkcmFmdHMiOiJ3cml0ZSJ9LCJvdXRwdXRIYW5kbGluZyI6InVzZXItb25seSIsImh1bWFuR2F0ZXMiOlsic2VuZC1lbWFpbCJdLCJjaGVja3BvaW50SW50ZXJ2YWxNcyI6NjAwMDAsInJlcXVpcmVTYW5kYm94Ijp0cnVlLCJtYXhEZWxlZ2F0aW9uRGVwdGgiOjJ9LCJncmFudGVlIjoiZGlkOmFyb2hhOno1ODZaN0gydnBYOXFOaE4yVDRlOVV0dWdpZTNvZ2pieHpHYU10TTNFNkhSNSIsImdyYW50b3IiOiJkaWQ6YXJvaGE6ekZWZW4zWDY2OXhMenNpNk4yVjkxRG9peXpIemcxdUFncWlUOGpaOW5TOTZaIiwiaXNzdWVkQXQiOiIyMDI2LTEwLTAxVDA5OjAwOjAwLjAwMFoiLCJleHBpcmVzQXQiOiIyMDI2LTEwLTAxVDIxOjAwOjAwLjAwMFoiLCJwYXJlbnRNYW5kYXRlSWQiOm51bGwsIm1hbmRhdGVJZCI6InRhc2stcm9vdC0wMDAxIn0sInNpZ25hdHVyZSI6IkVkSUM0Y25URm54b2UyVHduRUQzSG1vSkdtQ09FaTY5cTdRSlpfbDcxa1NzMjFGRmNFNXlWamxYVDN0cF82blM3R2w1dVhvMTJTaXd6eTA3azNqMEJnIn0",
+      "signer": "human",
+      "now": "2026-10-01T08:59:00.000Z",
+      "valid": false,
+      "reason": "Task mandate issuedAt 2026-10-01T09:00:00.000Z is in the future"
+    },
+    {
+      "name": "grantee-mismatch",
+      "token": "eyJ2IjoyLCJtYW5kYXRlIjp7Im1hbmRhdGVUeXBlIjoidGFzayIsIm1hbmRhdGVUaWVyIjoiaW50ZW50IiwiYWxsb3dlZCI6WyJzZWFyY2giLCJkcmFmdC1lbWFpbCIsInNlbmQtZW1haWwiLCJyZWFkLWNhbGVuZGFyIiwiZXhwb3J0LWRhdGEiXSwiYmxvY2tlZCI6WyJleHBvcnQtZGF0YSJdLCJ0YXNrQ29uc3RyYWludHMiOnsiYWN0aW9uTGltaXRzIjp7InNlbmQtZW1haWwiOjMsInNlYXJjaCI6NTB9LCJjb21wdXRlTGltaXQiOnsibGxtVG9rZW5zIjoxMDAwMDAsIndlYlJlcXVlc3RzIjoyMDAsImV4ZWN1dGlvblRpbWVNcyI6NjAwMDAwfSwiZGF0YUFjY2VzcyI6eyJjYWxlbmRhciI6InJlYWQiLCJlbWFpbCI6InJlYWQtd3JpdGUiLCJkcmFmdHMiOiJ3cml0ZSJ9LCJvdXRwdXRIYW5kbGluZyI6InVzZXItb25seSIsImh1bWFuR2F0ZXMiOlsic2VuZC1lbWFpbCJdLCJjaGVja3BvaW50SW50ZXJ2YWxNcyI6NjAwMDAsInJlcXVpcmVTYW5kYm94Ijp0cnVlLCJtYXhEZWxlZ2F0aW9uRGVwdGgiOjJ9LCJncmFudGVlIjoiZGlkOmFyb2hhOno1ODZaN0gydnBYOXFOaE4yVDRlOVV0dWdpZTNvZ2pieHpHYU10TTNFNkhSNSIsImdyYW50b3IiOiJkaWQ6YXJvaGE6ekZWZW4zWDY2OXhMenNpNk4yVjkxRG9peXpIemcxdUFncWlUOGpaOW5TOTZaIiwiaXNzdWVkQXQiOiIyMDI2LTEwLTAxVDA5OjAwOjAwLjAwMFoiLCJleHBpcmVzQXQiOiIyMDI2LTEwLTAxVDIxOjAwOjAwLjAwMFoiLCJwYXJlbnRNYW5kYXRlSWQiOm51bGwsIm1hbmRhdGVJZCI6InRhc2stcm9vdC0wMDAxIn0sInNpZ25hdHVyZSI6IkVkSUM0Y25URm54b2UyVHduRUQzSG1vSkdtQ09FaTY5cTdRSlpfbDcxa1NzMjFGRmNFNXlWamxYVDN0cF82blM3R2w1dVhvMTJTaXd6eTA3azNqMEJnIn0",
+      "signer": "human",
+      "now": "2026-10-01T10:00:00.000Z",
+      "expectedGrantee": "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr",
+      "valid": false,
+      "reason": "Grantee mismatch: expected did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr"
+    },
+    {
+      "name": "v2-signature-under-v1-marker",
+      "token": "eyJtYW5kYXRlIjp7Im1hbmRhdGVUeXBlIjoidGFzayIsIm1hbmRhdGVUaWVyIjoiaW50ZW50IiwiYWxsb3dlZCI6WyJzZWFyY2giLCJkcmFmdC1lbWFpbCIsInNlbmQtZW1haWwiLCJyZWFkLWNhbGVuZGFyIiwiZXhwb3J0LWRhdGEiXSwiYmxvY2tlZCI6WyJleHBvcnQtZGF0YSJdLCJ0YXNrQ29uc3RyYWludHMiOnsiYWN0aW9uTGltaXRzIjp7InNlbmQtZW1haWwiOjMsInNlYXJjaCI6NTB9LCJjb21wdXRlTGltaXQiOnsibGxtVG9rZW5zIjoxMDAwMDAsIndlYlJlcXVlc3RzIjoyMDAsImV4ZWN1dGlvblRpbWVNcyI6NjAwMDAwfSwiZGF0YUFjY2VzcyI6eyJjYWxlbmRhciI6InJlYWQiLCJlbWFpbCI6InJlYWQtd3JpdGUiLCJkcmFmdHMiOiJ3cml0ZSJ9LCJvdXRwdXRIYW5kbGluZyI6InVzZXItb25seSIsImh1bWFuR2F0ZXMiOlsic2VuZC1lbWFpbCJdLCJjaGVja3BvaW50SW50ZXJ2YWxNcyI6NjAwMDAsInJlcXVpcmVTYW5kYm94Ijp0cnVlLCJtYXhEZWxlZ2F0aW9uRGVwdGgiOjJ9LCJncmFudGVlIjoiZGlkOmFyb2hhOno1ODZaN0gydnBYOXFOaE4yVDRlOVV0dWdpZTNvZ2pieHpHYU10TTNFNkhSNSIsImdyYW50b3IiOiJkaWQ6YXJvaGE6ekZWZW4zWDY2OXhMenNpNk4yVjkxRG9peXpIemcxdUFncWlUOGpaOW5TOTZaIiwiaXNzdWVkQXQiOiIyMDI2LTEwLTAxVDA5OjAwOjAwLjAwMFoiLCJleHBpcmVzQXQiOiIyMDI2LTEwLTAxVDIxOjAwOjAwLjAwMFoiLCJwYXJlbnRNYW5kYXRlSWQiOm51bGwsIm1hbmRhdGVJZCI6InRhc2stcm9vdC0wMDAxIn0sInNpZ25hdHVyZSI6IkVkSUM0Y25URm54b2UyVHduRUQzSG1vSkdtQ09FaTY5cTdRSlpfbDcxa1NzMjFGRmNFNXlWamxYVDN0cF82blM3R2w1dVhvMTJTaXd6eTA3azNqMEJnIn0",
+      "signer": "human",
+      "now": "2026-10-01T10:00:00.000Z",
+      "valid": false,
+      "reason": "Invalid signature"
+    },
+    {
+      "name": "v1-signature-under-v2-marker",
+      "token": "eyJ2IjoyLCJtYW5kYXRlIjp7Im1hbmRhdGVUeXBlIjoidGFzayIsIm1hbmRhdGVUaWVyIjoiaW50ZW50IiwiYWxsb3dlZCI6WyJzZWFyY2giLCJkcmFmdC1lbWFpbCIsInNlbmQtZW1haWwiLCJyZWFkLWNhbGVuZGFyIiwiZXhwb3J0LWRhdGEiXSwiYmxvY2tlZCI6WyJleHBvcnQtZGF0YSJdLCJ0YXNrQ29uc3RyYWludHMiOnsiYWN0aW9uTGltaXRzIjp7InNlbmQtZW1haWwiOjMsInNlYXJjaCI6NTB9LCJjb21wdXRlTGltaXQiOnsibGxtVG9rZW5zIjoxMDAwMDAsIndlYlJlcXVlc3RzIjoyMDAsImV4ZWN1dGlvblRpbWVNcyI6NjAwMDAwfSwiZGF0YUFjY2VzcyI6eyJjYWxlbmRhciI6InJlYWQiLCJlbWFpbCI6InJlYWQtd3JpdGUiLCJkcmFmdHMiOiJ3cml0ZSJ9LCJvdXRwdXRIYW5kbGluZyI6InVzZXItb25seSIsImh1bWFuR2F0ZXMiOlsic2VuZC1lbWFpbCJdLCJjaGVja3BvaW50SW50ZXJ2YWxNcyI6NjAwMDAsInJlcXVpcmVTYW5kYm94Ijp0cnVlLCJtYXhEZWxlZ2F0aW9uRGVwdGgiOjJ9LCJncmFudGVlIjoiZGlkOmFyb2hhOno1ODZaN0gydnBYOXFOaE4yVDRlOVV0dWdpZTNvZ2pieHpHYU10TTNFNkhSNSIsImdyYW50b3IiOiJkaWQ6YXJvaGE6ekZWZW4zWDY2OXhMenNpNk4yVjkxRG9peXpIemcxdUFncWlUOGpaOW5TOTZaIiwiaXNzdWVkQXQiOiIyMDI2LTEwLTAxVDA5OjAwOjAwLjAwMFoiLCJleHBpcmVzQXQiOiIyMDI2LTEwLTAxVDIxOjAwOjAwLjAwMFoiLCJwYXJlbnRNYW5kYXRlSWQiOm51bGwsIm1hbmRhdGVJZCI6InRhc2stcm9vdC0wMDAxIn0sInNpZ25hdHVyZSI6ImRTclBCbjE4Q3lxSm1KbW4wbXBRclc5UmRCY29nekVaVlEwazlvamlFNUROajBaTWpaXzZHT2Q2STNyckdqSEl5aUlvMFBBVy1VVDJDRHdvTVJXbUF3In0",
+      "signer": "human",
+      "now": "2026-10-01T10:00:00.000Z",
+      "valid": false,
+      "reason": "Invalid signature"
+    },
+    {
+      "name": "spending-payload-replayed",
+      "token": "eyJ2IjoyLCJtYW5kYXRlIjp7Im1hbmRhdGVUeXBlIjoidGFzayIsIm1hbmRhdGVUaWVyIjoiaW50ZW50IiwiYWxsb3dlZCI6WyJzZWFyY2giLCJkcmFmdC1lbWFpbCIsInNlbmQtZW1haWwiLCJyZWFkLWNhbGVuZGFyIiwiZXhwb3J0LWRhdGEiXSwiYmxvY2tlZCI6WyJleHBvcnQtZGF0YSJdLCJ0YXNrQ29uc3RyYWludHMiOnsiYWN0aW9uTGltaXRzIjp7InNlbmQtZW1haWwiOjMsInNlYXJjaCI6NTB9LCJjb21wdXRlTGltaXQiOnsibGxtVG9rZW5zIjoxMDAwMDAsIndlYlJlcXVlc3RzIjoyMDAsImV4ZWN1dGlvblRpbWVNcyI6NjAwMDAwfSwiZGF0YUFjY2VzcyI6eyJjYWxlbmRhciI6InJlYWQiLCJlbWFpbCI6InJlYWQtd3JpdGUiLCJkcmFmdHMiOiJ3cml0ZSJ9LCJvdXRwdXRIYW5kbGluZyI6InVzZXItb25seSIsImh1bWFuR2F0ZXMiOlsic2VuZC1lbWFpbCJdLCJjaGVja3BvaW50SW50ZXJ2YWxNcyI6NjAwMDAsInJlcXVpcmVTYW5kYm94Ijp0cnVlLCJtYXhEZWxlZ2F0aW9uRGVwdGgiOjJ9LCJncmFudGVlIjoiZGlkOmFyb2hhOno1ODZaN0gydnBYOXFOaE4yVDRlOVV0dWdpZTNvZ2pieHpHYU10TTNFNkhSNSIsImdyYW50b3IiOiJkaWQ6YXJvaGE6ekZWZW4zWDY2OXhMenNpNk4yVjkxRG9peXpIemcxdUFncWlUOGpaOW5TOTZaIiwiaXNzdWVkQXQiOiIyMDI2LTEwLTAxVDA5OjAwOjAwLjAwMFoiLCJleHBpcmVzQXQiOiIyMDI2LTEwLTAxVDIxOjAwOjAwLjAwMFoiLCJwYXJlbnRNYW5kYXRlSWQiOm51bGwsIm1hbmRhdGVJZCI6InRhc2stcm9vdC0wMDAxIn0sInNpZ25hdHVyZSI6ImU3bWhGRTFYWmtad1RySU5OeXVRMVM5UjE5c3IteG5VbXJ1bFNxR2Z1UlNVdF9jWlYyTlVxeWI3czdCa21vWjFWV0VHT3dkRWtIdFptUjVqVVZUa0FBIn0",
+      "signer": "human",
+      "now": "2026-10-01T10:00:00.000Z",
+      "valid": false,
+      "reason": "Invalid signature"
+    },
+    {
+      "name": "unsupported-version",
+      "token": "eyJ2IjozLCJtYW5kYXRlIjp7Im1hbmRhdGVUeXBlIjoidGFzayIsIm1hbmRhdGVUaWVyIjoiaW50ZW50IiwiYWxsb3dlZCI6WyJzZWFyY2giLCJkcmFmdC1lbWFpbCIsInNlbmQtZW1haWwiLCJyZWFkLWNhbGVuZGFyIiwiZXhwb3J0LWRhdGEiXSwiYmxvY2tlZCI6WyJleHBvcnQtZGF0YSJdLCJ0YXNrQ29uc3RyYWludHMiOnsiYWN0aW9uTGltaXRzIjp7InNlbmQtZW1haWwiOjMsInNlYXJjaCI6NTB9LCJjb21wdXRlTGltaXQiOnsibGxtVG9rZW5zIjoxMDAwMDAsIndlYlJlcXVlc3RzIjoyMDAsImV4ZWN1dGlvblRpbWVNcyI6NjAwMDAwfSwiZGF0YUFjY2VzcyI6eyJjYWxlbmRhciI6InJlYWQiLCJlbWFpbCI6InJlYWQtd3JpdGUiLCJkcmFmdHMiOiJ3cml0ZSJ9LCJvdXRwdXRIYW5kbGluZyI6InVzZXItb25seSIsImh1bWFuR2F0ZXMiOlsic2VuZC1lbWFpbCJdLCJjaGVja3BvaW50SW50ZXJ2YWxNcyI6NjAwMDAsInJlcXVpcmVTYW5kYm94Ijp0cnVlLCJtYXhEZWxlZ2F0aW9uRGVwdGgiOjJ9LCJncmFudGVlIjoiZGlkOmFyb2hhOno1ODZaN0gydnBYOXFOaE4yVDRlOVV0dWdpZTNvZ2pieHpHYU10TTNFNkhSNSIsImdyYW50b3IiOiJkaWQ6YXJvaGE6ekZWZW4zWDY2OXhMenNpNk4yVjkxRG9peXpIemcxdUFncWlUOGpaOW5TOTZaIiwiaXNzdWVkQXQiOiIyMDI2LTEwLTAxVDA5OjAwOjAwLjAwMFoiLCJleHBpcmVzQXQiOiIyMDI2LTEwLTAxVDIxOjAwOjAwLjAwMFoiLCJwYXJlbnRNYW5kYXRlSWQiOm51bGwsIm1hbmRhdGVJZCI6InRhc2stcm9vdC0wMDAxIn0sInNpZ25hdHVyZSI6IkVkSUM0Y25URm54b2UyVHduRUQzSG1vSkdtQ09FaTY5cTdRSlpfbDcxa1NzMjFGRmNFNXlWamxYVDN0cF82blM3R2w1dVhvMTJTaXd6eTA3azNqMEJnIn0",
+      "signer": "human",
+      "now": "2026-10-01T10:00:00.000Z",
+      "valid": false,
+      "reason": "Unsupported task mandate token version: 3"
+    },
+    {
+      "name": "signature-missing",
+      "token": "eyJ2IjoyLCJtYW5kYXRlIjp7Im1hbmRhdGVUeXBlIjoidGFzayIsIm1hbmRhdGVUaWVyIjoiaW50ZW50IiwiYWxsb3dlZCI6WyJzZWFyY2giLCJkcmFmdC1lbWFpbCIsInNlbmQtZW1haWwiLCJyZWFkLWNhbGVuZGFyIiwiZXhwb3J0LWRhdGEiXSwiYmxvY2tlZCI6WyJleHBvcnQtZGF0YSJdLCJ0YXNrQ29uc3RyYWludHMiOnsiYWN0aW9uTGltaXRzIjp7InNlbmQtZW1haWwiOjMsInNlYXJjaCI6NTB9LCJjb21wdXRlTGltaXQiOnsibGxtVG9rZW5zIjoxMDAwMDAsIndlYlJlcXVlc3RzIjoyMDAsImV4ZWN1dGlvblRpbWVNcyI6NjAwMDAwfSwiZGF0YUFjY2VzcyI6eyJjYWxlbmRhciI6InJlYWQiLCJlbWFpbCI6InJlYWQtd3JpdGUiLCJkcmFmdHMiOiJ3cml0ZSJ9LCJvdXRwdXRIYW5kbGluZyI6InVzZXItb25seSIsImh1bWFuR2F0ZXMiOlsic2VuZC1lbWFpbCJdLCJjaGVja3BvaW50SW50ZXJ2YWxNcyI6NjAwMDAsInJlcXVpcmVTYW5kYm94Ijp0cnVlLCJtYXhEZWxlZ2F0aW9uRGVwdGgiOjJ9LCJncmFudGVlIjoiZGlkOmFyb2hhOno1ODZaN0gydnBYOXFOaE4yVDRlOVV0dWdpZTNvZ2pieHpHYU10TTNFNkhSNSIsImdyYW50b3IiOiJkaWQ6YXJvaGE6ekZWZW4zWDY2OXhMenNpNk4yVjkxRG9peXpIemcxdUFncWlUOGpaOW5TOTZaIiwiaXNzdWVkQXQiOiIyMDI2LTEwLTAxVDA5OjAwOjAwLjAwMFoiLCJleHBpcmVzQXQiOiIyMDI2LTEwLTAxVDIxOjAwOjAwLjAwMFoiLCJwYXJlbnRNYW5kYXRlSWQiOm51bGwsIm1hbmRhdGVJZCI6InRhc2stcm9vdC0wMDAxIn19",
+      "signer": "human",
+      "now": "2026-10-01T10:00:00.000Z",
+      "valid": false,
+      "reason": "Malformed token: signature missing"
+    },
+    {
+      "name": "token-is-null",
+      "token": "bnVsbA",
+      "signer": "human",
+      "now": "2026-10-01T10:00:00.000Z",
+      "valid": false,
+      "reason": "Malformed token"
+    },
+    {
+      "name": "mandate-type-invalid",
+      "token": "eyJ2IjoyLCJtYW5kYXRlIjp7Im1hbmRhdGVUeXBlIjoic3BlbmQiLCJtYW5kYXRlVGllciI6ImludGVudCIsImFsbG93ZWQiOlsic2VhcmNoIiwiZHJhZnQtZW1haWwiLCJzZW5kLWVtYWlsIiwicmVhZC1jYWxlbmRhciIsImV4cG9ydC1kYXRhIl0sImJsb2NrZWQiOlsiZXhwb3J0LWRhdGEiXSwidGFza0NvbnN0cmFpbnRzIjp7ImFjdGlvbkxpbWl0cyI6eyJzZW5kLWVtYWlsIjozLCJzZWFyY2giOjUwfSwiY29tcHV0ZUxpbWl0Ijp7ImxsbVRva2VucyI6MTAwMDAwLCJ3ZWJSZXF1ZXN0cyI6MjAwLCJleGVjdXRpb25UaW1lTXMiOjYwMDAwMH0sImRhdGFBY2Nlc3MiOnsiY2FsZW5kYXIiOiJyZWFkIiwiZW1haWwiOiJyZWFkLXdyaXRlIiwiZHJhZnRzIjoid3JpdGUifSwib3V0cHV0SGFuZGxpbmciOiJ1c2VyLW9ubHkiLCJodW1hbkdhdGVzIjpbInNlbmQtZW1haWwiXSwiY2hlY2twb2ludEludGVydmFsTXMiOjYwMDAwLCJyZXF1aXJlU2FuZGJveCI6dHJ1ZSwibWF4RGVsZWdhdGlvbkRlcHRoIjoyfSwiZ3JhbnRlZSI6ImRpZDphcm9oYTp6NTg2WjdIMnZwWDlxTmhOMlQ0ZTlVdHVnaWUzb2dqYnh6R2FNdE0zRTZIUjUiLCJncmFudG9yIjoiZGlkOmFyb2hhOnpGVmVuM1g2Njl4THpzaTZOMlY5MURvaXl6SHpnMXVBZ3FpVDhqWjluUzk2WiIsImlzc3VlZEF0IjoiMjAyNi0xMC0wMVQwOTowMDowMC4wMDBaIiwiZXhwaXJlc0F0IjoiMjAyNi0xMC0wMVQyMTowMDowMC4wMDBaIiwicGFyZW50TWFuZGF0ZUlkIjpudWxsLCJtYW5kYXRlSWQiOiJ0YXNrLXJvb3QtMDAwMSJ9LCJzaWduYXR1cmUiOiJFZElDNGNuVEZueG9lMlR3bkVEM0htb0pHbUNPRWk2OXE3UUpaX2w3MWtTczIxRkZjRTV5VmpsWFQzdHBfNm5TN0dsNXVYbzEyU2l3enkwN2szajBCZyJ9",
+      "signer": "human",
+      "now": "2026-10-01T10:00:00.000Z",
+      "valid": false,
+      "reason": "Malformed token: mandateType is invalid"
+    },
+    {
+      "name": "action-limit-not-a-number",
+      "token": "eyJ2IjoyLCJtYW5kYXRlIjp7Im1hbmRhdGVUeXBlIjoidGFzayIsIm1hbmRhdGVUaWVyIjoiaW50ZW50IiwiYWxsb3dlZCI6WyJzZWFyY2giLCJkcmFmdC1lbWFpbCIsInNlbmQtZW1haWwiLCJyZWFkLWNhbGVuZGFyIiwiZXhwb3J0LWRhdGEiXSwiYmxvY2tlZCI6WyJleHBvcnQtZGF0YSJdLCJ0YXNrQ29uc3RyYWludHMiOnsiYWN0aW9uTGltaXRzIjp7InNlbmQtZW1haWwiOiIzIn0sImNvbXB1dGVMaW1pdCI6eyJsbG1Ub2tlbnMiOjEwMDAwMCwid2ViUmVxdWVzdHMiOjIwMCwiZXhlY3V0aW9uVGltZU1zIjo2MDAwMDB9LCJkYXRhQWNjZXNzIjp7ImNhbGVuZGFyIjoicmVhZCIsImVtYWlsIjoicmVhZC13cml0ZSIsImRyYWZ0cyI6IndyaXRlIn0sIm91dHB1dEhhbmRsaW5nIjoidXNlci1vbmx5IiwiaHVtYW5HYXRlcyI6WyJzZW5kLWVtYWlsIl0sImNoZWNrcG9pbnRJbnRlcnZhbE1zIjo2MDAwMCwicmVxdWlyZVNhbmRib3giOnRydWUsIm1heERlbGVnYXRpb25EZXB0aCI6Mn0sImdyYW50ZWUiOiJkaWQ6YXJvaGE6ejU4Nlo3SDJ2cFg5cU5oTjJUNGU5VXR1Z2llM29namJ4ekdhTXRNM0U2SFI1IiwiZ3JhbnRvciI6ImRpZDphcm9oYTp6RlZlbjNYNjY5eEx6c2k2TjJWOTFEb2l5ekh6ZzF1QWdxaVQ4alo5blM5NloiLCJpc3N1ZWRBdCI6IjIwMjYtMTAtMDFUMDk6MDA6MDAuMDAwWiIsImV4cGlyZXNBdCI6IjIwMjYtMTAtMDFUMjE6MDA6MDAuMDAwWiIsInBhcmVudE1hbmRhdGVJZCI6bnVsbCwibWFuZGF0ZUlkIjoidGFzay1yb290LTAwMDEifSwic2lnbmF0dXJlIjoiRWRJQzRjblRGbnhvZTJUd25FRDNIbW9KR21DT0VpNjlxN1FKWl9sNzFrU3MyMUZGY0U1eVZqbFhUM3RwXzZuUzdHbDV1WG8xMlNpd3p5MDdrM2owQmcifQ",
+      "signer": "human",
+      "now": "2026-10-01T10:00:00.000Z",
+      "valid": false,
+      "reason": "Malformed token: taskConstraints.actionLimits[\"send-email\"] must be a finite, non-negative number"
+    },
+    {
+      "name": "data-access-level-invalid",
+      "token": "eyJ2IjoyLCJtYW5kYXRlIjp7Im1hbmRhdGVUeXBlIjoidGFzayIsIm1hbmRhdGVUaWVyIjoiaW50ZW50IiwiYWxsb3dlZCI6WyJzZWFyY2giLCJkcmFmdC1lbWFpbCIsInNlbmQtZW1haWwiLCJyZWFkLWNhbGVuZGFyIiwiZXhwb3J0LWRhdGEiXSwiYmxvY2tlZCI6WyJleHBvcnQtZGF0YSJdLCJ0YXNrQ29uc3RyYWludHMiOnsiYWN0aW9uTGltaXRzIjp7InNlbmQtZW1haWwiOjMsInNlYXJjaCI6NTB9LCJjb21wdXRlTGltaXQiOnsibGxtVG9rZW5zIjoxMDAwMDAsIndlYlJlcXVlc3RzIjoyMDAsImV4ZWN1dGlvblRpbWVNcyI6NjAwMDAwfSwiZGF0YUFjY2VzcyI6eyJlbWFpbCI6ImFkbWluIn0sIm91dHB1dEhhbmRsaW5nIjoidXNlci1vbmx5IiwiaHVtYW5HYXRlcyI6WyJzZW5kLWVtYWlsIl0sImNoZWNrcG9pbnRJbnRlcnZhbE1zIjo2MDAwMCwicmVxdWlyZVNhbmRib3giOnRydWUsIm1heERlbGVnYXRpb25EZXB0aCI6Mn0sImdyYW50ZWUiOiJkaWQ6YXJvaGE6ejU4Nlo3SDJ2cFg5cU5oTjJUNGU5VXR1Z2llM29namJ4ekdhTXRNM0U2SFI1IiwiZ3JhbnRvciI6ImRpZDphcm9oYTp6RlZlbjNYNjY5eEx6c2k2TjJWOTFEb2l5ekh6ZzF1QWdxaVQ4alo5blM5NloiLCJpc3N1ZWRBdCI6IjIwMjYtMTAtMDFUMDk6MDA6MDAuMDAwWiIsImV4cGlyZXNBdCI6IjIwMjYtMTAtMDFUMjE6MDA6MDAuMDAwWiIsInBhcmVudE1hbmRhdGVJZCI6bnVsbCwibWFuZGF0ZUlkIjoidGFzay1yb290LTAwMDEifSwic2lnbmF0dXJlIjoiRWRJQzRjblRGbnhvZTJUd25FRDNIbW9KR21DT0VpNjlxN1FKWl9sNzFrU3MyMUZGY0U1eVZqbFhUM3RwXzZuUzdHbDV1WG8xMlNpd3p5MDdrM2owQmcifQ",
+      "signer": "human",
+      "now": "2026-10-01T10:00:00.000Z",
+      "valid": false,
+      "reason": "Malformed token: taskConstraints.dataAccess[\"email\"] is invalid"
+    },
+    {
+      "name": "hybrid-without-spending",
+      "token": "eyJ2IjoyLCJtYW5kYXRlIjp7Im1hbmRhdGVUeXBlIjoiaHlicmlkIiwibWFuZGF0ZVRpZXIiOiJpbnRlbnQiLCJhbGxvd2VkIjpbImJvb2stZmxpZ2h0Il0sInRhc2tDb25zdHJhaW50cyI6eyJhY3Rpb25MaW1pdHMiOnsiYm9vay1mbGlnaHQiOjF9fSwiaW52YXJpYW50cyI6eyJwYXllZSI6WyJkaWQ6YXJvaGE6YWlybGluZS1hIl0sInBhcmFtZXRlcnMiOnsiZGVzdGluYXRpb24iOiJKRksiLCJwYXNzZW5nZXJzIjoxfSwibWF4QW1vdW50Ijp7ImFtb3VudCI6NDUwLCJjdXJyZW5jeSI6IlVTRCJ9fSwiZ3JhbnRlZSI6ImRpZDphcm9oYTp6NTg2WjdIMnZwWDlxTmhOMlQ0ZTlVdHVnaWUzb2dqYnh6R2FNdE0zRTZIUjUiLCJncmFudG9yIjoiZGlkOmFyb2hhOnpGVmVuM1g2Njl4THpzaTZOMlY5MURvaXl6SHpnMXVBZ3FpVDhqWjluUzk2WiIsImlzc3VlZEF0IjoiMjAyNi0xMC0wMVQwOTowMDowMC4wMDBaIiwiZXhwaXJlc0F0IjoiMjAyNi0xMC0wMVQyMTowMDowMC4wMDBaIiwicGFyZW50TWFuZGF0ZUlkIjpudWxsLCJtYW5kYXRlSWQiOiJ0YXNrLWh5YnJpZC0wMDA0In0sInNpZ25hdHVyZSI6IkVkSUM0Y25URm54b2UyVHduRUQzSG1vSkdtQ09FaTY5cTdRSlpfbDcxa1NzMjFGRmNFNXlWamxYVDN0cF82blM3R2w1dVhvMTJTaXd6eTA3azNqMEJnIn0",
+      "signer": "human",
+      "now": "2026-10-01T10:00:00.000Z",
+      "valid": false,
+      "reason": "Malformed token: spendingConstraints: constraints is not an object"
+    }
+  ],
+  "narrowing": [
+    {
+      "name": "child-narrows-root",
+      "parent": "root",
+      "child": {
+        "mandateType": "task",
+        "mandateTier": "cart",
+        "allowed": [
+          "search",
+          "send-email"
+        ],
+        "blocked": [
+          "export-data"
+        ],
+        "taskConstraints": {
+          "actionLimits": {
+            "send-email": 1,
+            "search": 10
+          },
+          "computeLimit": {
+            "llmTokens": 5000,
+            "webRequests": 20,
+            "executionTimeMs": 60000
+          },
+          "dataAccess": {
+            "email": "write"
+          },
+          "outputHandling": "internal-only",
+          "humanGates": [
+            "send-email"
+          ],
+          "checkpointIntervalMs": 30000,
+          "requireSandbox": true,
+          "maxDelegationDepth": 1
+        },
+        "grantee": "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr",
+        "grantor": "did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5",
+        "issuedAt": "2026-10-01T09:00:00.000Z",
+        "expiresAt": "2026-10-01T15:00:00.000Z",
+        "parentMandateId": "task-root-0001",
+        "mandateId": "task-child-0002"
+      },
+      "valid": true
+    },
+    {
+      "name": "equal-is-allowed",
+      "parent": "root",
+      "child": {
+        "mandateType": "task",
+        "mandateTier": "intent",
+        "allowed": [
+          "search",
+          "draft-email",
+          "send-email",
+          "read-calendar",
+          "export-data"
+        ],
+        "blocked": [
+          "export-data"
+        ],
+        "taskConstraints": {
+          "actionLimits": {
+            "send-email": 3,
+            "search": 50
+          },
+          "computeLimit": {
+            "llmTokens": 100000,
+            "webRequests": 200,
+            "executionTimeMs": 600000
+          },
+          "dataAccess": {
+            "calendar": "read",
+            "email": "read-write",
+            "drafts": "write"
+          },
+          "outputHandling": "user-only",
+          "humanGates": [
+            "send-email"
+          ],
+          "checkpointIntervalMs": 60000,
+          "requireSandbox": true,
+          "maxDelegationDepth": 2
+        },
+        "grantee": "did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5",
+        "grantor": "did:aroha:zFVen3X669xLzsi6N2V91DoiyzHzg1uAgqiT8jZ9nS96Z",
+        "issuedAt": "2026-10-01T09:00:00.000Z",
+        "expiresAt": "2026-10-01T21:00:00.000Z",
+        "parentMandateId": null,
+        "mandateId": "task-root-0001"
+      },
+      "valid": true
+    },
+    {
+      "name": "allowed-widened",
+      "parent": "root",
+      "child": {
+        "mandateType": "task",
+        "mandateTier": "cart",
+        "allowed": [
+          "search",
+          "send-email",
+          "post-social"
+        ],
+        "blocked": [
+          "export-data"
+        ],
+        "taskConstraints": {
+          "actionLimits": {
+            "send-email": 1,
+            "search": 10
+          },
+          "computeLimit": {
+            "llmTokens": 5000,
+            "webRequests": 20,
+            "executionTimeMs": 60000
+          },
+          "dataAccess": {
+            "email": "write"
+          },
+          "outputHandling": "internal-only",
+          "humanGates": [
+            "send-email"
+          ],
+          "checkpointIntervalMs": 30000,
+          "requireSandbox": true,
+          "maxDelegationDepth": 1
+        },
+        "grantee": "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr",
+        "grantor": "did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5",
+        "issuedAt": "2026-10-01T09:00:00.000Z",
+        "expiresAt": "2026-10-01T15:00:00.000Z",
+        "parentMandateId": "task-root-0001",
+        "mandateId": "task-child-0002"
+      },
+      "valid": false,
+      "reason": "Cannot attenuate task mandate: child allowed includes \"post-social\" which is not in parent's allowed list"
+    },
+    {
+      "name": "blocked-dropped",
+      "parent": "root",
+      "child": {
+        "mandateType": "task",
+        "mandateTier": "cart",
+        "allowed": [
+          "search",
+          "send-email"
+        ],
+        "blocked": [],
+        "taskConstraints": {
+          "actionLimits": {
+            "send-email": 1,
+            "search": 10
+          },
+          "computeLimit": {
+            "llmTokens": 5000,
+            "webRequests": 20,
+            "executionTimeMs": 60000
+          },
+          "dataAccess": {
+            "email": "write"
+          },
+          "outputHandling": "internal-only",
+          "humanGates": [
+            "send-email"
+          ],
+          "checkpointIntervalMs": 30000,
+          "requireSandbox": true,
+          "maxDelegationDepth": 1
+        },
+        "grantee": "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr",
+        "grantor": "did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5",
+        "issuedAt": "2026-10-01T09:00:00.000Z",
+        "expiresAt": "2026-10-01T15:00:00.000Z",
+        "parentMandateId": "task-root-0001",
+        "mandateId": "task-child-0002"
+      },
+      "valid": false,
+      "reason": "Cannot attenuate task mandate: child drops parent's blocked capability \"export-data\""
+    },
+    {
+      "name": "action-limit-omitted",
+      "parent": "root",
+      "child": {
+        "mandateType": "task",
+        "mandateTier": "cart",
+        "allowed": [
+          "search",
+          "send-email"
+        ],
+        "blocked": [
+          "export-data"
+        ],
+        "taskConstraints": {
+          "actionLimits": {
+            "search": 10
+          },
+          "computeLimit": {
+            "llmTokens": 5000,
+            "webRequests": 20,
+            "executionTimeMs": 60000
+          },
+          "dataAccess": {
+            "email": "write"
+          },
+          "outputHandling": "internal-only",
+          "humanGates": [
+            "send-email"
+          ],
+          "checkpointIntervalMs": 30000,
+          "requireSandbox": true,
+          "maxDelegationDepth": 1
+        },
+        "grantee": "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr",
+        "grantor": "did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5",
+        "issuedAt": "2026-10-01T09:00:00.000Z",
+        "expiresAt": "2026-10-01T15:00:00.000Z",
+        "parentMandateId": "task-root-0001",
+        "mandateId": "task-child-0002"
+      },
+      "valid": false,
+      "reason": "Cannot attenuate task mandate: parent sets actionLimits[\"send-email\"] (3) but child omits it"
+    },
+    {
+      "name": "action-limit-raised",
+      "parent": "root",
+      "child": {
+        "mandateType": "task",
+        "mandateTier": "cart",
+        "allowed": [
+          "search",
+          "send-email"
+        ],
+        "blocked": [
+          "export-data"
+        ],
+        "taskConstraints": {
+          "actionLimits": {
+            "send-email": 4,
+            "search": 10
+          },
+          "computeLimit": {
+            "llmTokens": 5000,
+            "webRequests": 20,
+            "executionTimeMs": 60000
+          },
+          "dataAccess": {
+            "email": "write"
+          },
+          "outputHandling": "internal-only",
+          "humanGates": [
+            "send-email"
+          ],
+          "checkpointIntervalMs": 30000,
+          "requireSandbox": true,
+          "maxDelegationDepth": 1
+        },
+        "grantee": "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr",
+        "grantor": "did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5",
+        "issuedAt": "2026-10-01T09:00:00.000Z",
+        "expiresAt": "2026-10-01T15:00:00.000Z",
+        "parentMandateId": "task-root-0001",
+        "mandateId": "task-child-0002"
+      },
+      "valid": false,
+      "reason": "Cannot attenuate task mandate: child actionLimits[\"send-email\"] (4) exceeds parent (3)"
+    },
+    {
+      "name": "action-limit-for-dropped-capability-may-be-omitted",
+      "parent": "root",
+      "child": {
+        "mandateType": "task",
+        "mandateTier": "cart",
+        "allowed": [
+          "search"
+        ],
+        "blocked": [
+          "export-data"
+        ],
+        "taskConstraints": {
+          "actionLimits": {
+            "search": 10
+          },
+          "computeLimit": {
+            "llmTokens": 5000,
+            "webRequests": 20,
+            "executionTimeMs": 60000
+          },
+          "dataAccess": {
+            "email": "write"
+          },
+          "outputHandling": "internal-only",
+          "humanGates": [
+            "send-email"
+          ],
+          "checkpointIntervalMs": 30000,
+          "requireSandbox": true,
+          "maxDelegationDepth": 1
+        },
+        "grantee": "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr",
+        "grantor": "did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5",
+        "issuedAt": "2026-10-01T09:00:00.000Z",
+        "expiresAt": "2026-10-01T15:00:00.000Z",
+        "parentMandateId": "task-root-0001",
+        "mandateId": "task-child-0002"
+      },
+      "valid": true
+    },
+    {
+      "name": "compute-limit-omitted",
+      "parent": "root",
+      "child": {
+        "mandateType": "task",
+        "mandateTier": "cart",
+        "allowed": [
+          "search",
+          "send-email"
+        ],
+        "blocked": [
+          "export-data"
+        ],
+        "taskConstraints": {
+          "actionLimits": {
+            "send-email": 1,
+            "search": 10
+          },
+          "dataAccess": {
+            "email": "write"
+          },
+          "outputHandling": "internal-only",
+          "humanGates": [
+            "send-email"
+          ],
+          "checkpointIntervalMs": 30000,
+          "requireSandbox": true,
+          "maxDelegationDepth": 1
+        },
+        "grantee": "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr",
+        "grantor": "did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5",
+        "issuedAt": "2026-10-01T09:00:00.000Z",
+        "expiresAt": "2026-10-01T15:00:00.000Z",
+        "parentMandateId": "task-root-0001",
+        "mandateId": "task-child-0002"
+      },
+      "valid": false,
+      "reason": "Cannot attenuate task mandate: parent sets computeLimit.llmTokens (100000) but child omits it"
+    },
+    {
+      "name": "compute-limit-raised",
+      "parent": "root",
+      "child": {
+        "mandateType": "task",
+        "mandateTier": "cart",
+        "allowed": [
+          "search",
+          "send-email"
+        ],
+        "blocked": [
+          "export-data"
+        ],
+        "taskConstraints": {
+          "actionLimits": {
+            "send-email": 1,
+            "search": 10
+          },
+          "computeLimit": {
+            "llmTokens": 5000,
+            "webRequests": 201,
+            "executionTimeMs": 60000
+          },
+          "dataAccess": {
+            "email": "write"
+          },
+          "outputHandling": "internal-only",
+          "humanGates": [
+            "send-email"
+          ],
+          "checkpointIntervalMs": 30000,
+          "requireSandbox": true,
+          "maxDelegationDepth": 1
+        },
+        "grantee": "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr",
+        "grantor": "did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5",
+        "issuedAt": "2026-10-01T09:00:00.000Z",
+        "expiresAt": "2026-10-01T15:00:00.000Z",
+        "parentMandateId": "task-root-0001",
+        "mandateId": "task-child-0002"
+      },
+      "valid": false,
+      "reason": "Cannot attenuate task mandate: child webRequests (201) exceeds parent (200)"
+    },
+    {
+      "name": "data-access-omitted",
+      "parent": "root",
+      "child": {
+        "mandateType": "task",
+        "mandateTier": "cart",
+        "allowed": [
+          "search",
+          "send-email"
+        ],
+        "blocked": [
+          "export-data"
+        ],
+        "taskConstraints": {
+          "actionLimits": {
+            "send-email": 1,
+            "search": 10
+          },
+          "computeLimit": {
+            "llmTokens": 5000,
+            "webRequests": 20,
+            "executionTimeMs": 60000
+          },
+          "outputHandling": "internal-only",
+          "humanGates": [
+            "send-email"
+          ],
+          "checkpointIntervalMs": 30000,
+          "requireSandbox": true,
+          "maxDelegationDepth": 1
+        },
+        "grantee": "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr",
+        "grantor": "did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5",
+        "issuedAt": "2026-10-01T09:00:00.000Z",
+        "expiresAt": "2026-10-01T15:00:00.000Z",
+        "parentMandateId": "task-root-0001",
+        "mandateId": "task-child-0002"
+      },
+      "valid": false,
+      "reason": "Cannot attenuate task mandate: parent restricts dataAccess but child omits it"
+    },
+    {
+      "name": "data-access-read-to-read-write",
+      "parent": "root",
+      "child": {
+        "mandateType": "task",
+        "mandateTier": "cart",
+        "allowed": [
+          "search",
+          "send-email"
+        ],
+        "blocked": [
+          "export-data"
+        ],
+        "taskConstraints": {
+          "actionLimits": {
+            "send-email": 1,
+            "search": 10
+          },
+          "computeLimit": {
+            "llmTokens": 5000,
+            "webRequests": 20,
+            "executionTimeMs": 60000
+          },
+          "dataAccess": {
+            "calendar": "read-write"
+          },
+          "outputHandling": "internal-only",
+          "humanGates": [
+            "send-email"
+          ],
+          "checkpointIntervalMs": 30000,
+          "requireSandbox": true,
+          "maxDelegationDepth": 1
+        },
+        "grantee": "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr",
+        "grantor": "did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5",
+        "issuedAt": "2026-10-01T09:00:00.000Z",
+        "expiresAt": "2026-10-01T15:00:00.000Z",
+        "parentMandateId": "task-root-0001",
+        "mandateId": "task-child-0002"
+      },
+      "valid": false,
+      "reason": "Cannot attenuate task mandate: child dataAccess[\"calendar\"] (read-write) exceeds parent (read)"
+    },
+    {
+      "name": "data-access-write-only-to-read",
+      "parent": "root",
+      "child": {
+        "mandateType": "task",
+        "mandateTier": "cart",
+        "allowed": [
+          "search",
+          "send-email"
+        ],
+        "blocked": [
+          "export-data"
+        ],
+        "taskConstraints": {
+          "actionLimits": {
+            "send-email": 1,
+            "search": 10
+          },
+          "computeLimit": {
+            "llmTokens": 5000,
+            "webRequests": 20,
+            "executionTimeMs": 60000
+          },
+          "dataAccess": {
+            "drafts": "read"
+          },
+          "outputHandling": "internal-only",
+          "humanGates": [
+            "send-email"
+          ],
+          "checkpointIntervalMs": 30000,
+          "requireSandbox": true,
+          "maxDelegationDepth": 1
+        },
+        "grantee": "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr",
+        "grantor": "did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5",
+        "issuedAt": "2026-10-01T09:00:00.000Z",
+        "expiresAt": "2026-10-01T15:00:00.000Z",
+        "parentMandateId": "task-root-0001",
+        "mandateId": "task-child-0002"
+      },
+      "valid": false,
+      "reason": "Cannot attenuate task mandate: child dataAccess[\"drafts\"] (read) exceeds parent (write)"
+    },
+    {
+      "name": "data-access-new-resource",
+      "parent": "root",
+      "child": {
+        "mandateType": "task",
+        "mandateTier": "cart",
+        "allowed": [
+          "search",
+          "send-email"
+        ],
+        "blocked": [
+          "export-data"
+        ],
+        "taskConstraints": {
+          "actionLimits": {
+            "send-email": 1,
+            "search": 10
+          },
+          "computeLimit": {
+            "llmTokens": 5000,
+            "webRequests": 20,
+            "executionTimeMs": 60000
+          },
+          "dataAccess": {
+            "contacts": "read"
+          },
+          "outputHandling": "internal-only",
+          "humanGates": [
+            "send-email"
+          ],
+          "checkpointIntervalMs": 30000,
+          "requireSandbox": true,
+          "maxDelegationDepth": 1
+        },
+        "grantee": "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr",
+        "grantor": "did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5",
+        "issuedAt": "2026-10-01T09:00:00.000Z",
+        "expiresAt": "2026-10-01T15:00:00.000Z",
+        "parentMandateId": "task-root-0001",
+        "mandateId": "task-child-0002"
+      },
+      "valid": false,
+      "reason": "Cannot attenuate task mandate: child dataAccess[\"contacts\"] (read) exceeds parent (none)"
+    },
+    {
+      "name": "human-gate-dropped",
+      "parent": "root",
+      "child": {
+        "mandateType": "task",
+        "mandateTier": "cart",
+        "allowed": [
+          "search",
+          "send-email"
+        ],
+        "blocked": [
+          "export-data"
+        ],
+        "taskConstraints": {
+          "actionLimits": {
+            "send-email": 1,
+            "search": 10
+          },
+          "computeLimit": {
+            "llmTokens": 5000,
+            "webRequests": 20,
+            "executionTimeMs": 60000
+          },
+          "dataAccess": {
+            "email": "write"
+          },
+          "outputHandling": "internal-only",
+          "humanGates": [],
+          "checkpointIntervalMs": 30000,
+          "requireSandbox": true,
+          "maxDelegationDepth": 1
+        },
+        "grantee": "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr",
+        "grantor": "did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5",
+        "issuedAt": "2026-10-01T09:00:00.000Z",
+        "expiresAt": "2026-10-01T15:00:00.000Z",
+        "parentMandateId": "task-root-0001",
+        "mandateId": "task-child-0002"
+      },
+      "valid": false,
+      "reason": "Cannot attenuate task mandate: child drops parent's human gate on \"send-email\""
+    },
+    {
+      "name": "sandbox-dropped",
+      "parent": "root",
+      "child": {
+        "mandateType": "task",
+        "mandateTier": "cart",
+        "allowed": [
+          "search",
+          "send-email"
+        ],
+        "blocked": [
+          "export-data"
+        ],
+        "taskConstraints": {
+          "actionLimits": {
+            "send-email": 1,
+            "search": 10
+          },
+          "computeLimit": {
+            "llmTokens": 5000,
+            "webRequests": 20,
+            "executionTimeMs": 60000
+          },
+          "dataAccess": {
+            "email": "write"
+          },
+          "outputHandling": "internal-only",
+          "humanGates": [
+            "send-email"
+          ],
+          "checkpointIntervalMs": 30000,
+          "requireSandbox": false,
+          "maxDelegationDepth": 1
+        },
+        "grantee": "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr",
+        "grantor": "did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5",
+        "issuedAt": "2026-10-01T09:00:00.000Z",
+        "expiresAt": "2026-10-01T15:00:00.000Z",
+        "parentMandateId": "task-root-0001",
+        "mandateId": "task-child-0002"
+      },
+      "valid": false,
+      "reason": "Cannot attenuate task mandate: parent requires requireSandbox but child does not"
+    },
+    {
+      "name": "output-handling-widened",
+      "parent": "root",
+      "child": {
+        "mandateType": "task",
+        "mandateTier": "cart",
+        "allowed": [
+          "search",
+          "send-email"
+        ],
+        "blocked": [
+          "export-data"
+        ],
+        "taskConstraints": {
+          "actionLimits": {
+            "send-email": 1,
+            "search": 10
+          },
+          "computeLimit": {
+            "llmTokens": 5000,
+            "webRequests": 20,
+            "executionTimeMs": 60000
+          },
+          "dataAccess": {
+            "email": "write"
+          },
+          "outputHandling": "shareable",
+          "humanGates": [
+            "send-email"
+          ],
+          "checkpointIntervalMs": 30000,
+          "requireSandbox": true,
+          "maxDelegationDepth": 1
+        },
+        "grantee": "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr",
+        "grantor": "did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5",
+        "issuedAt": "2026-10-01T09:00:00.000Z",
+        "expiresAt": "2026-10-01T15:00:00.000Z",
+        "parentMandateId": "task-root-0001",
+        "mandateId": "task-child-0002"
+      },
+      "valid": false,
+      "reason": "Cannot attenuate task mandate: child outputHandling (shareable) is wider than parent (user-only)"
+    },
+    {
+      "name": "output-handling-omitted",
+      "parent": "root",
+      "child": {
+        "mandateType": "task",
+        "mandateTier": "cart",
+        "allowed": [
+          "search",
+          "send-email"
+        ],
+        "blocked": [
+          "export-data"
+        ],
+        "taskConstraints": {
+          "actionLimits": {
+            "send-email": 1,
+            "search": 10
+          },
+          "computeLimit": {
+            "llmTokens": 5000,
+            "webRequests": 20,
+            "executionTimeMs": 60000
+          },
+          "dataAccess": {
+            "email": "write"
+          },
+          "humanGates": [
+            "send-email"
+          ],
+          "checkpointIntervalMs": 30000,
+          "requireSandbox": true,
+          "maxDelegationDepth": 1
+        },
+        "grantee": "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr",
+        "grantor": "did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5",
+        "issuedAt": "2026-10-01T09:00:00.000Z",
+        "expiresAt": "2026-10-01T15:00:00.000Z",
+        "parentMandateId": "task-root-0001",
+        "mandateId": "task-child-0002"
+      },
+      "valid": false,
+      "reason": "Cannot attenuate task mandate: child outputHandling (unset) is wider than parent (user-only)"
+    },
+    {
+      "name": "checkpoint-interval-longer",
+      "parent": "root",
+      "child": {
+        "mandateType": "task",
+        "mandateTier": "cart",
+        "allowed": [
+          "search",
+          "send-email"
+        ],
+        "blocked": [
+          "export-data"
+        ],
+        "taskConstraints": {
+          "actionLimits": {
+            "send-email": 1,
+            "search": 10
+          },
+          "computeLimit": {
+            "llmTokens": 5000,
+            "webRequests": 20,
+            "executionTimeMs": 60000
+          },
+          "dataAccess": {
+            "email": "write"
+          },
+          "outputHandling": "internal-only",
+          "humanGates": [
+            "send-email"
+          ],
+          "checkpointIntervalMs": 120000,
+          "requireSandbox": true,
+          "maxDelegationDepth": 1
+        },
+        "grantee": "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr",
+        "grantor": "did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5",
+        "issuedAt": "2026-10-01T09:00:00.000Z",
+        "expiresAt": "2026-10-01T15:00:00.000Z",
+        "parentMandateId": "task-root-0001",
+        "mandateId": "task-child-0002"
+      },
+      "valid": false,
+      "reason": "Cannot attenuate task mandate: child checkpointIntervalMs (120000) is longer than parent (60000)"
+    },
+    {
+      "name": "expiry-beyond-parent",
+      "parent": "root",
+      "child": {
+        "mandateType": "task",
+        "mandateTier": "cart",
+        "allowed": [
+          "search",
+          "send-email"
+        ],
+        "blocked": [
+          "export-data"
+        ],
+        "taskConstraints": {
+          "actionLimits": {
+            "send-email": 1,
+            "search": 10
+          },
+          "computeLimit": {
+            "llmTokens": 5000,
+            "webRequests": 20,
+            "executionTimeMs": 60000
+          },
+          "dataAccess": {
+            "email": "write"
+          },
+          "outputHandling": "internal-only",
+          "humanGates": [
+            "send-email"
+          ],
+          "checkpointIntervalMs": 30000,
+          "requireSandbox": true,
+          "maxDelegationDepth": 1
+        },
+        "grantee": "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr",
+        "grantor": "did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5",
+        "issuedAt": "2026-10-01T09:00:00.000Z",
+        "expiresAt": "2026-10-02T00:00:00.000Z",
+        "parentMandateId": "task-root-0001",
+        "mandateId": "task-child-0002"
+      },
+      "valid": false,
+      "reason": "Cannot attenuate task mandate: child expiry (2026-10-02T00:00:00.000Z) extends beyond parent (2026-10-01T21:00:00.000Z)"
+    },
+    {
+      "name": "guest-child-keeps-binding",
+      "parent": "guest",
+      "child": {
+        "allowed": [
+          "search"
+        ],
+        "taskConstraints": {
+          "onBehalfOf": "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr",
+          "roomId": "room-01JA0TASK",
+          "reversibleOnly": true
+        },
+        "expiresAt": "2026-10-01T21:00:00.000Z"
+      },
+      "valid": true
+    },
+    {
+      "name": "guest-room-dropped",
+      "parent": "guest",
+      "child": {
+        "allowed": [
+          "search"
+        ],
+        "taskConstraints": {
+          "onBehalfOf": "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr",
+          "reversibleOnly": true
+        }
+      },
+      "valid": false,
+      "reason": "Cannot attenuate task mandate: child roomId (unset) does not keep the parent's roomId (room-01JA0TASK)"
+    },
+    {
+      "name": "guest-on-behalf-of-changed",
+      "parent": "guest",
+      "child": {
+        "allowed": [
+          "search"
+        ],
+        "taskConstraints": {
+          "onBehalfOf": "did:aroha:zFVen3X669xLzsi6N2V91DoiyzHzg1uAgqiT8jZ9nS96Z",
+          "roomId": "room-01JA0TASK",
+          "reversibleOnly": true
+        }
+      },
+      "valid": false,
+      "reason": "Cannot attenuate task mandate: child onBehalfOf (did:aroha:zFVen3X669xLzsi6N2V91DoiyzHzg1uAgqiT8jZ9nS96Z) does not keep the parent's onBehalfOf (did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr)"
+    },
+    {
+      "name": "guest-reversible-only-dropped",
+      "parent": "guest",
+      "child": {
+        "allowed": [
+          "search"
+        ],
+        "taskConstraints": {
+          "onBehalfOf": "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr",
+          "roomId": "room-01JA0TASK"
+        }
+      },
+      "valid": false,
+      "reason": "Cannot attenuate task mandate: parent requires reversibleOnly but child does not"
+    },
+    {
+      "name": "hybrid-narrows",
+      "parent": "hybrid",
+      "child": {
+        "allowed": [
+          "book-flight"
+        ],
+        "taskConstraints": {
+          "actionLimits": {
+            "book-flight": 1
+          }
+        },
+        "spendingConstraints": {
+          "spendLimitUsd": 450,
+          "currency": "USD",
+          "allowedMerchants": [
+            "did:aroha:airline-a"
+          ]
+        },
+        "invariants": {
+          "payee": [
+            "did:aroha:airline-a"
+          ],
+          "parameters": {
+            "destination": "JFK",
+            "passengers": 1
+          },
+          "maxAmount": {
+            "amount": 400,
+            "currency": "USD"
+          }
+        }
+      },
+      "valid": true
+    },
+    {
+      "name": "hybrid-spend-widened",
+      "parent": "hybrid",
+      "child": {
+        "allowed": [
+          "book-flight"
+        ],
+        "taskConstraints": {
+          "actionLimits": {
+            "book-flight": 1
+          }
+        },
+        "spendingConstraints": {
+          "spendLimitUsd": 900,
+          "currency": "USD",
+          "allowedMerchants": [
+            "did:aroha:airline-a"
+          ]
+        },
+        "invariants": {
+          "payee": [
+            "did:aroha:airline-a"
+          ],
+          "parameters": {
+            "destination": "JFK",
+            "passengers": 1
+          },
+          "maxAmount": {
+            "amount": 450,
+            "currency": "USD"
+          }
+        }
+      },
+      "valid": false,
+      "reason": "Cannot attenuate task mandate: spendingConstraints: Cannot attenuate task → task: child spendLimitUsd (900) exceeds parent (500)"
+    },
+    {
+      "name": "hybrid-spending-dropped",
+      "parent": "hybrid",
+      "child": {
+        "allowed": [
+          "book-flight"
+        ],
+        "taskConstraints": {
+          "actionLimits": {
+            "book-flight": 1
+          }
+        },
+        "invariants": {
+          "payee": [
+            "did:aroha:airline-a"
+          ],
+          "parameters": {
+            "destination": "JFK",
+            "passengers": 1
+          },
+          "maxAmount": {
+            "amount": 450,
+            "currency": "USD"
+          }
+        }
+      },
+      "valid": false,
+      "reason": "Cannot attenuate task mandate: parent sets spendingConstraints but child omits them"
+    },
+    {
+      "name": "hybrid-invariants-dropped",
+      "parent": "hybrid",
+      "child": {
+        "allowed": [
+          "book-flight"
+        ],
+        "taskConstraints": {
+          "actionLimits": {
+            "book-flight": 1
+          }
+        },
+        "spendingConstraints": {
+          "spendLimitUsd": 500,
+          "currency": "USD",
+          "allowedMerchants": [
+            "did:aroha:airline-a"
+          ]
+        }
+      },
+      "valid": false,
+      "reason": "Cannot attenuate task mandate: parent has invariants but child drops them entirely"
+    },
+    {
+      "name": "hybrid-parameter-changed",
+      "parent": "hybrid",
+      "child": {
+        "allowed": [
+          "book-flight"
+        ],
+        "taskConstraints": {
+          "actionLimits": {
+            "book-flight": 1
+          }
+        },
+        "spendingConstraints": {
+          "spendLimitUsd": 500,
+          "currency": "USD",
+          "allowedMerchants": [
+            "did:aroha:airline-a"
+          ]
+        },
+        "invariants": {
+          "payee": [
+            "did:aroha:airline-a"
+          ],
+          "parameters": {
+            "destination": "LGA",
+            "passengers": 1
+          },
+          "maxAmount": {
+            "amount": 450,
+            "currency": "USD"
+          }
+        }
+      },
+      "valid": false,
+      "reason": "Cannot attenuate task mandate: child parameter \"destination\" does not match parent's fixed value"
+    },
+    {
+      "name": "hybrid-max-amount-raised",
+      "parent": "hybrid",
+      "child": {
+        "allowed": [
+          "book-flight"
+        ],
+        "taskConstraints": {
+          "actionLimits": {
+            "book-flight": 1
+          }
+        },
+        "spendingConstraints": {
+          "spendLimitUsd": 500,
+          "currency": "USD",
+          "allowedMerchants": [
+            "did:aroha:airline-a"
+          ]
+        },
+        "invariants": {
+          "payee": [
+            "did:aroha:airline-a"
+          ],
+          "parameters": {
+            "destination": "JFK",
+            "passengers": 1
+          },
+          "maxAmount": {
+            "amount": 451,
+            "currency": "USD"
+          }
+        }
+      },
+      "valid": false,
+      "reason": "Cannot attenuate task mandate: child maxAmount (451) exceeds parent (450)"
+    }
+  ],
+  "requests": [
+    {
+      "name": "search-within-limits",
+      "mandate": "child",
+      "request": {
+        "requestedCapability": "search",
+        "currentActionCounts": {
+          "search": 9
+        },
+        "currentCompute": {
+          "llmTokens": 4999
+        }
+      },
+      "allowed": true
+    },
+    {
+      "name": "action-limit-reached",
+      "mandate": "child",
+      "request": {
+        "requestedCapability": "search",
+        "currentActionCounts": {
+          "search": 10
+        }
+      },
+      "allowed": false,
+      "code": "ACTION_LIMIT_EXCEEDED",
+      "reason": "Action limit exceeded for \"search\": 10/10"
+    },
+    {
+      "name": "send-email-needs-human",
+      "mandate": "child",
+      "request": {
+        "requestedCapability": "send-email"
+      },
+      "allowed": false,
+      "code": "HUMAN_GATE_REQUIRED",
+      "reason": "Capability \"send-email\" requires human approval (humanGate)"
+    },
+    {
+      "name": "send-email-approved",
+      "mandate": "child",
+      "request": {
+        "requestedCapability": "send-email",
+        "humanApproved": true,
+        "dataAccess": {
+          "email": "write"
+        }
+      },
+      "allowed": true
+    },
+    {
+      "name": "send-email-over-limit",
+      "mandate": "child",
+      "request": {
+        "requestedCapability": "send-email",
+        "humanApproved": true,
+        "currentActionCounts": {
+          "send-email": 1
+        }
+      },
+      "allowed": false,
+      "code": "ACTION_LIMIT_EXCEEDED",
+      "reason": "Action limit exceeded for \"send-email\": 1/1"
+    },
+    {
+      "name": "capability-not-allowed",
+      "mandate": "child",
+      "request": {
+        "requestedCapability": "draft-email"
+      },
+      "allowed": false,
+      "code": "CAPABILITY_NOT_PERMITTED",
+      "reason": "Capability \"draft-email\" is not in the mandate's allowed list"
+    },
+    {
+      "name": "capability-blocked",
+      "mandate": "root",
+      "request": {
+        "requestedCapability": "export-data"
+      },
+      "allowed": false,
+      "code": "CAPABILITY_NOT_PERMITTED",
+      "reason": "Capability \"export-data\" is explicitly blocked by the mandate"
+    },
+    {
+      "name": "llm-budget-exhausted",
+      "mandate": "child",
+      "request": {
+        "requestedCapability": "search",
+        "currentCompute": {
+          "llmTokens": 5000
+        }
+      },
+      "allowed": false,
+      "code": "COMPUTE_LIMIT_EXCEEDED",
+      "reason": "LLM token budget exhausted (5000 max)"
+    },
+    {
+      "name": "web-budget-exhausted",
+      "mandate": "child",
+      "request": {
+        "requestedCapability": "search",
+        "currentCompute": {
+          "webRequests": 20
+        }
+      },
+      "allowed": false,
+      "code": "COMPUTE_LIMIT_EXCEEDED",
+      "reason": "Web request budget exhausted (20 max)"
+    },
+    {
+      "name": "time-budget-exhausted",
+      "mandate": "child",
+      "request": {
+        "requestedCapability": "search",
+        "currentCompute": {
+          "wallClockMs": 60000
+        }
+      },
+      "allowed": false,
+      "code": "COMPUTE_LIMIT_EXCEEDED",
+      "reason": "Execution time budget exhausted (60000ms max)"
+    },
+    {
+      "name": "data-read-on-write-only-grant",
+      "mandate": "child",
+      "request": {
+        "requestedCapability": "search",
+        "dataAccess": {
+          "email": "read"
+        }
+      },
+      "allowed": false,
+      "code": "DATA_ACCESS_VIOLATION",
+      "reason": "Data access \"read\" on \"email\" exceeds the mandate's grant (write)"
+    },
+    {
+      "name": "data-on-unlisted-resource",
+      "mandate": "child",
+      "request": {
+        "requestedCapability": "search",
+        "dataAccess": {
+          "calendar": "read"
+        }
+      },
+      "allowed": false,
+      "code": "DATA_ACCESS_VIOLATION",
+      "reason": "Data access \"read\" on \"calendar\" exceeds the mandate's grant (none)"
+    },
+    {
+      "name": "data-read-granted",
+      "mandate": "root",
+      "request": {
+        "requestedCapability": "read-calendar",
+        "dataAccess": {
+          "calendar": "read"
+        }
+      },
+      "allowed": true
+    },
+    {
+      "name": "guest-request-in-room",
+      "mandate": "guest",
+      "request": {
+        "requestedCapability": "search",
+        "capabilityReversibility": "full",
+        "roomId": "room-01JA0TASK",
+        "onBehalfOf": "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr"
+      },
+      "allowed": true
+    },
+    {
+      "name": "guest-request-other-room",
+      "mandate": "guest",
+      "request": {
+        "requestedCapability": "search",
+        "capabilityReversibility": "full",
+        "roomId": "room-other",
+        "onBehalfOf": "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr"
+      },
+      "allowed": false,
+      "code": "CONTEXT_MISMATCH",
+      "reason": "The mandate is bound to room room-01JA0TASK; the request is from room-other"
+    },
+    {
+      "name": "guest-request-no-room",
+      "mandate": "guest",
+      "request": {
+        "requestedCapability": "search",
+        "capabilityReversibility": "full",
+        "onBehalfOf": "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr"
+      },
+      "allowed": false,
+      "code": "CONTEXT_MISMATCH",
+      "reason": "The mandate is bound to room room-01JA0TASK; the request is from no room"
+    },
+    {
+      "name": "guest-request-other-member",
+      "mandate": "guest",
+      "request": {
+        "requestedCapability": "search",
+        "capabilityReversibility": "full",
+        "roomId": "room-01JA0TASK",
+        "onBehalfOf": "did:aroha:zFVen3X669xLzsi6N2V91DoiyzHzg1uAgqiT8jZ9nS96Z"
+      },
+      "allowed": false,
+      "code": "CONTEXT_MISMATCH",
+      "reason": "The mandate acts on behalf of did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr; the request is for did:aroha:zFVen3X669xLzsi6N2V91DoiyzHzg1uAgqiT8jZ9nS96Z"
+    },
+    {
+      "name": "guest-undeclared-reversibility",
+      "mandate": "guest",
+      "request": {
+        "requestedCapability": "search",
+        "roomId": "room-01JA0TASK",
+        "onBehalfOf": "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr"
+      },
+      "allowed": false,
+      "code": "REVERSIBILITY_VIOLATION",
+      "reason": "Capability \"search\" is irreversible but mandate requires reversibleOnly"
+    },
+    {
+      "name": "guest-semi-reversible-gated",
+      "mandate": "guest",
+      "request": {
+        "requestedCapability": "draft-email",
+        "capabilityReversibility": "semi",
+        "roomId": "room-01JA0TASK",
+        "onBehalfOf": "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr"
+      },
+      "allowed": false,
+      "code": "HUMAN_GATE_REQUIRED",
+      "reason": "Capability \"draft-email\" requires human approval (humanGate)"
+    },
+    {
+      "name": "hybrid-book-flight",
+      "mandate": "hybrid",
+      "request": {
+        "requestedCapability": "book-flight"
+      },
+      "allowed": true
+    },
+    {
+      "name": "hybrid-book-flight-twice",
+      "mandate": "hybrid",
+      "request": {
+        "requestedCapability": "book-flight",
+        "currentActionCounts": {
+          "book-flight": 1
+        }
+      },
+      "allowed": false,
+      "code": "ACTION_LIMIT_EXCEEDED",
+      "reason": "Action limit exceeded for \"book-flight\": 1/1"
+    }
+  ]
+}

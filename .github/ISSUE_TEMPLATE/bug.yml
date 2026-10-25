@@ -1,0 +1,77 @@
+# Copyright (c) 2026 Aroha Labs
+# SPDX-License-Identifier: Apache-2.0
+
+name: Bug Report
+description: Report a bug in the Aroha protocol implementation
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug. Please fill in as much detail as possible.
+        **Security vulnerabilities:** Do NOT use this form. Follow [SECURITY.md](https://github.com/ArohaLabs/aroha-protocol/blob/main/SECURITY.md) instead (private email to the maintainer).
+
+  - type: dropdown
+    id: package
+    attributes:
+      label: Affected package
+      multiple: true
+      options:
+        - aroha-core
+        - aroha-cli
+        - aroha-credentials
+        - aroha-registry
+        - aroha-policy
+        - aroha-mcp-bridge
+        - aroha-a2a-bridge
+        - aroha-langchain-bridge
+        - aroha-telemetry
+        - aroha-trusted-mesh
+        - Other / unknown
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      placeholder: "e.g. 1.0.0"
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug description
+      description: What happened? What did you expect to happen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: Minimal reproduction steps or code snippet
+      placeholder: |
+        1. Create agent with...
+        2. Send envelope to...
+        3. Observe...
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      placeholder: |
+        Node.js version:
+        OS:
+        npm version:
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs or error output
+      render: shell

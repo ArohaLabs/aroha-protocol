@@ -1,0 +1,86 @@
+{
+  "name": "@aroha-sdk/core",
+  "version": "2.0.0",
+  "description": "Aroha core: identity, crypto, messaging, transport",
+  "files": [
+    "dist",
+    "src",
+    "NOTICE",
+    "!**/*.test.*",
+    "!**/test-utils/**",
+    "!**/*.tsbuildinfo"
+  ],
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./identity": {
+      "types": "./dist/identity/index.d.ts",
+      "import": "./dist/identity/index.js",
+      "default": "./dist/identity/index.js"
+    },
+    "./crypto": {
+      "types": "./dist/crypto/index.d.ts",
+      "import": "./dist/crypto/index.js",
+      "default": "./dist/crypto/index.js"
+    },
+    "./messages": {
+      "types": "./dist/messages/index.d.ts",
+      "import": "./dist/messages/index.js",
+      "default": "./dist/messages/index.js"
+    },
+    "./transport": {
+      "types": "./dist/transport/index.d.ts",
+      "import": "./dist/transport/index.js",
+      "default": "./dist/transport/index.js"
+    },
+    "./consult": {
+      "types": "./dist/consult/index.d.ts",
+      "import": "./dist/consult/index.js",
+      "default": "./dist/consult/index.js"
+    },
+    "./action": {
+      "types": "./dist/action/index.d.ts",
+      "import": "./dist/action/index.js",
+      "default": "./dist/action/index.js"
+    },
+    "./endpoints": {
+      "types": "./dist/endpoints/index.d.ts",
+      "import": "./dist/endpoints/index.js",
+      "default": "./dist/endpoints/index.js"
+    },
+    "./receipts": {
+      "types": "./dist/receipts/index.d.ts",
+      "import": "./dist/receipts/index.js",
+      "default": "./dist/receipts/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "dev": "tsc -p tsconfig.json --watch",
+    "prepack": "node ../../scripts/clean-dist.mjs && tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@noble/curves": "^1.9.7",
+    "@noble/ed25519": "^2.1.0",
+    "@noble/hashes": "^1.4.0",
+    "undici": "^6.27.0",
+    "ws": "^8.17.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "@types/ws": "^8.5.10",
+    "typescript": "^5.4.5",
+    "vitest": "^5.0.3"
+  },
+  "license": "Apache-2.0",
+  "engines": {
+    "node": ">=22"
+  }
+}

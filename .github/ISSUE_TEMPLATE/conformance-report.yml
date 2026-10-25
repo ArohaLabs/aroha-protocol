@@ -1,0 +1,102 @@
+# Copyright (c) 2026 Aroha Labs
+# SPDX-License-Identifier: Apache-2.0
+
+name: Conformance Report
+description: Submit a conformance test result for an independent Aroha 1.0 implementation
+labels: ["conformance", "ecosystem"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form to submit a conformance report for an independent Aroha 1.0 implementation.
+        See [docs/conformance/implementer-packet.md](https://github.com/ArohaLabs/aroha-protocol/blob/main/docs/conformance/implementer-packet.md) for the full process and [docs/conformance/test-matrix.md](https://github.com/ArohaLabs/aroha-protocol/blob/main/docs/conformance/test-matrix.md) for the test rubric.
+
+  - type: input
+    id: implementation-name
+    attributes:
+      label: Implementation name
+      placeholder: "e.g. aroha-python, aroha-go"
+    validations:
+      required: true
+
+  - type: input
+    id: repository
+    attributes:
+      label: Repository URL
+      placeholder: "https://github.com/yourorg/your-implementation"
+    validations:
+      required: true
+
+  - type: input
+    id: language
+    attributes:
+      label: Implementation language
+      placeholder: "e.g. Python, Go, Rust, Java"
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: layers
+    attributes:
+      label: Layers tested
+      description: Which protocol layers does your implementation cover?
+      options:
+        - label: "L0 — DID & Identity"
+        - label: "L1 — Signed Envelopes"
+        - label: "L2 — Capability Registry"
+        - label: "L3 — Saga Pattern"
+        - label: "L4 — Commerce"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: conformance-grade
+    attributes:
+      label: Self-assessed conformance grade
+      description: See test-matrix.md for grade definitions
+      options:
+        - Full conformance (all MUST + all SHOULD pass)
+        - Core conformance (all MUST pass, ≥50% SHOULD pass)
+        - Provisional (all MUST pass, SHOULD untested)
+        - Non-conformant (one or more MUST fails — submitting for feedback)
+    validations:
+      required: true
+
+  - type: textarea
+    id: must-results
+    attributes:
+      label: MUST test results
+      description: List each MUST test ID and its result (pass/fail). See test-matrix.md for IDs.
+      placeholder: |
+        L0-01: PASS
+        L0-02: PASS
+        L1-01: PASS
+        L1-02: PASS
+        ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: interop-result
+    attributes:
+      label: Interoperability test result
+      description: Did you test against the reference implementation? What was the outcome?
+    validations:
+      required: true
+
+  - type: textarea
+    id: deviations
+    attributes:
+      label: SHOULD deviations and rationale
+      description: List any SHOULD rows that fail, with your rationale for each.
+
+  - type: dropdown
+    id: tier-requested
+    attributes:
+      label: Ecosystem tier requested
+      options:
+        - Listed only
+        - Verified
+        - Certified
+    validations:
+      required: true

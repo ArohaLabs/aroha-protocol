@@ -1,0 +1,69 @@
+{
+  "runs": 1000,
+  "seed": 7,
+  "results": {
+    "no-decay": {
+      "t_det_mean": 26.6,
+      "t_det_std": 2.2,
+      "censored_pct": 0.0,
+      "fpr_pct": 68.5,
+      "rq10": 0.985
+    },
+    "symmetric": {
+      "t_det_mean": 15.9,
+      "t_det_std": 1.1,
+      "censored_pct": 0.0,
+      "fpr_pct": 35.0,
+      "rq10": 0.986
+    },
+    "aroharep": {
+      "t_det_mean": 27.1,
+      "t_det_std": 1.9,
+      "censored_pct": 0.0,
+      "fpr_pct": 18.6,
+      "rq10": 0.986
+    },
+    "rho=1.0": {
+      "t_det_mean": 13.0,
+      "t_det_std": 0.8,
+      "censored_pct": 0.0,
+      "fpr_pct": 27.1,
+      "rq10": 0.986
+    },
+    "rho=1.5": {
+      "t_det_mean": 18.1,
+      "t_det_std": 1.1,
+      "censored_pct": 0.0,
+      "fpr_pct": 22.2,
+      "rq10": 0.986
+    },
+    "rho=2.0": {
+      "t_det_mean": 21.9,
+      "t_det_std": 1.4,
+      "censored_pct": 0.0,
+      "fpr_pct": 20.3,
+      "rq10": 0.986
+    },
+    "rho=3.0": {
+      "t_det_mean": 27.1,
+      "t_det_std": 1.9,
+      "censored_pct": 0.0,
+      "fpr_pct": 18.6,
+      "rq10": 0.986
+    },
+    "rho=4.0": {
+      "t_det_mean": 30.7,
+      "t_det_std": 2.3,
+      "censored_pct": 0.0,
+      "fpr_pct": 17.9,
+      "rq10": 0.986
+    },
+    "rho=5.0": {
+      "t_det_mean": 33.3,
+      "t_det_std": 2.6,
+      "censored_pct": 0.0,
+      "fpr_pct": 17.5,
+      "rq10": 0.986
+    }
+  }
+}

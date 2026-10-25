@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aroha-labs.com/schemas/consent-v1.json",
+  "title": "Aroha consent record (aroha-1.0 §12.3), ISO/IEC TS 27560-shaped",
+  "description": "Append-only, hash-chained events, each signed by its own actorDid: Ed25519 over UTF-8(JCS({purpose:'aroha.consent-event/v1', recordId, subjectDid, roomId, purposes, withdrawalRoute, index, prevHash, entry})), where entry is the event without sig and prevHash is SHA-256 hex of JCS of the previous event (sig included), null for index 0. Rules this schema cannot express (first event 'given'; 'given' only by the subject; event purposes within record purposes; non-decreasing at and epoch; non-subject actor must be a room member at the event's epoch) are normative in §12.3.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["v", "purpose", "recordId", "subjectDid", "roomId", "purposes", "withdrawalRoute", "events"],
+  "$defs": {
+    "purposes": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "enum": ["transcript_retention", "agent_use_of_messages", "memory_write", "provider_processing"] }
+    }
+  },
+  "properties": {
+    "v": { "const": 1 },
+    "purpose": { "const": "aroha.consent/v1" },
+    "recordId": { "type": "string", "minLength": 1 },
+    "subjectDid": { "type": "string", "pattern": "^did:" },
+    "roomId": { "type": "string", "minLength": 1 },
+    "purposes": { "$ref": "#/$defs/purposes" },
+    "withdrawalRoute": { "type": "string", "minLength": 1 },
+    "events": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["event", "purposes", "at", "actorDid", "epoch", "sig"],
+        "properties": {
+          "event": { "enum": ["given", "withdrawn"] },
+          "purposes": { "$ref": "#/$defs/purposes" },
+          "at": { "type": "string", "format": "date-time" },
+          "actorDid": { "type": "string", "pattern": "^did:" },
+          "epoch": { "type": "integer", "minimum": 0 },
+          "sig": { "type": "string", "pattern": "^[A-Za-z0-9_-]+$" }
+        }
+      }
+    }
+  }
+}

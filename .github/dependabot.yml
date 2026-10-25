@@ -1,0 +1,63 @@
+# Copyright (c) 2026 Aroha Labs
+# SPDX-License-Identifier: Apache-2.0
+#
+# Dependabot VERSION updates (weekly, grouped). Whether Dependabot security
+# ALERTS are enabled is a repository setting the owner must verify in
+# Settings -> Code security; this file does not turn them on.
+#
+# Grouping keeps the PR count manageable for a single maintainer: minor and
+# patch bumps arrive as one PR per ecosystem, majors individually.
+
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      npm-minor-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: pip
+    directory: "/sdks/aroha-py"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 3
+    groups:
+      python-sdk-minor-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: gomod
+    directory: "/sdks/go"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 3
+    groups:
+      go-minor-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: maven
+    directory: "/sdks/java"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 3
+    groups:
+      java-minor-patch:
+        update-types: [minor, patch]
+
+  # Actions are pinned to commit SHAs; Dependabot updates the SHA and the
+  # trailing "# vX.Y.Z" comment together.
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      actions:
+        patterns: ["*"]

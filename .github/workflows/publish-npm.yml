@@ -1,0 +1,199 @@
+# Copyright (c) 2026 Aroha Labs
+# SPDX-License-Identifier: Apache-2.0
+
+name: Publish — npm
+
+# Release tag scheme (see CONTRIBUTING.md "Releasing"). This workflow acts
+# ONLY on a release tag of one of these forms:
+#   @aroha-sdk/<name>@<version>   publish that one package; its package.json
+#                                 version must equal <version>
+#   create-aroha-agent@<version>  same, for the unscoped scaffolder
+#   npm-v<anything>               batch: publish every workspace whose current
+#                                 version is not on npm yet (already-published
+#                                 versions are skipped)
+# It runs on a published GitHub Release, or by hand with the same tag. Either
+# way the Release Quality Gate (release-gate.yml) runs first, on the same
+# commit, and publishing `needs:` it.
+#
+# Provenance: `npm publish --provenance` is NOT used. npm only accepts
+# provenance statements for packages built from a PUBLIC source repository,
+# and ArohaLabs/aroha-protocol is private. Once the repository is public, switch to npm
+# Trusted Publishing (OIDC; id-token is already granted below) and remove
+# NPM_TOKEN — steps in CONTRIBUTING.md "Releasing".
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: >-
+          Release tag to publish: @aroha-sdk/<name>@<version>,
+          create-aroha-agent@<version> or npm-v<anything> (batch). Run the
+          workflow from that tag (or a branch whose head is the tagged commit).
+        required: true
+        type: string
+      dry-run:
+        description: Resolve and pack without publishing, to see what would go out.
+        type: boolean
+        default: false
+      first-publish:
+        description: >-
+          Allow a 403/404 from npm to be reported as a warning instead of a
+          failure. Only for the very first publish of a new package name, when
+          the token may lack rights to create it. Never set this for a routine
+          release.
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  resolve:
+    name: Resolve release tag
+    runs-on: ubuntu-latest
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'release' && (
+        startsWith(github.event.release.tag_name, '@aroha-sdk/') ||
+        startsWith(github.event.release.tag_name, 'create-aroha-agent@') ||
+        startsWith(github.event.release.tag_name, 'npm-v')))
+    outputs:
+      tag: ${{ steps.target.outputs.tag }}
+      selected: ${{ steps.target.outputs.selected }}
+      expect_version: ${{ steps.target.outputs.expect_version }}
+    steps:
+      - name: Resolve what to publish
+        id: target
+        env:
+          EVENT: ${{ github.event_name }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          INPUT_TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT" = "release" ]; then TAG="$RELEASE_TAG"; else TAG="$INPUT_TAG"; fi
+          SELECTED="all"
+          EXPECT_VERSION=""
+          case "$TAG" in
+            npm-v*) SELECTED="all" ;;
+            @aroha-sdk/*@*|create-aroha-agent@*)
+              SELECTED="${TAG%@*}"
+              EXPECT_VERSION="${TAG##*@}"
+              ;;
+            *) echo "::error::Tag '$TAG' is not an npm release tag"; exit 1 ;;
+          esac
+          {
+            echo "tag=$TAG"
+            echo "selected=$SELECTED"
+            echo "expect_version=$EXPECT_VERSION"
+          } >> "$GITHUB_OUTPUT"
+          echo "Publishing: $SELECTED ${EXPECT_VERSION:+(expecting version $EXPECT_VERSION)} from $TAG"
+
+  gate:
+    name: Release Quality Gate
+    needs: resolve
+    uses: ./.github/workflows/release-gate.yml
+    with:
+      tag: ${{ needs.resolve.outputs.tag }}
+    permissions:
+      contents: read
+
+  publish:
+    name: Publish to npm
+    needs: [resolve, gate]
+    runs-on: ubuntu-latest
+    # Scopes the publish to the `release` environment. Required reviewers on
+    # that environment are a manual owner setting (not available on the
+    # current private/free plan) — see CONTRIBUTING.md "Releasing".
+    environment: release
+    permissions:
+      contents: read
+      id-token: write   # unused until npm Trusted Publishing is switched on
+
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: 24.x
+          registry-url: https://registry.npmjs.org
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build all packages
+        run: npm run build
+
+      - name: Publish workspaces
+        run: |
+          # Publish each workspace individually so a rate-limit on one package
+          # doesn't silently abort the rest, and so "previously published"
+          # (idempotent re-run) is distinguished from real errors.
+          FAILED=0
+          ONLY="${SELECTED:-all}"
+          DRY=""
+          if [ "$DRY_RUN" = "true" ]; then
+            DRY="--dry-run"
+            echo "DRY RUN — nothing will actually be published."
+          fi
+          PUBLISHED_ANY=0
+          for dir in packages/aroha-*/ packages/create-aroha-agent/; do
+            [ -f "${dir}package.json" ] || continue
+            name=$(node -e "process.stdout.write(require('./${dir}package.json').name)")
+            version=$(node -e "process.stdout.write(require('./${dir}package.json').version)")
+            private=$(node -e "process.stdout.write(String(require('./${dir}package.json').private === true))")
+            if [ "$ONLY" != "all" ] && [ "$name" != "$ONLY" ]; then
+              continue
+            fi
+            if [ "$private" = "true" ]; then
+              echo "↷ $name is private — skipping"
+              continue
+            fi
+            PUBLISHED_ANY=1
+            # A per-package tag must match the version being published: a tag
+            # for 1.4.0 must never publish whatever 1.5.0 happens to be on disk.
+            if [ -n "$EXPECT_VERSION" ] && [ "$version" != "$EXPECT_VERSION" ]; then
+              echo "✗ $name is at $version but the release tag says $EXPECT_VERSION" >&2
+              FAILED=1
+              continue
+            fi
+            echo "--- Publishing $name@$version ---"
+            > /tmp/npm-publish.log
+            npm publish "$dir" --access public $DRY 2>&1 | tee /tmp/npm-publish.log
+            NPM_EXIT=${PIPESTATUS[0]}
+            if [ $NPM_EXIT -eq 0 ]; then
+              echo "✓ $name published"
+            elif grep -q "previously published\|Cannot publish over the previously published" /tmp/npm-publish.log; then
+              echo "↩ $name already at this version — skipping"
+            elif grep -q "E403\|E404\|403 Forbidden\|404 Not Found\|You do not have permission" /tmp/npm-publish.log; then
+              if [ "$FIRST_PUBLISH" = "true" ]; then
+                # Explicit opt-in only: the first publish of a new (unscoped)
+                # name may need a token with broader rights than NPM_TOKEN.
+                echo "::warning::$name — npm refused the publish (403/404). first-publish=true, so not failing. Publish it once by hand: cd $dir && npm publish --access public"
+              else
+                echo "::error::$name — npm refused the publish (403/404: token lacks permission or package/scope not found). Re-run with first-publish=true only if this is the package's first ever publish."
+                FAILED=1
+              fi
+            else
+              echo "✗ $name failed" >&2
+              FAILED=1
+            fi
+          done
+          # A name that matched nothing is a typo, not a no-op.
+          if [ "$ONLY" != "all" ] && [ "$PUBLISHED_ANY" -eq 0 ]; then
+            echo "✗ no publishable workspace is named \"$ONLY\"" >&2
+            exit 1
+          fi
+          exit $FAILED
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          SELECTED: ${{ needs.resolve.outputs.selected }}
+          EXPECT_VERSION: ${{ needs.resolve.outputs.expect_version }}
+          DRY_RUN: ${{ inputs.dry-run }}
+          FIRST_PUBLISH: ${{ inputs.first-publish }}

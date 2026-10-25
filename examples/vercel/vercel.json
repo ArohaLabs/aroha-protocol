@@ -1,0 +1,11 @@
+{
+  "rewrites": [
+    { "source": "/.well-known/aroha-agent.json", "destination": "/api/aroha" },
+    { "source": "/aroha/v1", "destination": "/api/aroha" }
+  ],
+  "functions": {
+    "api/aroha.ts": {
+      "maxDuration": 30
+    }
+  }
+}

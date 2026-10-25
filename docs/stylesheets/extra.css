@@ -1,0 +1,456 @@
+/* Copyright (c) 2026 Aroha Labs */
+/* SPDX-License-Identifier: Apache-2.0 */
+
+/* ── Material primary colour override (primary: custom in mkdocs.yml) ─────── */
+[data-md-color-primary="custom"] {
+  --md-primary-fg-color:        #5c35c5;
+  --md-primary-fg-color--light: #7c4dff;
+  --md-primary-fg-color--dark:  #4527a0;
+  --md-primary-bg-color:        #fff;
+  --md-primary-bg-color--light: rgba(255,255,255,0.7);
+  --md-accent-fg-color:         #651fff;
+  --md-accent-fg-color--transparent: rgba(101,31,255,0.1);
+  --md-accent-bg-color:         #fff;
+  --md-accent-bg-color--light:  rgba(255,255,255,0.7);
+}
+
+[data-md-color-scheme="slate"][data-md-color-primary="custom"] {
+  --md-primary-fg-color:        #7c4dff;
+  --md-primary-fg-color--light: #9e76ff;
+  --md-primary-fg-color--dark:  #5c35c5;
+  --md-primary-bg-color:        rgba(255,255,255,0.87);
+  --md-primary-bg-color--light: rgba(255,255,255,0.54);
+  --md-accent-fg-color:         #aa80ff;
+  --md-accent-fg-color--transparent: rgba(170,128,255,0.1);
+  --md-accent-bg-color:         rgba(255,255,255,0.87);
+  --md-accent-bg-color--light:  rgba(255,255,255,0.54);
+}
+
+/* ── Design tokens ────────────────────────────────────────────────────────── */
+:root {
+  --aroha-purple:       #6200ea;
+  --aroha-purple-light: #7c4dff;
+  --aroha-indigo:       #3949ab;
+  --aroha-teal:         #00897b;
+  --aroha-success:      #2e7d32;
+  --aroha-warn:         #e65100;
+  --aroha-hero-start:   #3d1f8f;
+  --aroha-hero-mid:     #1a237e;
+  --aroha-hero-end:     #0d47a1;
+  --aroha-card-radius:  10px;
+  --aroha-shadow-sm:    0 1px 4px rgba(0,0,0,0.08);
+  --aroha-shadow-md:    0 4px 16px rgba(0,0,0,0.12);
+  --aroha-shadow-lg:    0 8px 32px rgba(0,0,0,0.18);
+}
+
+[data-md-color-scheme="slate"] {
+  --aroha-hero-start: #2a1560;
+  --aroha-hero-mid:   #0d1754;
+  --aroha-hero-end:   #0a2a6e;
+  --aroha-shadow-sm:  0 1px 4px rgba(0,0,0,0.24);
+  --aroha-shadow-md:  0 4px 16px rgba(0,0,0,0.30);
+  --aroha-shadow-lg:  0 8px 32px rgba(0,0,0,0.40);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   HERO — full-bleed at every breakpoint
+   MkDocs Material content inner has 0.8rem horizontal padding; match it exactly.
+══════════════════════════════════════════════════════════════════════════════ */
+.md-typeset .hero {
+  margin: -0.8rem calc(-0.8rem - var(--md-content-padding, 0px)) 3rem;
+  padding: 5rem 2rem 4rem;
+  text-align: center;
+  background: linear-gradient(135deg,
+    var(--aroha-hero-start) 0%,
+    var(--aroha-hero-mid)   55%,
+    var(--aroha-hero-end)   100%);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  box-shadow: var(--aroha-shadow-lg);
+  position: relative;
+  overflow: hidden;
+}
+
+/* subtle radial glow behind the title */
+.md-typeset .hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 70% 60% at 50% 40%,
+    rgba(124, 77, 255, 0.22) 0%,
+    transparent 70%);
+  pointer-events: none;
+}
+
+.md-typeset .hero h1 {
+  font-size: clamp(2.2rem, 6vw, 3.8rem);
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  margin-bottom: 0.2rem;
+  color: #fff;
+  text-shadow: 0 2px 16px rgba(0,0,0,0.35);
+  position: relative;
+}
+
+.md-typeset .hero .tagline {
+  font-size: clamp(1rem, 2.2vw, 1.18rem);
+  color: rgba(255,255,255,0.86);
+  margin: 0 auto 2rem;
+  max-width: 680px;
+  line-height: 1.7;
+  position: relative;
+}
+
+.md-typeset .hero .badges {
+  display: flex;
+  gap: 0.45rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 2.4rem;
+  position: relative;
+}
+
+.md-typeset .hero .badges img {
+  height: 20px;
+  border-radius: 4px;
+}
+
+/* CTA buttons */
+.md-typeset .hero .md-button--primary {
+  background: #fff !important;
+  color: var(--aroha-purple) !important;
+  border-color: transparent !important;
+  font-weight: 700;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.md-typeset .hero .md-button--primary:hover {
+  background: #f3e5f5 !important;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+  transform: translateY(-1px);
+}
+
+.md-typeset .hero .md-button:not(.md-button--primary) {
+  border: 1.5px solid rgba(255,255,255,0.55) !important;
+  color: rgba(255,255,255,0.92) !important;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+}
+
+.md-typeset .hero .md-button:not(.md-button--primary):hover {
+  background: rgba(255,255,255,0.1) !important;
+  border-color: rgba(255,255,255,0.85) !important;
+  transform: translateY(-1px);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   CONTENT HEADINGS
+══════════════════════════════════════════════════════════════════════════════ */
+.md-typeset h1 {
+  font-weight: 800;
+  letter-spacing: -0.025em;
+}
+
+.md-typeset h2 {
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  margin-top: 2em;
+  padding-bottom: 0.35em;
+  border-bottom: 1px solid var(--md-default-fg-color--lightest);
+}
+
+.md-typeset h3 {
+  font-weight: 600;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   FEATURE CARDS
+══════════════════════════════════════════════════════════════════════════════ */
+.md-typeset .grid.cards > ul {
+  gap: 0.9rem;
+}
+
+.md-typeset .grid.cards > ul > li {
+  border-left: none !important;
+  border-top: 3px solid var(--md-primary-fg-color);
+  border-radius: var(--aroha-card-radius);
+  box-shadow: var(--aroha-shadow-sm);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.md-typeset .grid.cards > ul > li:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--aroha-shadow-md);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   TABLES
+══════════════════════════════════════════════════════════════════════════════ */
+.md-typeset table:not([class]) {
+  border-collapse: separate;
+  border-spacing: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: var(--aroha-shadow-sm);
+  width: 100%;
+  font-size: 0.88em;
+}
+
+.md-typeset table:not([class]) th {
+  background: var(--md-primary-fg-color);
+  color: var(--md-primary-bg-color);
+  font-weight: 600;
+  font-size: 0.8em;
+  letter-spacing: 0.03em;
+  padding: 0.7em 1em;
+  border: none;
+  white-space: nowrap;
+}
+
+.md-typeset table:not([class]) td {
+  padding: 0.6em 1em;
+  border-top: 1px solid var(--md-default-fg-color--lightest);
+  vertical-align: middle;
+}
+
+.md-typeset table:not([class]) tr:last-child td:first-child {
+  border-bottom-left-radius: 8px;
+}
+
+.md-typeset table:not([class]) tr:last-child td:last-child {
+  border-bottom-right-radius: 8px;
+}
+
+.md-typeset table:not([class]) tbody tr:hover td {
+  background: var(--md-default-fg-color--lightest);
+}
+
+.md-typeset table code {
+  font-size: 0.85em;
+}
+
+/* centre-align cells that contain only a checkmark or dash */
+.md-typeset table:not([class]) td:not(:first-child) {
+  text-align: center;
+}
+
+/* but left-align the first column always */
+.md-typeset table:not([class]) td:first-child,
+.md-typeset table:not([class]) th:first-child {
+  text-align: left;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   CODE BLOCKS
+══════════════════════════════════════════════════════════════════════════════ */
+.md-typeset .highlight {
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: var(--aroha-shadow-sm);
+}
+
+.md-typeset .highlight pre > code {
+  font-size: 0.84rem;
+  line-height: 1.65;
+}
+
+/* Inline code */
+.md-typeset code:not(.highlight code) {
+  font-size: 0.85em;
+  padding: 0.12em 0.4em;
+  border-radius: 4px;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   ADMONITIONS
+══════════════════════════════════════════════════════════════════════════════ */
+.md-typeset .admonition,
+.md-typeset details {
+  border-radius: 8px;
+  border-left-width: 4px;
+  box-shadow: var(--aroha-shadow-sm);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   LAYER & TIER BADGES
+══════════════════════════════════════════════════════════════════════════════ */
+.layer-badge {
+  display: inline-block;
+  font-size: 0.67rem;
+  font-weight: 700;
+  padding: 0.14em 0.55em;
+  border-radius: 4px;
+  margin-right: 0.35em;
+  vertical-align: middle;
+  font-family: var(--md-code-font-family);
+  letter-spacing: 0.04em;
+}
+
+.layer-0 { background: #546e7a; color: #fff; }
+.layer-1 { background: #1565c0; color: #fff; }
+.layer-2 { background: #6a1b9a; color: #fff; }
+.layer-3 { background: #00695c; color: #fff; }
+.layer-4 { background: #e65100; color: #fff; }
+.layer-5 { background: #c62828; color: #fff; }
+
+.tier-kernel,
+.tier-extension,
+.tier-bridge,
+.tier-tooling {
+  display: inline-block;
+  font-size: 0.62rem;
+  font-weight: 700;
+  padding: 0.12em 0.55em;
+  border-radius: 20px;
+  vertical-align: middle;
+  font-family: var(--md-code-font-family);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.tier-kernel    { background: #1565c0; color: #fff; }
+.tier-extension { background: #6a1b9a; color: #fff; }
+.tier-bridge    { background: #00695c; color: #fff; }
+.tier-tooling   { background: #37474f; color: #fff; }
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   STATUS BADGES
+══════════════════════════════════════════════════════════════════════════════ */
+.status-complete,
+.status-progress {
+  display: inline-block;
+  font-size: 0.62rem;
+  font-weight: 700;
+  padding: 0.12em 0.55em;
+  border-radius: 20px;
+  font-family: var(--md-code-font-family);
+  letter-spacing: 0.05em;
+  vertical-align: middle;
+}
+
+.status-complete { background: var(--aroha-success); color: #fff; }
+.status-progress { background: var(--aroha-warn);    color: #fff; }
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   ENVELOPE DIAGRAM
+══════════════════════════════════════════════════════════════════════════════ */
+.envelope-diagram {
+  background: var(--md-code-bg-color);
+  border: 1px solid var(--md-default-fg-color--lighter);
+  border-radius: 8px;
+  padding: 1.2rem 1.5rem;
+  font-family: var(--md-code-font-family);
+  font-size: 0.84rem;
+  overflow-x: auto;
+  line-height: 1.6;
+  box-shadow: var(--aroha-shadow-sm);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   ANNOUNCEMENT BAR
+══════════════════════════════════════════════════════════════════════════════ */
+.md-announce {
+  background: linear-gradient(90deg, #4527a0 0%, #1565c0 100%);
+  color: rgba(255,255,255,0.9);
+  text-align: center;
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  line-height: 1.5;
+  padding: 0.45rem 1rem;
+}
+
+.md-announce a {
+  color: #fff;
+  text-decoration: none;
+  font-weight: 700;
+  border-bottom: 1px solid rgba(255,255,255,0.4);
+  transition: border-color 0.12s ease;
+}
+
+.md-announce a:hover {
+  border-bottom-color: #fff;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   NAV TABS
+══════════════════════════════════════════════════════════════════════════════ */
+.md-tabs__link {
+  font-weight: 500;
+  opacity: 0.82;
+  transition: opacity 0.15s ease;
+}
+
+.md-tabs__link:hover {
+  opacity: 1;
+}
+
+.md-tabs__link--active {
+  font-weight: 700;
+  opacity: 1;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   SIDEBAR
+══════════════════════════════════════════════════════════════════════════════ */
+.md-nav__title {
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.md-nav__link {
+  font-size: 0.73rem;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   MERMAID DIAGRAMS
+══════════════════════════════════════════════════════════════════════════════ */
+.md-typeset .mermaid {
+  margin: 1.5rem auto;
+  text-align: center;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   FOOTER
+══════════════════════════════════════════════════════════════════════════════ */
+.md-footer {
+  background: #1a1a2e;
+}
+
+.md-footer-meta {
+  background: #0f0f1a;
+}
+
+.md-footer__link {
+  opacity: 0.75;
+  transition: opacity 0.15s ease;
+}
+
+.md-footer__link:hover {
+  opacity: 1;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   RESPONSIVE
+══════════════════════════════════════════════════════════════════════════════ */
+@media screen and (max-width: 600px) {
+  .md-typeset .hero {
+    padding: 3rem 1.2rem 2.4rem;
+    margin-bottom: 2rem;
+  }
+
+  .md-typeset .hero .md-button {
+    display: block;
+    margin: 0.4rem auto;
+    width: fit-content;
+  }
+}
+
+/* Wide screens — tighten nav padding to stay aligned with content grid */
+@media screen and (min-width: 76.25em) {
+  .md-typeset .hero {
+    margin-left: calc(-0.8rem - var(--md-content-padding, 0px));
+    margin-right: calc(-0.8rem - var(--md-content-padding, 0px));
+  }
+}

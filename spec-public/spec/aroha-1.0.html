@@ -1,0 +1,2611 @@
+<!-- Copyright (c) 2026 Aroha Labs
+     SPDX-License-Identifier: Apache-2.0 -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Aroha Protocol (Aroha) 1.0</title>
+  <script src="https://www.w3.org/Tools/respec/respec-w3c" async class="remove"></script>
+  <script class="remove">
+    var respecConfig = {
+      // "unofficial": no W3C group publishes this document. No W3C Community
+      // Group has been proposed, so no `group` is set.
+      specStatus:     "unofficial",
+      shortName:      "aroha",
+      subtitle:       "Specification Version 1.0",
+      edDraftURI:     "https://aroha-labs.com/spec/aroha-1.0.html",
+      latestVersion:  "https://aroha-labs.com/spec/aroha-1.0.html",
+      editors: [
+        { name: "Aroha Working Group", url: "https://aroha-labs.com" }
+      ],
+      github: "https://github.com/ArohaLabs/aroha-spec",
+      // ReSpec has no Apache-2.0 `license` value. The <p class="copyright">
+      // at the top of <body> replaces ReSpec's default copyright/licence text.
+      xref: ["did-core", "vc-data-model-2.0", "json-ld11"],
+      localBiblio: {
+        "RFC4122": {
+          title: "A Universally Unique IDentifier (UUID) URN Namespace",
+          href:  "https://www.rfc-editor.org/rfc/rfc4122",
+          authors: ["P. Leach", "M. Mealling", "R. Salz"],
+          status: "IETF RFC"
+        },
+        "RFC8032": {
+          title: "Edwards-Curve Digital Signature Algorithm (EdDSA)",
+          href:  "https://www.rfc-editor.org/rfc/rfc8032",
+          authors: ["S. Josefsson", "I. Liusvaara"],
+          status: "IETF RFC"
+        },
+        "RFC8037": {
+          title: "CFRG Elliptic Curves for JOSE",
+          href:  "https://www.rfc-editor.org/rfc/rfc8037",
+          authors: ["I. Liusvaara"],
+          status: "IETF RFC"
+        },
+        "RFC8615": {
+          title: "Well-Known Uniform Resource Identifiers (URIs)",
+          href:  "https://www.rfc-editor.org/rfc/rfc8615",
+          authors: ["M. Nottingham"],
+          status: "IETF RFC"
+        },
+        "RFC9110": {
+          title: "HTTP Semantics",
+          href:  "https://www.rfc-editor.org/rfc/rfc9110",
+          status: "IETF RFC"
+        },
+        "DIDComm": {
+          title: "DIDComm Messaging v2",
+          href:  "https://identity.foundation/didcomm-messaging/spec/",
+          authors: ["S. Curren", "S. Smith", "O. Steele"],
+          status: "DIF Specification"
+        },
+        "RFC2119": {
+          title: "Key words for use in RFCs to Indicate Requirement Levels",
+          href:  "https://www.rfc-editor.org/rfc/rfc2119",
+          status: "IETF RFC"
+        }
+      }
+    };
+  </script>
+  <style>
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid #ccc; padding: 6px 10px; text-align: left; }
+    th { background: #f0f0f0; }
+    .state-machine { font-family: monospace; background: #f9f9f9;
+                     padding: 1em; border: 1px solid #ddd; }
+    pre.json { background: #f6f8fa; border: 1px solid #e1e4e8;
+               padding: 1em; overflow-x: auto; }
+  </style>
+</head>
+<body>
+
+<p class="copyright">
+  Copyright &copy; 2026 Aroha Labs. This document is licensed under the
+  <a rel="license" href="https://www.apache.org/licenses/LICENSE-2.0">Apache
+  License, Version 2.0</a>.
+</p>
+
+<!-- ═══════════════════════════════════════════════════════ ABSTRACT -->
+<section id="abstract">
+  <p>
+    The <strong>Aroha Protocol (Aroha)</strong> is an open,
+    decentralized protocol for agent-to-agent communication, discovery, and
+    atomic multi-agent transactions. It defines how AI agents from different
+    organizations discover each other, establish identity and trust, exchange
+    cryptographically signed messages, and coordinate complex multi-step tasks
+    that either fully succeed or fully roll back using a distributed saga pattern.
+    Multi-step coordination (sagas) and preference context are defined as
+    extensions in a companion extensions document.
+  </p>
+  <p>
+    Aroha is language-agnostic and framework-agnostic. It defines a protocol
+    specification, not an implementation. Any agent that correctly implements
+    these rules can interoperate with any other conformant Aroha agent.
+    The protocol is built on existing W3C standards: Decentralized Identifiers
+    [[did-core]], Verifiable Credentials [[vc-data-model-2.0]], and JSON-LD [[json-ld11]].
+  </p>
+</section>
+
+<!-- ═══════════════════════════════════════════════════ STATUS OF DOCUMENT -->
+<section id="sotd">
+  <p>
+    <strong>This is an unofficial draft.</strong> It has not been submitted to
+    any standards body. It is not a W3C document: no W3C Community Group has
+    been proposed for it, and it is not a W3C Standard nor on the W3C Standards
+    Track. The <code>did:aroha</code> DID method is not registered in the W3C
+    DID Method Registry. This draft may be updated, replaced, or made obsolete
+    at any time.
+  </p>
+  <p class="note">
+    <strong>Status note (2026-10):</strong> the reference registry is an HTTP
+    registry; the on-chain registry contracts are not wired into DID resolution
+    in the reference implementation. The post-quantum appendix is
+    non-normative and describes future work.
+  </p>
+  <p>
+    The Markdown version of this document (<code>aroha-1.0.md</code>) is the
+    source of truth; this HTML rendering is kept in step with it.
+    Comments and contributions are welcome at the
+    <a href="https://github.com/ArohaLabs/aroha-spec/issues">GitHub issue tracker</a>.
+    The <a href="https://github.com/ArohaLabs/aroha-spec">source</a> for this
+    document is available on GitHub.
+  </p>
+</section>
+
+<!-- ═══════════════════════════════════════════════════ REVISION HISTORY -->
+<section id="revision-history" class="informative">
+  <h2>Revision history</h2>
+  <table class="simple">
+    <thead><tr><th>Date</th><th>Change</th></tr></thead>
+    <tbody>
+      <tr><td>2026-10-25</td>
+          <td>Scope: the core specification now covers Layers 0–3 (Transport,
+              Identity, Registry, Messaging). Orchestration (sagas) and
+              preference context moved unchanged to the extensions document
+              (<code>extensions.md</code>); their sections remain as pointers.
+              Conformance items for sagas and preference context now apply to
+              implementations that adopt those extensions.</td></tr>
+      <tr><td>2026-10-19</td>
+          <td>New section Mandate Presentation: the holder proof that keeps a
+              mandate from being a bearer token, with the MCP binding
+              (<code>_meta["aroha/mandate"]</code>, previously defined only by
+              the reference code) and a new plain-HTTP binding
+              (<code>Aroha-Mandate</code> header) with vectors in
+              <code>packages/aroha-credentials/test-vectors/http-presentation-v1.json</code>.
+              Spending mandate format: a body that carries
+              <code>mandateType</code> is a task mandate and is refused as a
+              spending mandate.</td></tr>
+      <tr><td>2026-10-15</td>
+          <td>New §12 Conversation and Memory Profile: signed rooms and
+              membership epochs, person invitations with per-event signed
+              consent records, turn signatures, the person-DID signing rule
+              and speaker-kind resolution, the memory record, signed action
+              receipts v1/v2 (outcome, denied receipts,
+              <code>presentedHash</code>), and <code>ArohaDisclosure</code>
+              (optional envelope field). New sections on the task-mandate
+              token v2 (with <code>onBehalfOf</code> and <code>roomId</code>),
+              signed revocation status and the governed verifier profile,
+              previously defined only by the reference code. Schemas in
+              <code>spec-public/schemas/</code>, vectors in
+              <code>spec-public/vectors/conversation-v1.json</code>.</td></tr>
+      <tr><td>2026-10-08</td>
+          <td>Registry: the HTTP registry (§5.1a) is the normative baseline;
+              on-chain registration, staking and slashing are scoped to the
+              optional blockchain registry (§5.1b). §6.3 envelope validation:
+              maximum lifetime, <code>created</code> skew,
+              signature-before-nonce ordering, per-sender nonce keys. §6.4
+              lists all 19 message types. New §6.5 normative spending-mandate
+              token format (v2). §9 key rotation is KEL rotation for E-form
+              DIDs. Appendix A lists all 28 error codes; Appendix B states SDK
+              status.</td></tr>
+      <tr><td>2026-10-07</td>
+          <td>Identity: rotatable, self-certifying <code>did:aroha:E…</code>
+              identifiers with Key Event Logs (pre-rotation, person
+              controllers, controller recovery and revocation, stale-log and
+              duplicity handling) — see the DID method specification. §4.1
+              lists the three <code>did:aroha</code> forms; the <code>z</code>
+              form is marked legacy (non-rotatable) and the named form
+              registry-trusted. §9 adds the person-root rule for delegation
+              chains.</td></tr>
+      <tr><td>2026-07-27</td>
+          <td>Private resources: §3.5 <code>aroha-sig</code> caller
+              authentication (signed material, headers, and the verifier
+              ordering rules); §5.4 registry visibility levels and access
+              grants, including the requirement to filter inside the query and
+              to make an unauthorised viewer indistinguishable from a
+              non-existent record; §5.1a grant and visibility endpoints.</td></tr>
+      <tr><td>2026-04-28</td>
+          <td>Kernel hardening: <code>auth/</code> directory removed from
+              <code>@aroha-sdk/core</code> (dead duplicate of
+              <code>@aroha-sdk/credentials</code>); <code>WalletService</code>
+              relocated to <code>@aroha-sdk/settlement/payments</code>;
+              Ed25519→X25519 key conversion corrected to use
+              <code>edwardsToMontgomeryPub/Priv</code>; full Vitest suite added
+              (100+ tests across all 10 packages).</td></tr>
+      <tr><td>2026-04-21</td>
+          <td><code>@aroha-sdk/commerce</code> extension complete (B2B, B2C,
+              C2B); <code>@aroha-sdk/credentials</code> extracted from kernel;
+              <code>IArohaRegistry</code> pluggable backend spec
+              finalized.</td></tr>
+      <tr><td>2026-04-14</td>
+          <td>Initial draft prepared in W3C CG format (not submitted).</td></tr>
+    </tbody>
+  </table>
+  <p>
+    Section numbers (§) in this table and elsewhere in this document refer to
+    the numbering of the Markdown source, <code>aroha-1.0.md</code>.
+  </p>
+</section>
+
+<!-- ═══════════════════════════════════════════════════ 1. INTRODUCTION -->
+<section id="intro">
+  <h2>Introduction</h2>
+  <p>
+    Modern AI systems are built as isolated agents — each lives inside a single
+    application, vendor, or context. There is no interoperable protocol for an
+    agent built by one organization to discover, authenticate, and transact with
+    an agent built by another. Aroha addresses this gap.
+  </p>
+  <p>
+    Aroha is designed around three principles of separation:
+  </p>
+  <ul>
+    <li>The <strong>protocol</strong> defines wire formats, cryptographic rules, and
+        transaction semantics. It says nothing about internal agent logic.</li>
+    <li>The <strong>SDK</strong> (reference implementation) implements the protocol.
+        Its use is optional — any language can implement the spec.</li>
+    <li>The <strong>application</strong> builds on the protocol. It decides what
+        agents do, what AI models they use, and how they present results.</li>
+  </ul>
+
+  <section id="design-principles">
+    <h3>Design Principles</h3>
+    <ol>
+      <li><strong>Decentralized</strong> — No central authority controls agent
+          discovery or registration.</li>
+      <li><strong>Self-sovereign identity</strong> — Every agent owns its
+          cryptographic identity. No registry or other third party can revoke
+          it; only the identity itself or, for an E-form agent, the person
+          named as its controller can rotate, recover or revoke it
+          (<a href="did-aroha-method-1.0.html#forms">DID Method → Forms</a>).</li>
+      <li><strong>Composable</strong> — Complex tasks are assembled from atomic,
+          single-purpose agents.</li>
+      <li><strong>Atomic</strong> — Multi-agent transactions either fully succeed
+          or fully roll back (saga pattern, defined in the extensions document).</li>
+      <li><strong>Open standards</strong> — Built on W3C DIDs, JSON-LD, Ed25519,
+          and EVM smart contracts.</li>
+      <li><strong>Protocol-application separation</strong> — The protocol defines
+          envelopes and handshakes. Applications decide what to do with
+          messages.</li>
+    </ol>
+  </section>
+
+  <section id="protocol-layers-overview">
+    <h3>Protocol Layers</h3>
+    <table class="simple">
+      <thead><tr><th>Layer</th><th>Name</th><th>Responsibility</th></tr></thead>
+      <tbody>
+        <tr><td>0</td><td>Transport</td><td>HTTPS + WebSocket, TLS 1.3+</td></tr>
+        <tr><td>1</td><td>Identity</td><td>W3C DIDs, Ed25519</td></tr>
+        <tr><td>2</td><td>Registry</td><td>Pluggable registry (managed HTTP, self-hosted, or optional blockchain) + IPFS manifests</td></tr>
+        <tr><td>3</td><td>Messaging</td><td>Signed JSON-LD envelopes, 19 message types</td></tr>
+      </tbody>
+    </table>
+    <p>Extensions (pluggable outside the core protocol):</p>
+    <ul>
+      <li><strong>Orchestration:</strong> saga state machine, reserve/commit/cancel
+          (extensions document §1; formerly Layer 4)</li>
+      <li><strong>Preference Context:</strong> user constraints, consent tokens
+          (extensions document §2; formerly Layer 5)</li>
+      <li><strong>Credentials:</strong> RBAC, Human Credentials, Credential Registry</li>
+      <li><strong>Settlement:</strong> Null, ApiKey, Quota, Escrow — plus
+          <code>WalletService</code> for invisible Web3</li>
+      <li><strong>Commerce:</strong> B2B Agreements, B2C Consent, C2B Feedback,
+          <code>CommerceAuditLog</code></li>
+    </ul>
+    <div class="note" title="Kernel boundary">
+      <p>
+        The core protocol kernel (<code>@aroha-sdk/core</code>) MUST NOT import
+        any extension package. <code>@aroha-sdk/core</code> exports: transport,
+        identity, crypto primitives, and signed messaging only. Settlement,
+        credentials, and commerce are injected via the <code>middleware</code> /
+        <code>settlement</code> constructor parameters — never statically
+        coupled to the kernel.
+      </p>
+    </div>
+  </section>
+</section>
+
+<!-- ═══════════════════════════════════════════════════ 2. CONFORMANCE -->
+<section id="conformance">
+  <p>
+    The key words <em class="rfc2119">MUST</em>, <em class="rfc2119">MUST NOT</em>,
+    <em class="rfc2119">REQUIRED</em>, <em class="rfc2119">SHALL</em>,
+    <em class="rfc2119">SHALL NOT</em>, <em class="rfc2119">SHOULD</em>,
+    <em class="rfc2119">SHOULD NOT</em>, <em class="rfc2119">RECOMMENDED</em>,
+    <em class="rfc2119">MAY</em>, and <em class="rfc2119">OPTIONAL</em> in this
+    document are to be interpreted as described in [[RFC2119]].
+  </p>
+
+  <p>An implementation is conformant if it:</p>
+  <ol>
+    <li>Exposes a valid DID Document at <code>/.well-known/aroha-agent.json</code></li>
+    <li>Accepts messages at <code>/aroha/v1</code> using the defined envelope format</li>
+    <li>Rejects messages that fail signature, expiry, nonce, or recipient checks</li>
+    <li>If it adopts the orchestration extension
+        (<code>sagaRole: "participant"</code>), meets that extension's
+        conformance requirements (extensions document §3)</li>
+    <li>If it adopts the preference context extension, does not store or share
+        <code>preferenceContext</code> beyond the current request (extensions
+        document §2.2)</li>
+    <li>Publishes a signed capability manifest that includes a valid
+        <code>endpoint</code> field when registering in any registry (to IPFS
+        when the registry is the optional blockchain registry, §5.2)</li>
+    <li>Executes extensions appropriately: if RBAC is configured (via
+        <code>@aroha-sdk/credentials</code>), resolves agent roles and verifies
+        <code>HumanCredential</code> before dispatching any action message;
+        returns <code>401</code> or <code>403</code> on failure.</li>
+  </ol>
+
+  <p>In more detail, this specification defines three conformance classes:</p>
+
+  <section id="conformance-provider">
+    <h3>Conformant Aroha Provider Agent</h3>
+    <p>
+      A <a>provider agent</a> is conformant if it:
+    </p>
+    <ol>
+      <li>Serves a valid <a>DID Document</a> at
+          <code>GET /.well-known/aroha-agent.json</code>.</li>
+      <li>Accepts Aroha <a>message envelopes</a> at <code>POST /aroha/v1</code>.</li>
+      <li>Rejects envelopes that fail signature, expiry, nonce, or recipient
+          validation as defined in <a href="#validation-rules"></a>.</li>
+      <li>When it adopts the orchestration or preference context extensions:
+          meets the provider requirements in the extensions document §3.</li>
+      <li>When an <a>RBAC</a> policy is configured: resolves agent roles and/or
+          verifies <a>HumanCredential</a> before dispatching any action message;
+          returns <code>401</code> for authentication failures and
+          <code>403</code> for authorization failures.</li>
+      <li>When a <a>credential registry</a> is configured: exposes the four
+          credential endpoints defined in <a href="#credential-registry-endpoints"></a>
+          and rejects any <a>credentialId</a> that has been revoked.</li>
+    </ol>
+  </section>
+
+  <section id="conformance-orchestrator">
+    <h3>Conformant Aroha Orchestrator Agent</h3>
+    <p>An <a>orchestrator agent</a> is conformant if it:</p>
+    <ol>
+      <li>Satisfies all requirements of a conformant <a>provider agent</a>.</li>
+      <li>Signs every outbound message with its Ed25519 private key as defined
+          in <a href="#signature-rule"></a>.</li>
+      <li>When it adopts the orchestration or preference context extensions:
+          meets the orchestrator requirements in the extensions document §3.</li>
+    </ol>
+  </section>
+
+  <section id="conformance-registry">
+    <h3>Conformant Aroha Registry</h3>
+    <p>A <a>registry</a> is conformant if it:</p>
+    <ol>
+      <li>Satisfies the logical <code>IArohaRegistry</code> interface defined in
+          <a href="#registry-interface"></a>, through one of the HTTP
+          (<a href="#http-registry-endpoints"></a>) or blockchain
+          (<a href="#smart-contract-interface"></a>) bindings.</li>
+      <li>For a blockchain registry: stores only the IPFS CID of the capability
+          manifest on-chain — not the manifest content itself.</li>
+      <li>Verifies manifest signatures before returning discovery results.</li>
+      <li>When it supports visibility, applies the filtering requirements of
+          <a href="#visibility-and-grants"></a>.</li>
+    </ol>
+  </section>
+</section>
+
+<!-- ═══════════════════════════════════════════════════ 3. TERMINOLOGY -->
+<section id="terminology">
+  <h2>Terminology</h2>
+  <dl>
+    <dt><dfn>agent</dfn></dt>
+    <dd>An autonomous software process that communicates using the Aroha protocol.
+        An agent has a unique <a>DID</a>, exposes a Aroha endpoint, and can act
+        as a provider, orchestrator, or both.</dd>
+
+    <dt><dfn>provider agent</dfn></dt>
+    <dd>An agent that offers capabilities to other agents. It accepts
+        <a>ArohaRequest</a> messages and responds with results.</dd>
+
+    <dt><dfn>orchestrator agent</dfn></dt>
+    <dd>An agent that coordinates tasks by discovering and invoking one or more
+        provider agents. It manages <a>saga</a> lifecycles.</dd>
+
+    <dt><dfn>DID</dfn></dt>
+    <dd>A Decentralized Identifier as defined in [[did-core]]. In Aroha, all
+        DIDs use the <code>did:aroha:</code> method, in one of three forms
+        (see <a href="#agent-did"></a>).</dd>
+
+    <dt><dfn>Key Event Log</dfn> (<dfn>KEL</dfn>)</dt>
+    <dd>The append-only, hash-chained log of signed key events (inception,
+        rotate, recover, revoke, anchor) from which the current key of an
+        E-form <code>did:aroha</code> identifier is derived. Defined in the
+        <a href="did-aroha-method-1.0.html">Aroha DID Method Specification</a>.</dd>
+
+    <dt><dfn>person</dfn></dt>
+    <dd>An E-form identity of kind <code>person</code>, with no controller. A
+        person may be named as the controller of an agent, and can then recover
+        or revoke that agent.</dd>
+
+    <dt><dfn>DID Document</dfn></dt>
+    <dd>A JSON-LD document associated with a DID that contains the agent's
+        public key and service endpoint, as defined in [[did-core]].</dd>
+
+    <dt><dfn>capability</dfn></dt>
+    <dd>A named, versioned function that a provider agent exposes. Capabilities
+        are described in the agent's <a>capability manifest</a>.</dd>
+
+    <dt><dfn>capability manifest</dfn></dt>
+    <dd>A signed JSON document describing an agent's capabilities, stored on
+        IPFS. Its content hash (CID) is indexed by the <a>registry</a>.</dd>
+
+    <dt><dfn>message envelope</dfn></dt>
+    <dd>The standard JSON-LD wrapper for all Aroha messages. Contains routing
+        metadata, a signed proof, and a typed body.</dd>
+
+    <dt><dfn>saga</dfn></dt>
+    <dd>An atomic multi-agent transaction pattern. All participating agents
+        must successfully reserve and commit for the transaction to succeed.
+        On any failure, all committed steps are compensated in LIFO order.</dd>
+
+    <dt><dfn>reservation token</dfn></dt>
+    <dd>An opaque string returned by a provider agent in <a>ArohaReserveAck</a>
+        that uniquely identifies a held resource. Used in subsequent
+        <a>ArohaCommit</a> and <a>ArohaCancel</a> messages.</dd>
+
+    <dt><dfn>correlation ID</dfn></dt>
+    <dd>A unique string that groups related messages across a single saga or
+        session. All messages in a saga share the same correlation ID.</dd>
+
+    <dt><dfn>preference context</dfn></dt>
+    <dd>An optional JSON object attached to <a>ArohaRequest</a> and
+        <a>ArohaReserve</a> messages that carries the user's preferences,
+        constraints, and budget.</dd>
+
+    <dt><dfn>consent token</dfn></dt>
+    <dd>A W3C Verifiable Credential issued by the user's personal agent that
+        grants a provider agent permission to retain preference data beyond the
+        current request.</dd>
+
+    <dt><dfn>trust level</dfn></dt>
+    <dd>A numeric classification (0–4) of an agent's verified trustworthiness,
+        based on registration, Verifiable Credentials, and reputation
+        score.</dd>
+
+    <dt><dfn>nonce</dfn></dt>
+    <dd>A random 32-byte hex string included in every message envelope.
+        Recipients MUST reject any message whose nonce has been seen before
+        within the message's validity window, preventing replay attacks.</dd>
+
+    <dt><dfn>registry</dfn></dt>
+    <dd>The Layer 2 service that records agent registrations and capability
+        indexes: an HTTP registry (the reference deployment) or, optionally, an
+        on-chain smart contract system that additionally records stakes and
+        reputation scores (see <a href="#layer-2-registry"></a>).</dd>
+
+    <dt><dfn>credential registry</dfn></dt>
+    <dd>An HTTP service (hosted by a Personal Agent or any trusted agent) that
+        stores, resolves, and revokes <a>HumanCredential</a> objects. Exposed
+        at <code>/aroha/credentials</code> on the same host as
+        <code>/aroha/v1</code>.</dd>
+
+    <dt><dfn>RBAC</dfn></dt>
+    <dd>Role-Based Access Control. The Aroha mechanism that maps principals
+        (humans via <a>HumanCredential</a>, agents via DID) to named roles,
+        and maps roles to the message-type actions they may perform.</dd>
+  </dl>
+</section>
+
+<!-- ═══════════════════════════════════════════════════ 4. LAYER 0 -->
+<section id="layer-0-transport">
+  <h2>Layer 0 — Transport</h2>
+
+  <section id="well-known-endpoint">
+    <h3>Well-Known Endpoint</h3>
+    <p>
+      Every Aroha agent MUST serve its <a>DID Document</a> at the well-known URI
+      defined in [[RFC8615]]:
+    </p>
+    <pre class="json">GET https://&lt;domain&gt;/.well-known/aroha-agent.json
+Content-Type: application/json
+→ Response: DID Document (see <a href="#layer-1-identity"></a>)</pre>
+    <p>
+      This URI MUST be registered with IANA as specified in [[RFC8615]] §3.1.
+    </p>
+  </section>
+
+  <section id="message-endpoint">
+    <h3>Message Endpoint</h3>
+    <p>All Aroha messages MUST be sent via HTTP POST [[RFC9110]]:</p>
+    <pre class="json">POST https://&lt;domain&gt;/aroha/v1
+Content-Type: application/json
+Body: ArohaEnvelope (see <a href="#layer-3-messaging"></a>)</pre>
+    <p>
+      A 200 response carries a synchronous reply envelope.
+      A 202 response indicates the request was accepted for asynchronous
+      processing; results will be streamed (see <a href="#streaming"></a>).
+    </p>
+  </section>
+
+  <section id="streaming">
+    <h3>Streaming</h3>
+    <p>
+      An async capability is one that declares <code>"async": true</code> in
+      its manifest. Async capabilities MUST use WebSocket at:
+    </p>
+    <pre class="json">wss://&lt;domain&gt;/aroha/stream?cid=&lt;correlationId&gt;</pre>
+    <p>
+      Frames are <a>ArohaStream</a> envelopes (JSON): each WebSocket frame is a
+      complete message envelope serialized as UTF-8 JSON.
+    </p>
+  </section>
+
+  <section id="transport-security">
+    <h3>Transport Security</h3>
+    <ul>
+      <li>All connections MUST use TLS 1.3 or higher.</li>
+      <li>Provider agents SHOULD use mTLS (mutual TLS).</li>
+      <li>HTTP (non-TLS) MUST NOT be used in production.</li>
+    </ul>
+    <p class="note">
+      Credential Registry endpoints, previously defined in Layer 0, are now part
+      of the <code>@aroha-sdk/credentials</code> extension. They are described in
+      <a href="#credential-registry-endpoints"></a> for agents that use that
+      extension.
+    </p>
+  </section>
+
+  <section id="caller-authentication">
+    <h3>Caller Authentication (<code>aroha-sig</code>)</h3>
+    <p>
+      A bearer token proves only that the caller holds a secret; every holder of
+      that token is indistinguishable. An agent that must restrict <em>which
+      agents</em> may invoke it therefore needs caller <strong>identity</strong>,
+      not a shared secret.
+    </p>
+    <p>
+      Agents MAY require the <code>aroha-sig</code> scheme. A signed request
+      carries the caller's DID and an Ed25519 signature that the callee verifies
+      against the public key published for that DID (§4.2,
+      <a href="#did-document-format"></a>).
+    </p>
+    <p>
+      <strong>Signed material.</strong> The caller signs the newline-joined
+      concatenation, in exactly this order:
+    </p>
+    <pre><code>METHOD \n PATH \n TIMESTAMP \n NONCE \n SHA-256(body, hex)</code></pre>
+    <p>
+      Binding the method and path prevents a captured signature being replayed
+      against a different endpoint; binding a hash of the body prevents
+      alteration of its content.
+    </p>
+    <p><strong>Headers.</strong></p>
+    <table class="simple">
+      <thead>
+        <tr><th>Header</th><th>Value</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>X-Aroha-Did</code></td><td>Caller's DID, e.g. <code>did:aroha:planner</code></td></tr>
+        <tr><td><code>X-Aroha-Timestamp</code></td><td>ISO-8601 instant</td></tr>
+        <tr><td><code>X-Aroha-Nonce</code></td><td>Unique per request</td></tr>
+        <tr><td><code>X-Aroha-Signature</code></td><td><code>base64url</code> Ed25519 signature over the signed material</td></tr>
+      </tbody>
+    </table>
+    <p><strong>Verifier requirements.</strong> A conformant verifier MUST:</p>
+    <ol>
+      <li>
+        Reject a request whose <code>X-Aroha-Timestamp</code> differs from local
+        time by more than the permitted skew (RECOMMENDED default: 5 minutes).
+      </li>
+      <li>
+        Reject a request whose <code>X-Aroha-Did</code> is absent from the
+        callee's allow-list, <strong>before</strong> resolving any key. Checking
+        membership first means an unauthorised DID cannot use response timing
+        to probe which identities are known.
+      </li>
+      <li>Resolve the caller's public key from the DID and verify the signature.</li>
+      <li>
+        Reject a replayed <code>X-Aroha-Nonce</code>. The nonce MUST be consumed
+        <strong>last</strong> — only once the request is otherwise fully valid.
+        Consuming it earlier would let an attacker burn a legitimate caller's
+        nonce with an invalid request.
+      </li>
+    </ol>
+    <p>
+      An agent requiring <code>aroha-sig</code> MUST fail closed: a request with a
+      missing, malformed, or unverifiable signature is rejected, never downgraded
+      to anonymous access.
+    </p>
+  </section>
+
+  <section id="credential-registry-endpoints">
+    <h3>Credential Registry Endpoints (Extension)</h3>
+    <p class="note">
+      This section describes the <code>@aroha-sdk/credentials</code> extension.
+      It is not part of core Layer 0; its requirements apply only to agents that
+      host a <a>credential registry</a>.
+    </p>
+    <p>
+      Agents that host a <a>credential registry</a> MUST expose the following
+      additional HTTP endpoints at the same host as <code>/aroha/v1</code>:
+    </p>
+    <table>
+      <thead>
+        <tr><th>Method</th><th>Path</th><th>Purpose</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>POST</code></td>
+          <td><code>/aroha/credentials</code></td>
+          <td>Register a <a>HumanCredential</a>. Body: <code>HumanCredential</code> JSON.
+              Server verifies the Ed25519 signature before storing.
+              Returns <code>201 { credentialId, stored: true }</code>.</td>
+        </tr>
+        <tr>
+          <td><code>GET</code></td>
+          <td><code>/aroha/credentials/:id</code></td>
+          <td>Resolve a credential by ID. Returns <code>200 HumanCredential</code>
+              or <code>404</code>. Expired credentials are auto-evicted and
+              return <code>404</code>.</td>
+        </tr>
+        <tr>
+          <td><code>GET</code></td>
+          <td><code>/aroha/credentials?userId=&lt;id&gt;</code></td>
+          <td>List all active credentials for a user.
+              Returns <code>200 HumanCredential[]</code>.</td>
+        </tr>
+        <tr>
+          <td><code>DELETE</code></td>
+          <td><code>/aroha/credentials/:id</code></td>
+          <td>Revoke a credential. Requires <code>X-Revoke-Proof</code> header:
+              a base64url Ed25519 signature by the issuer over
+              <code>{"action":"revoke","credentialId":"&lt;id&gt;"}</code>
+              (keys sorted). Returns <code>200 { credentialId, revoked: true }</code>
+              or <code>403</code> if proof is invalid.</td>
+        </tr>
+      </tbody>
+    </table>
+    <p>
+      After revocation, any message bearing that <code>credentialId</code> MUST
+      be rejected with <code>401 Aroha_UNAUTHORIZED</code> by any verifier that
+      consults the credential registry. A verifier that works offline cannot
+      observe a revocation before the credential expires.
+    </p>
+  </section>
+</section>
+
+<!-- ═══════════════════════════════════════════════════ 5. LAYER 1 -->
+<section id="layer-1-identity">
+  <h2>Layer 1 — Identity</h2>
+
+  <section id="agent-did">
+    <h3>Agent DID</h3>
+    <p>
+      Every agent MUST have a <a>DID</a>:
+    </p>
+    <pre class="json">did:aroha:&lt;unique-id&gt;</pre>
+    <p>
+      Where <code>&lt;unique-id&gt;</code> is globally unique and chosen by the
+      operator. The <code>did:aroha</code> DID method is defined in the
+      companion <a href="did-aroha-method-1.0.html">Aroha DID Method Specification</a>.
+    </p>
+    <p>
+      Three forms of <code>&lt;unique-id&gt;</code> exist, told apart by syntax
+      (<a href="did-aroha-method-1.0.html#forms">DID Method → Forms</a>):
+    </p>
+    <ul>
+      <li><strong>E-form</strong>
+          <code>did:aroha:E&lt;base58btc(sha256(inception))&gt;</code> —
+          self-certifying and rotatable; the current key is derived from the
+          identifier's <a>Key Event Log</a>. A person is an E-form identity of
+          kind <code>person</code>; an agent MAY name a person as its
+          controller, who can recover or revoke it. New identities SHOULD use
+          this form.</li>
+      <li><strong>z-form</strong>
+          <code>did:aroha:z&lt;base58btc(publicKey)&gt;</code> — legacy.
+          Self-certifying but not rotatable.</li>
+      <li><strong>Named form</strong> — human-readable and registry-trusted.</li>
+    </ul>
+  </section>
+
+  <section id="did-document-format">
+    <h3>DID Document Format</h3>
+    <p>
+      The <a>DID Document</a> MUST conform to [[did-core]].
+    </p>
+    <p><strong>Requirements:</strong></p>
+    <ul>
+      <li>MUST contain at least one <code>Ed25519VerificationKey2020</code>
+          verification method.</li>
+      <li>MUST contain a <code>ArohaEndpoint</code> service entry (pointing to
+          the agent's HTTPS endpoint).</li>
+      <li>The public key MUST be registered with the agent's Layer 2 registry
+          (§5.1) before the agent can be discovered.</li>
+    </ul>
+    <p>
+      The HTTP registry (§5.1a, <a href="#http-registry-endpoints"></a>) is
+      the normative baseline for registration and key resolution. The
+      blockchain registry (§5.1b) is OPTIONAL; where it is used, "registered"
+      means registered on-chain. For z-form and E-form DIDs the verifying key
+      comes from the DID itself (and, for E-form, its Key Event Log), so a
+      registry record can never substitute a different key for them. The
+      registry smart contracts in Appendix B are not wired into DID resolution
+      in the reference implementation.
+    </p>
+    <pre class="example json" title="Aroha DID Document">
+{
+  "@context": [
+    "https://www.w3.org/ns/did/v1",
+    "https://w3id.org/security/suites/ed25519-2020/v1"
+  ],
+  "id": "did:aroha:expedia-flights-v2",
+  "verificationMethod": [{
+    "id": "did:aroha:expedia-flights-v2#key-1",
+    "type": "Ed25519VerificationKey2020",
+    "controller": "did:aroha:expedia-flights-v2",
+    "publicKeyMultibase": "z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK"
+  }],
+  "authentication": ["did:aroha:expedia-flights-v2#key-1"],
+  "service": [{
+    "id": "did:aroha:expedia-flights-v2#aroha",
+    "type": "ArohaEndpoint",
+    "serviceEndpoint": "https://agents.expedia.com/aroha/v1"
+  }]
+}</pre>
+  </section>
+
+  <section id="verifiable-credentials">
+    <h3>Verifiable Credentials</h3>
+    <p>
+      Agents MAY carry W3C Verifiable Credentials (VCs) to prove claims
+      [[vc-data-model-2.0]]:
+    </p>
+    <table class="simple">
+      <thead>
+        <tr><th>VC Type</th><th>Purpose</th><th>Required at Trust Level</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>CorporateIdentityCredential</code></td>
+            <td>Proves corporate operator</td><td>2</td></tr>
+        <tr><td><code>ComplianceCertificationCredential</code></td>
+            <td>Proves regulatory compliance</td><td>2</td></tr>
+        <tr><td><code>CapabilityAuthorizationCredential</code></td>
+            <td>Authorizes specific capabilities</td><td>3</td></tr>
+      </tbody>
+    </table>
+    <p>VCs MUST be signed by a recognized trust anchor's Ed25519 key.</p>
+  </section>
+
+  <section id="trust-levels">
+    <h3>Trust Levels</h3>
+    <table>
+      <thead>
+        <tr><th>Level</th><th>Requirements</th><th>Permitted Operations</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>0</td><td>None</td><td>Read manifests, query registry</td></tr>
+        <tr><td>1</td><td>Registered with a Layer 2 registry (plus a stake only where an optional blockchain registry requires one, §5.1b)</td>
+            <td>Search, negotiate</td></tr>
+        <tr><td>2</td><td>VC from trust anchor</td>
+            <td>Reserve (low-value)</td></tr>
+        <tr><td>3</td><td>Reputation ≥ 8000</td>
+            <td>Reserve + commit (high-value)</td></tr>
+        <tr><td>4</td><td>Explicit user authorization</td>
+            <td>Full access + payments</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="human-credentials">
+    <h3>Human Credentials (Extension)</h3>
+    <p class="note">
+      See the <code>@aroha-sdk/credentials</code> extension for details on how
+      human users authenticate to their Personal Agent out-of-band and receive a
+      signed <code>HumanCredential</code>. This section summarises that
+      extension; its requirements apply only to agents that use it.
+    </p>
+    <p>
+      Human users are not DID-bearing agents. They authenticate to their
+      Personal Agent out-of-band (password, OAuth, passkey) and receive a
+      signed <dfn>HumanCredential</dfn>. That credential is carried in the
+      body of any Aroha message the user triggers.
+    </p>
+    <pre class="example json" title="HumanCredential">
+{
+  "credentialId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "userId": "user-alice",
+  "email": "alice@example.com",
+  "roles": ["human:user"],
+  "issuedAt":  "2026-04-16T00:00:00Z",
+  "expiresAt": "2026-04-23T00:00:00Z",
+  "issuerDID": "did:aroha:personal-agent-alice",
+  "signature": "&lt;base64url-Ed25519-sig-over-canonical-credential-body&gt;"
+}</pre>
+    <p>
+      The <code>signature</code> MUST be the Ed25519 signature by the
+      <code>issuerDID</code> agent over the canonical JSON of the credential
+      with the <code>signature</code> field omitted and all keys sorted
+      lexicographically — identical to the envelope proof canonicalization
+      rule (see <a href="#signature-rule"></a>).
+    </p>
+    <p>
+      Messages from human-triggered flows MUST carry one of:
+    </p>
+    <ul>
+      <li><dfn>credentialId</dfn> — the UUID of a credential stored in a
+          <a>credential registry</a>. The receiving agent resolves it via
+          <code>GET /aroha/credentials/:id</code>. Preferred for repeated
+          calls; allows immediate revocation.</li>
+      <li><dfn>credentialToken</dfn> — the full <a>HumanCredential</a> JSON
+          encoded as base64url. Used when no shared registry is available
+          (e.g. first call, direct peer).</li>
+    </ul>
+    <p>
+      If both are present, <a>credentialId</a> takes precedence.
+    </p>
+  </section>
+
+  <section id="rbac">
+    <h3>Role-Based Access Control (Extension)</h3>
+    <p class="note">
+      See the <code>@aroha-sdk/credentials</code> extension for details on the
+      standard role system that governs which principals may invoke which
+      message types. This section summarises that extension (<a>RBAC</a>).
+    </p>
+    <p>
+      Aroha defines a standard role system that governs which principals may
+      invoke which message types. Roles are additive: a principal with
+      multiple roles has the union of all their permissions.
+    </p>
+
+    <section id="rbac-roles">
+      <h4>Roles</h4>
+      <table>
+        <thead>
+          <tr><th>Role</th><th>Type</th><th>Permitted Actions</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>human:admin</code></td><td>Human</td>
+              <td>query, reserve, commit, cancel, delegate, negotiate, admin</td></tr>
+          <tr><td><code>human:user</code></td><td>Human</td>
+              <td>query, reserve, commit, cancel, negotiate</td></tr>
+          <tr><td><code>human:readonly</code></td><td>Human</td>
+              <td>query</td></tr>
+          <tr><td><code>agent:orchestrator</code></td><td>Agent</td>
+              <td>query, reserve, commit, cancel, delegate, negotiate</td></tr>
+          <tr><td><code>agent:provider</code></td><td>Agent</td>
+              <td><em>receives only — does not initiate</em></td></tr>
+          <tr><td><code>agent:observer</code></td><td>Agent</td>
+              <td>query</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="rbac-actions">
+      <h4>Actions Mapped to Message Types</h4>
+      <table>
+        <thead><tr><th>Action</th><th>Message Types</th></tr></thead>
+        <tbody>
+          <tr><td><code>query</code></td>
+              <td><a>ArohaRequest</a>, <a>ArohaStream</a></td></tr>
+          <tr><td><code>reserve</code></td><td><a>ArohaReserve</a></td></tr>
+          <tr><td><code>commit</code></td><td><a>ArohaCommit</a></td></tr>
+          <tr><td><code>cancel</code></td><td><a>ArohaCancel</a></td></tr>
+          <tr><td><code>delegate</code></td><td><a>ArohaDelegate</a></td></tr>
+          <tr><td><code>negotiate</code></td>
+              <td><a>ArohaNegotiate</a>, <a>ArohaCounterOffer</a>, <a>ArohaAccept</a></td></tr>
+          <tr><td><code>admin</code></td><td>All of the above</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="rbac-enforcement">
+      <h4>Enforcement</h4>
+      <ul>
+        <li>Agent roles are resolved by the receiving agent from the registry
+            or configured statically at startup.</li>
+        <li>Human roles are read from the verified <a>HumanCredential</a>
+            (inline <a>credentialToken</a> or registry lookup via
+            <a>credentialId</a>).</li>
+        <li>If a principal has no roles → <code>403 Aroha_FORBIDDEN</code>.</li>
+        <li>If a credential is missing, expired, or has an invalid signature
+            → <code>401 Aroha_UNAUTHORIZED</code>.</li>
+        <li>Response types (<a>ArohaResponse</a>, <a>ArohaReserveAck</a>,
+            <a>ArohaCommitAck</a>, <a>ArohaCancelAck</a>, <a>ArohaError</a>)
+            are <strong>not</strong> subject to RBAC.</li>
+      </ul>
+      <p>
+        Applications MAY define custom role strings beyond the built-in set.
+        The permission matrix is injected at server configuration time and
+        can be overridden per deployment.
+      </p>
+    </section>
+  </section>
+</section>
+
+<!-- ═══════════════════════════════════════════════════ 6. LAYER 2 -->
+<section id="layer-2-registry">
+  <h2>Layer 2 — Registry</h2>
+
+  <section id="registry-interface">
+    <h3>Registry Interface</h3>
+    <p>
+      Any conformant registry implementation MUST satisfy the following logical
+      interface (shown in TypeScript; equivalent interfaces exist in all SDK
+      languages):
+    </p>
+    <pre class="example" title="IArohaRegistry TypeScript Interface">
+interface IArohaRegistry {
+  register(did: string, manifestCID: string, publicKey: Uint8Array,
+           options?: RegisterOptions): Promise&lt;void&gt;;
+  deactivate(did: string): Promise&lt;void&gt;;
+  updateManifest(did: string, newCID: string): Promise&lt;void&gt;;
+  resolveByDID(did: string): Promise&lt;AgentRecord | null&gt;;
+  queryByCapability(capabilityIds: string[]): Promise&lt;AgentRecord[]&gt;;
+}</pre>
+    <p>Three conformant implementations are defined by this specification:</p>
+    <table class="simple">
+      <thead>
+        <tr><th>Implementation</th><th>Backend</th><th>Use case</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Managed HTTP Registry</strong></td>
+          <td>REST API (SaaS or self-hosted)</td>
+          <td>Enterprise default. No blockchain required. Subscription-based.</td>
+        </tr>
+        <tr>
+          <td><strong>Self-hosted HTTP Registry</strong></td>
+          <td>REST API (operator-run)</td>
+          <td>Regulated industries (healthcare, finance, government) that
+              cannot use external services.</td>
+        </tr>
+        <tr>
+          <td><strong>Blockchain Registry</strong></td>
+          <td>EVM smart contract (optional)</td>
+          <td>Trustless, permissionless deployments. Useful for open ecosystems
+              with no trusted operator.</td>
+        </tr>
+      </tbody>
+    </table>
+    <p>
+      Implementations are <strong>interchangeable</strong> at the SDK level.
+      Application code depends only on <code>IArohaRegistry</code>, not on
+      any specific backend.
+    </p>
+  </section>
+
+  <section id="http-registry-endpoints">
+    <h3>Managed and Self-Hosted HTTP Registry</h3>
+    <p>An HTTP registry MUST expose the following REST endpoints:</p>
+    <table class="simple">
+      <thead>
+        <tr><th>Method</th><th>Path</th><th>Purpose</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>POST</code></td><td><code>/v1/agents</code></td>
+            <td>Register an agent. Body: <code>{ did, manifestCID, publicKeyB64 }</code></td></tr>
+        <tr><td><code>DELETE</code></td><td><code>/v1/agents/:didHash</code></td>
+            <td>Deactivate an agent</td></tr>
+        <tr><td><code>PUT</code></td><td><code>/v1/agents/:didHash/manifest</code></td>
+            <td>Update capability manifest CID</td></tr>
+        <tr><td><code>GET</code></td><td><code>/v1/agents/:didHash</code></td>
+            <td>Resolve agent record by DID</td></tr>
+        <tr><td><code>GET</code></td><td><code>/v1/agents?capabilities=a,b</code></td>
+            <td>Query agents by capability ID list</td></tr>
+      </tbody>
+    </table>
+    <p>
+      A registry supporting visibility and access grants (§5.4,
+      <a href="#visibility-and-grants"></a>) MUST additionally expose:
+    </p>
+    <table class="simple">
+      <thead>
+        <tr><th>Method</th><th>Path</th><th>Purpose</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>PATCH</code></td><td><code>/v1/agents/:didHash/visibility</code></td>
+            <td>Set <code>public</code> | <code>unlisted</code> | <code>private</code></td></tr>
+        <tr><td><code>POST</code></td><td><code>/v1/grants</code></td>
+            <td>Grant a party access to a resource</td></tr>
+        <tr><td><code>GET</code></td><td><code>/v1/grants?resource=:didHash</code></td>
+            <td>List live grants on a resource</td></tr>
+        <tr><td><code>DELETE</code></td><td><code>/v1/grants/:id</code></td>
+            <td>Revoke a grant</td></tr>
+      </tbody>
+    </table>
+    <p>All four are restricted to the owner of the resource.</p>
+    <p>
+      Authentication is via <code>Authorization: Bearer &lt;api-key&gt;</code>
+      header. Endpoints that read records MUST accept the header as OPTIONAL,
+      since visibility filtering (§5.4.3, <a href="#filtering-requirements"></a>)
+      requires serving anonymous callers the public view rather than rejecting
+      them. Sybil resistance is enforced by the registry operator through
+      subscription tiers, org verification, or rate limiting — not by
+      cryptocurrency staking.
+    </p>
+  </section>
+
+  <section id="smart-contract-interface">
+    <h3>Blockchain Registry (Optional)</h3>
+    <p>
+      For trustless deployments, the following Solidity interface defines
+      a conformant on-chain registry. Use of a blockchain backend is
+      OPTIONAL.
+    </p>
+    <pre class="example" title="IArohaRegistry Solidity Interface (Optional Blockchain Backend)">
+interface IArohaRegistry {
+  function register(
+    bytes32 didHash,
+    string calldata manifestCID,
+    bytes calldata publicKey
+  ) external payable;  // payable = staking optional
+
+  function deactivate(bytes32 didHash) external;
+
+  function updateManifest(
+    bytes32 didHash,
+    string calldata newCID
+  ) external;
+
+  function updatePublicKey(
+    bytes32 didHash,
+    bytes calldata newPublicKey,
+    bytes calldata rotationProof
+  ) external;
+
+  function resolveByDID(bytes32 didHash)
+    external view returns (AgentRecord memory);
+
+  function queryByCapability(bytes32[] calldata capabilityHashes)
+    external view returns (AgentRecord[] memory);
+}</pre>
+    <ul>
+      <li><code>updatePublicKey</code> enables key rotation while preserving the
+          DID and on-chain reputation. The <code>rotationProof</code> is an
+          Ed25519 signature by the current private key over
+          <code>SHA-256("aroha-key-rotation:" || didHash || newPublicKey)</code>.</li>
+      <li><code>didHash</code> = <code>keccak256(didString)</code>;
+          <code>capabilityHash</code> = <code>keccak256(capabilityId)</code></li>
+      <li>Staking (<code>payable</code>) is OPTIONAL. Registry operators MAY
+          require a minimum stake for Sybil resistance; they MAY also set
+          minimum stake to zero.</li>
+    </ul>
+  </section>
+
+  <section id="capability-manifest">
+    <h3>Capability Manifest</h3>
+    <p>
+      The manifest MUST be signed by the agent. With the optional blockchain
+      registry (§5.1b), the manifest MUST be published to IPFS and its CID
+      stored on-chain. An HTTP registry (§5.1a) MAY store the signed manifest
+      directly or reference it by CID.
+    </p>
+    <pre class="example json" title="Capability Manifest Format">
+{
+  "aroha": "1.0",
+  "did": "did:aroha:&lt;id&gt;",
+  "name": "&lt;string&gt;",
+  "version": "&lt;semver&gt;",
+  "endpoint": "https://&lt;domain&gt;/aroha/v1",
+  "capabilities": [ /* CapabilityDefinition[] */ ],
+  "protocols": ["aroha/1.0"],
+  "signature": "&lt;base64url-Ed25519-signature-over-manifest-body&gt;"
+}</pre>
+    <p>
+      The <code>endpoint</code> field is the authoritative Aroha message URL
+      for this agent. Discovering agents MUST use the <code>endpoint</code>
+      value from the verified manifest as the target for all Aroha messages.
+      This field MUST be present and MUST be an HTTPS URL (or
+      <code>wss://</code> for streaming-only agents). Because the manifest is
+      Ed25519-signed by the agent operator and verified against the agent's
+      registered public key (§4.2), the endpoint value is trusted without a separate DID
+      Document resolution step.
+    </p>
+    <p><strong>Capability Definition:</strong></p>
+    <pre class="example json" title="Capability Definition">
+{
+  "id": "&lt;string&gt;",
+  "version": "&lt;semver&gt;",
+  "inputSchema": { /* JSON Schema */ },
+  "outputSchema": { /* JSON Schema */ },
+  "async": false,
+  "maxResponseMs": 5000,
+  "requiredTrustLevel": 1,
+  "pricing": { "model": "free" | "per-transaction" | "subscription" },
+  "sagaRole": "none" | "participant",
+  "reserveCapabilityId": "&lt;id&gt;",
+  "cancelCapabilityId": "&lt;id&gt;"
+}</pre>
+    <p><strong>Requirements:</strong></p>
+    <ul>
+      <li>The manifest <code>signature</code> MUST be verified against the
+          agent's registered public key (§4.2) before use.</li>
+      <li>Any manifest with an invalid signature MUST be rejected.</li>
+    </ul>
+    <pre class="example json" title="Capability Manifest (complete example)">
+{
+  "aroha": "1.0",
+  "did": "did:aroha:expedia-flights-v2",
+  "name": "Expedia Flight Search",
+  "version": "2.1.0",
+  "endpoint": "https://agents.expedia.com/aroha/v1",
+  "capabilities": [
+    {
+      "id": "search-flights",
+      "version": "1.0.0",
+      "description": "Search available flights between two airports",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "origin":      { "type": "string" },
+          "destination": { "type": "string" },
+          "date":        { "type": "string", "format": "date" }
+        },
+        "required": ["origin", "destination", "date"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "flights": { "type": "array" }
+        }
+      },
+      "async": false,
+      "maxResponseMs": 3000,
+      "requiredTrustLevel": 1,
+      "pricing": { "model": "per-transaction" },
+      "sagaRole": "participant",
+      "reserveCapabilityId": "reserve-flight",
+      "cancelCapabilityId":  "cancel-reservation"
+    }
+  ],
+  "protocols": ["aroha/1.0"],
+  "signature": "&lt;base64url-Ed25519-signature-over-manifest-body&gt;"
+}</pre>
+  </section>
+
+  <section id="reputation">
+    <h3>Reputation</h3>
+    <p>
+      Reputation scores (0–10000) are maintained by the
+      <code>ArohaReputation</code> oracle contract using an exponential moving
+      average (EMA):
+    </p>
+    <pre class="json">newScore = floor(oldScore × 0.85 + signal × 0.15)
+
+signal values:
+  SUCCESS      = 10000
+  COMPENSATED  =  3000
+  FAILURE      =  1000
+  DISPUTE_LOST =     0</pre>
+    <p>Default score for new agents: <strong>5000</strong> (neutral).</p>
+  </section>
+
+  <section id="visibility-and-grants">
+    <h3>Visibility and Access Grants</h3>
+    <p>
+      Not every agent, MCP server, or skill is meant to be public. A registry
+      MUST support restricting <strong>discovery</strong> of a record, and this
+      is distinct from restricting <strong>invocation</strong> of the agent it
+      describes.
+    </p>
+
+    <section id="visibility-levels">
+      <h4>Visibility levels</h4>
+      <p>Every agent, MCP, and skill record has a <code>visibility</code> field:</p>
+      <table class="simple">
+        <thead>
+          <tr>
+            <th>Level</th>
+            <th>Appears in capability queries</th>
+            <th>Resolvable by <code>didHash</code></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td><code>public</code></td><td>Yes</td><td>Yes</td></tr>
+          <tr><td><code>unlisted</code></td><td>No</td><td>Yes</td></tr>
+          <tr>
+            <td><code>private</code></td>
+            <td>Only for the owner and holders of a live grant</td>
+            <td>Only for the owner and holders of a live grant</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>
+        <code>public</code> is the default, so an implementation adding
+        visibility does not change the behaviour of existing records.
+      </p>
+      <p>
+        <code>unlisted</code> is <em>obscurity</em>, not access control: anyone
+        who learns the <code>didHash</code> can resolve the record. It is
+        appropriate for records that are simply not worth listing, and MUST NOT
+        be relied on to protect anything.
+      </p>
+    </section>
+
+    <section id="access-grants">
+      <h4>Access grants</h4>
+      <p>
+        An <strong>access grant</strong> records that the owner of a resource
+        has granted a named party access to it. A grant identifies its grantee
+        in one of two ways, because discovery and invocation authenticate
+        differently:
+      </p>
+      <table class="simple">
+        <thead>
+          <tr><th>Grantee form</th><th>Used at</th><th>Rationale</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Registry credential</td><td>Discovery time</td>
+              <td>Registry callers authenticate with an API key, not a DID</td></tr>
+          <tr><td>Agent DID</td><td>Invocation time</td>
+              <td>The calling agent proves its DID via <code>aroha-sig</code>
+                  (§3.5, <a href="#caller-authentication"></a>)</td></tr>
+        </tbody>
+      </table>
+      <p>
+        A grant MAY carry an expiry and MAY be limited to a subset of the
+        resource's capability identifiers; an absent capability list means the
+        whole resource. Revocation MUST be a soft delete so the audit trail
+        survives, and MUST take effect immediately for subsequent requests.
+      </p>
+      <p>
+        A registry MUST enforce that at most one live grant exists per
+        (resource, grantee) pair, while still permitting a grantee to be
+        re-granted access after revocation.
+      </p>
+    </section>
+
+    <section id="filtering-requirements">
+      <h4>Filtering requirements</h4>
+      <p>
+        A conformant registry MUST apply visibility filtering
+        <strong>inside the query that retrieves records</strong>, not by
+        post-filtering results. Post-filtering leaks existence through result
+        counts, pagination boundaries, and timing.
+      </p>
+      <p>A viewer is entitled to a record when any of the following holds:</p>
+      <ol>
+        <li>
+          the record is <code>public</code> (for capability queries), or
+          <code>public</code>/<code>unlisted</code> (for direct resolution);
+        </li>
+        <li>the viewer owns the record; or</li>
+        <li>
+          the viewer holds a grant on the record that is neither revoked nor
+          expired.
+        </li>
+      </ol>
+      <p>
+        Requests presenting no credential MUST be treated as an anonymous viewer
+        that satisfies only condition 1. An anonymous viewer MUST NOT be
+        distinguishable, in status code or timing, from an authenticated viewer
+        who simply lacks access — both MUST receive the same "not found"
+        response. Returning <code>403</code> for a private record confirms that
+        it exists.
+      </p>
+      <p>
+        Credentials presented for discovery MUST NOT be used to probe: an
+        invalid or unrecognised credential MUST degrade to the anonymous view
+        rather than producing an authentication error, so that the presence of
+        a record cannot be inferred from the difference.
+      </p>
+    </section>
+
+    <section id="discovery-vs-invocation">
+      <h4>Separation of discovery and invocation</h4>
+      <p>
+        Visibility and grants govern the <strong>registry</strong> only. Marking
+        a record <code>private</code> conceals it from discovery; it does not
+        prevent invocation by a party that already knows the endpoint.
+      </p>
+      <p>
+        An agent that must restrict who may invoke it MUST enforce that itself,
+        by requiring <code>aroha-sig</code> (§3.5,
+        <a href="#caller-authentication"></a>) and checking the caller's DID
+        against its own allow-list. Implementations MUST NOT present registry
+        visibility as an invocation control.
+      </p>
+    </section>
+  </section>
+</section>
+
+<!-- ═══════════════════════════════════════════════════ 7. LAYER 3 -->
+<section id="layer-3-messaging">
+  <h2>Layer 3 — Messaging</h2>
+
+  <section id="message-envelope">
+    <h3>Message Envelope</h3>
+    <p>All Aroha messages MUST use this envelope (JSON-LD):</p>
+    <pre class="example json" title="Aroha Message Envelope Format">
+{
+  "@context": ["https://aroha-labs.com/contexts/v1",
+               "https://w3id.org/security/suites/ed25519-2020/v1"],
+  "id": "urn:uuid:&lt;uuid-v4&gt;",
+  "type": "&lt;ArohaMessageType&gt;",
+  "from": "did:aroha:&lt;sender&gt;",
+  "to":   "did:aroha:&lt;recipient&gt;",
+  "created": "&lt;ISO8601&gt;",
+  "expires":  "&lt;ISO8601&gt;",
+  "nonce": "&lt;random-hex-32&gt;",
+  "correlationId": "&lt;string&gt;",
+  "body": { },
+  "proof": {
+    "type": "Ed25519Signature2020",
+    "created": "&lt;ISO8601&gt;",
+    "verificationMethod": "did:aroha:&lt;sender&gt;#key-1",
+    "proofPurpose": "authentication",
+    "proofValue": "&lt;base64url-Ed25519-signature&gt;"
+  }
+}</pre>
+    <p>An envelope MAY also carry an optional <code>disclosure</code> member
+       (an <code>ArohaDisclosure</code>, see the Conversation and Memory
+       Profile). Like every other member except <code>proof</code>, it is
+       covered by the signature.</p>
+    <p>For example:</p>
+    <pre class="example json" title="Aroha Message Envelope">
+{
+  "@context": [
+    "https://aroha-labs.com/contexts/v1",
+    "https://w3id.org/security/suites/ed25519-2020/v1"
+  ],
+  "id": "urn:uuid:550e8400-e29b-41d4-a716-446655440000",
+  "type": "ArohaRequest",
+  "from": "did:aroha:personal-agent-alice",
+  "to":   "did:aroha:expedia-flights-v2",
+  "created": "2026-04-14T10:00:00Z",
+  "expires":  "2026-04-14T10:05:00Z",
+  "nonce": "a3f2b1c4d5e6f7a8b9c0d1e2f3a4b5c6",
+  "correlationId": "corr-8f3a2b1c4d5e",
+  "body": {
+    "capability": "search-flights",
+    "params": { "origin": "JFK", "destination": "NRT", "date": "2026-05-01" }
+  },
+  "proof": {
+    "type": "Ed25519Signature2020",
+    "created": "2026-04-14T10:00:00Z",
+    "verificationMethod": "did:aroha:personal-agent-alice#key-1",
+    "proofPurpose": "authentication",
+    "proofValue": "z4oey8BqNfCLFMmoF..."
+  }
+}</pre>
+  </section>
+
+  <section id="signature-rule">
+    <h3>Signature Rule</h3>
+    <p>
+      <code>proof.proofValue</code> MUST be the Ed25519 signature over:
+    </p>
+    <pre class="json">canonicalJSON = JSON.stringify(messageWithoutProof, keysLexicographicallySorted)</pre>
+    <p>
+      That is, the Ed25519 [[RFC8032]] signature over the canonical form of the
+      message, computed as follows:
+    </p>
+    <ol>
+      <li>Remove the <code>proof</code> field from the message object.</li>
+      <li>Recursively sort all object keys lexicographically (Unicode code
+          point order).</li>
+      <li>Serialize to UTF-8 JSON with no whitespace.</li>
+      <li>Sign the resulting byte sequence with the sender's Ed25519 private
+          key.</li>
+      <li>Encode the 64-byte signature as base64url (no padding).</li>
+    </ol>
+  </section>
+
+  <section id="validation-rules">
+    <h3>Validation Rules</h3>
+    <p>A receiving agent MUST reject any message where:</p>
+    <ol>
+      <li>Signature verification fails against the sender's public key,
+          resolved for the <code>from</code> DID (§4.1–§4.2): derived from the
+          DID for z-form, from the Key Event Log for E-form, from the registry
+          for named DIDs.</li>
+      <li><code>expires</code> timestamp is in the past.</li>
+      <li><code>nonce</code> has been seen before (<a>nonce</a> replay attack
+          prevention).</li>
+      <li><code>to</code> does not match the receiving agent's DID.</li>
+      <li><code>created</code> or <code>expires</code> is missing or cannot be
+          parsed.</li>
+      <li><code>created</code> is more than the allowed clock skew in the
+          future (default 30 seconds).</li>
+      <li><code>expires - created</code> exceeds the maximum envelope lifetime
+          (default 5 minutes).</li>
+      <li>the proof's <code>verificationMethod</code> names a DID other than
+          <code>from</code>.</li>
+    </ol>
+    <p>
+      <strong>Ordering.</strong> A receiver MUST perform the stateless checks
+      (recipient, timestamps, lifetime, nonce present) and the signature check
+      <strong>before</strong> it consults or writes the nonce store. Only an
+      envelope whose signature verifies may record its nonce; otherwise an
+      unauthenticated client could fill the store, or consume a legitimate
+      sender's nonce in advance so that the real message is later rejected as
+      a replay.
+    </p>
+    <p>
+      <strong>Nonce scope.</strong> Nonces MUST be tracked per sender: the
+      replay key is the pair (<code>from</code>, <code>nonce</code>), so one
+      sender's nonce can never collide with another's. A recorded nonce MUST
+      be retained at least until <code>expires</code> plus any expiry clock
+      tolerance the receiver applies.
+    </p>
+    <p>
+      A receiver that raises the maximum lifetime SHOULD use a nonce store that
+      survives restarts and is shared by every instance that accepts messages
+      for the same DID, because an envelope's replay window is its whole
+      lifetime.
+    </p>
+  </section>
+
+  <section id="message-types">
+    <h3>Message Types</h3>
+    <table>
+      <thead>
+        <tr><th>Type</th><th>Sender</th><th>Required Body Fields</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><dfn>ArohaRequest</dfn></td><td>Orchestrator</td>
+            <td><code>capability</code>, <code>params</code>,
+                <code>preferenceContext?</code>,
+                <code>credentialId?</code>, <code>credentialToken?</code></td></tr>
+        <tr><td><dfn>ArohaResponse</dfn></td><td>Provider</td>
+            <td><code>capability</code>, <code>result</code></td></tr>
+        <tr><td><dfn>ArohaStream</dfn></td><td>Provider</td>
+            <td><code>capability</code>, <code>progressPct</code>,
+                <code>event</code>, <code>data?</code></td></tr>
+        <tr><td><dfn>ArohaNegotiate</dfn></td><td>Orchestrator</td>
+            <td><code>capability</code>, <code>proposedTerms</code></td></tr>
+        <tr><td><dfn>ArohaCounterOffer</dfn></td><td>Provider</td>
+            <td><code>capability</code>, <code>revisedTerms</code></td></tr>
+        <tr><td><dfn>ArohaAccept</dfn></td><td>Orchestrator</td>
+            <td><code>capability</code>, <code>acceptedTerms</code></td></tr>
+        <tr><td><dfn>ArohaReserve</dfn></td><td>Orchestrator</td>
+            <td><code>capability</code>, <code>params</code>,
+                <code>holdDurationMs</code>, <code>preferenceContext?</code>,
+                <code>credentialId?</code>, <code>credentialToken?</code></td></tr>
+        <tr><td><dfn>ArohaReserveAck</dfn></td><td>Provider</td>
+            <td><code>reservationToken</code>, <code>expiresAt</code></td></tr>
+        <tr><td><dfn>ArohaCommit</dfn></td><td>Orchestrator</td>
+            <td><code>reservationToken</code></td></tr>
+        <tr><td><dfn>ArohaCommitAck</dfn></td><td>Provider</td>
+            <td><code>reservationToken</code>, <code>result</code></td></tr>
+        <tr><td><dfn>ArohaCancel</dfn></td><td>Orchestrator</td>
+            <td><code>reservationToken</code>, <code>reason</code></td></tr>
+        <tr><td><dfn>ArohaCancelAck</dfn></td><td>Provider</td>
+            <td><code>reservationToken</code></td></tr>
+        <tr><td><dfn>ArohaDelegate</dfn></td><td>Orchestrator</td>
+            <td><code>targetDID</code>, <code>capability</code>,
+                <code>params</code>,
+                <code>credentialId?</code>, <code>credentialToken?</code></td></tr>
+        <tr><td><dfn>ArohaError</dfn></td><td>Either</td>
+            <td><code>code</code>, <code>message</code>,
+                <code>retryable</code></td></tr>
+        <tr><td><dfn>ArohaSatisfactionSignal</dfn></td>
+            <td>Orchestrator → its own preference store (never to a provider)</td>
+            <td><code>sagaId</code>, <code>agentDID</code>,
+                <code>outcome</code>, <code>dimensions</code></td></tr>
+        <tr><td><dfn>ArohaSpendingMandate</dfn></td><td>Grantor → grantee</td>
+            <td><code>mandateTier</code>, <code>constraints</code>,
+                <code>grantee</code>, <code>grantor</code>, <code>issuedAt</code>,
+                <code>expiresAt</code>, <code>parentMandateId</code>,
+                <code>mandateId</code> (wire token format:
+                <a href="#spending-mandate-token-v2"></a>)</td></tr>
+        <tr><td><dfn>ArohaTaskMandate</dfn></td><td>Grantor → grantee</td>
+            <td><code>mandateType</code>, <code>mandateTier</code>,
+                <code>allowed</code>, <code>blocked?</code>,
+                <code>taskConstraints</code>, <code>spendingConstraints?</code>,
+                <code>invariants?</code>, <code>grantee</code>,
+                <code>grantor</code>, <code>issuedAt</code>, …</td></tr>
+        <tr><td><dfn>ArohaDispute</dfn></td>
+            <td>Either transacting party → arbiter</td>
+            <td><code>sagaId</code>, <code>reservationToken</code>,
+                <code>raisedBy</code>, <code>reason</code>,
+                <code>disputedEvidence?</code></td></tr>
+        <tr><td><dfn>ArohaDisputeResolution</dfn></td>
+            <td>Arbiter → both parties</td>
+            <td><code>sagaId</code>, <code>reservationToken</code>,
+                <code>resolution</code> (<code>release</code> |
+                <code>refund</code> | <code>split</code>),
+                <code>splitAmountWei?</code>, <code>reason</code>,
+                <code>arbiterSignature</code></td></tr>
+      </tbody>
+    </table>
+    <p>
+      The first 15 types are shared by every reference SDK; the last four are
+      implemented in the TypeScript reference only (Appendix B).
+    </p>
+    <p>
+      <code>credentialId</code> and <code>credentialToken</code> are mutually
+      exclusive; <code>credentialId</code> takes precedence when both are
+      present. They are required only when the receiving agent enforces an RBAC
+      policy (see §4.6, <a href="#rbac"></a>). Agent-to-agent messages where the
+      sender's DID already carries a known role do not need to include them.
+    </p>
+  </section>
+
+  <section id="spending-mandate-token-v2">
+    <h3>Spending Mandate Token Format (v2)</h3>
+    <p>
+      A spending mandate is a signed, narrowing grant of spending authority
+      from a grantor to a grantee. Mandates form a chain: a human (or
+      organisation) issues a root <code>intent</code> mandate, and each
+      delegate may issue a narrower <code>cart</code> or <code>payment</code>
+      mandate to the next agent. This section defines the wire format that
+      every implementation MUST produce and accept; the conformance vectors are
+      in packages/aroha-credentials/test-vectors/mandate-v2.json in the
+      reference repository.
+    </p>
+    <p>
+      <strong>Mandate body.</strong> Each link's body has the fields
+      mandateTier (intent | cart | payment), constraints, grantee, grantor,
+      issuedAt, expiresAt, parentMandateId (null for a root) and mandateId.
+      issuedAt is REQUIRED.
+      A body that carries <code>mandateType</code> is a task mandate and MUST
+      be rejected as a spending mandate.
+    </p>
+    <p>
+      <strong>Signature.</strong> A v2 link signature is the Ed25519 signature,
+      by the link's grantor, over the UTF-8 bytes of the [[RFC8785]] (JCS)
+      canonicalisation of the object <code>{"mandate": &lt;body&gt;, "v": 2}</code>,
+      encoded as base64url without padding.
+    </p>
+    <p>
+      <strong>Token.</strong> A token is base64url(JSON) of
+      <code>{ "v": 2, "mandate": &lt;leaf body&gt;, "signature": &lt;leaf
+      signature&gt;, "chain": [ … ] }</code>. <code>chain</code> lists every
+      ancestor link, root first, excluding the leaf; each entry is
+      <code>{ "v": 1 | 2, "mandate": &lt;body&gt;, "signature": &lt;sig&gt; }</code>.
+      A root mandate carries an empty <code>chain</code>. A token without
+      <code>v</code> is a legacy v1 token, which never carries a chain; a token
+      with a <code>chain</code> but no <code>v: 2</code> MUST be rejected as
+      malformed.
+    </p>
+    <p>
+      <strong>Chain verification.</strong> Before acting on a token to move
+      money, a verifier MUST check every link, root first, and MUST reject the
+      token if any check fails:
+    </p>
+    <ol>
+      <li>Each link's signature verifies against the public key of that link's
+          <code>grantor</code>. The key for an ancestor link MUST be resolved
+          from the grantor's DID (derived from a z-form DID, from the Key Event
+          Log for an E-form DID, or from a trusted registry for a named DID) —
+          never taken from the token. A key the caller supplies for the leaf
+          grantor applies to the leaf link only, by position; if the leaf
+          grantor's DID is self-certifying, the supplied key MUST equal the key
+          derived from that DID.</li>
+      <li>The root has <code>parentMandateId</code> null and tier
+          <code>intent</code>; if the verifier expects a particular root, the
+          root's <code>grantor</code> equals it.</li>
+      <li>Each child's <code>grantor</code> equals its parent's
+          <code>grantee</code>, its <code>parentMandateId</code> equals its
+          parent's <code>mandateId</code>, its tier is not broader than its
+          parent's (<code>intent</code> → <code>cart</code> →
+          <code>payment</code>), and its <code>expiresAt</code> is not later
+          than its parent's.</li>
+      <li>Each child's constraints narrow its parent's:
+          <code>spendLimitUsd</code> is not greater; and every optional limit
+          the parent sets (<code>sessionLimitUsd</code>,
+          <code>requireHumanApprovalAboveUsd</code>,
+          <code>allowedMerchants</code>, <code>merchantCategory</code>,
+          <code>validFrom</code>, <code>validUntil</code>,
+          <code>currency</code>) is also set by the child, to an equal or
+          narrower value. A child that omits a limit its parent sets is a
+          widening and MUST be rejected.</li>
+      <li>Every link is within its time window (<code>issuedAt</code>,
+          <code>expiresAt</code>, <code>validFrom</code>,
+          <code>validUntil</code>) and, when a revocation source is configured,
+          not revoked.</li>
+      <li>If the verifier expects a particular grantee (normally itself), the
+          leaf's <code>grantee</code> equals it.</li>
+    </ol>
+    <p>
+      Issuers MAY fill an omitted optional limit from the parent when they
+      attenuate (so that honest callers produce valid children); verifiers MUST
+      NOT.
+    </p>
+    <p>
+      <strong>Acting-for side.</strong> A mandate body MAY carry
+      <code>actingFor</code> (<code>payer</code> | <code>payee</code>),
+      declaring which side of a payment the chain acts for. When a parent sets
+      it, a verifier MUST reject a child whose <code>actingFor</code> is absent
+      or different. The field is part of the signed body only when present.
+    </p>
+    <p>
+      A legacy v1 token proves only that its immediate grantor signed it. A
+      verifier MUST NOT treat a v1 token that is not itself a root as authority
+      traceable to a human.
+    </p>
+    <p>
+      <strong>Revocation and redemption (optional registry
+      extensions).</strong> A registry MAY expose
+      GET /v1/mandates/:id/revoked so verifiers can check every link's
+      mandateId for revocation, and MAY offer payment-mandate redemption
+      tracking so the cumulative amount redeemed against a payment mandate
+      never exceeds min(spendLimitUsd, sessionLimitUsd). Both are extensions
+      to the HTTP registry of §5.1a (<a href="#http-registry-endpoints"></a>).
+      A verifier that uses a revocation source MUST treat an unreachable source
+      as a failure. Without redemption tracking, a payment mandate is a bearer
+      authorisation that could be presented more than once. A registry that
+      records revocations or redemption totals MUST key them by the pair
+      (grantor, mandateId), where grantor is the mandate's own grantor, because
+      a mandateId is chosen by whoever mints the mandate and does not by itself
+      identify one.
+    </p>
+    <p>The reference registry implements these extensions as follows (non-normative):</p>
+    <table class="simple">
+      <thead><tr><th>Method</th><th>Path</th><th>Auth</th><th>Purpose</th></tr></thead>
+      <tbody>
+        <tr><td><code>POST</code></td><td><code>/v1/mandates/:mandateId/revoke</code></td>
+            <td>none (rate limited); signed</td>
+            <td>Body <code>{ token, revokedAt, revoker, signature }</code>.
+                <code>token</code>'s leaf is <code>:mandateId</code> and verifies;
+                <code>revoker</code> is the grantor of the leaf or of any ancestor;
+                <code>signature</code> is Ed25519 by the revoker over JCS
+                <code>{ mandateId, purpose: "aroha.mandate.revoke/v1", revokedAt }</code>.
+                Revocations are permanent and first-wins.</td></tr>
+        <tr><td><code>GET</code></td><td><code>/v1/mandates/:mandateId/revoked?grantor=&lt;DID&gt;</code></td>
+            <td>public</td><td><code>{ mandateId, grantor, revoked, revokedAt? }</code></td></tr>
+        <tr><td><code>POST</code></td><td><code>/v1/mandates/:mandateId/redeem</code></td>
+            <td>API key</td>
+            <td>Body <code>{ token, amountMicros, merchant, redemptionId? }</code>.
+                The registry verifies the chain itself, requires a payment mandate
+                and an allowed merchant, derives the limit from the verified leaf,
+                and adds atomically: <code>200 { accepted: true, … }</code> or
+                <code>409 { accepted: false, redeemedMicros, limitMicros }</code>.</td></tr>
+        <tr><td><code>GET</code></td><td><code>/v1/mandates/:mandateId/redemptions?grantor=&lt;DID&gt;</code></td>
+            <td>API key</td><td><code>{ mandateId, grantor, redeemedMicros }</code> (integer micro-USD)</td></tr>
+      </tbody>
+    </table>
+    <p>
+      The <code>@aroha-sdk/credentials</code> clients are
+      <code>revokeMandate</code>, <code>httpRevocationCheck</code> and
+      <code>httpRedemptionStore</code>.
+    </p>
+  </section>
+<section id="sec-task-mandate-token-format-v2">
+<h3>Task Mandate Token Format (v2)</h3>
+<p>A task mandate (<code>ArohaTaskMandate</code>, §6.4) grants non-monetary authority: which capabilities a grantee may invoke and under which task constraints. It narrows along a chain the same way as a spending mandate.</p>
+<p><strong>Signature.</strong> A v2 task-mandate signature is the Ed25519 signature, by the mandate's grantor, over the UTF-8 bytes of the JCS canonicalisation of <code>{"mandate": &lt;body&gt;, "purpose": "aroha.task-mandate/v2", "v": 2}</code>, encoded as base64url without padding. The purpose tag keeps a task-mandate signature from verifying as any other Aroha object.</p>
+<p><strong>Token.</strong> A token is base64url(JSON) of <code>{ "v": 2, "mandate": &lt;body&gt;, "signature": &lt;sig&gt; }</code>. A token without <code>v</code> is a legacy v1 token, signed over the key-sorted JSON of the body. A verifier MUST reject any other value of <code>v</code>.</p>
+<p><strong>Body.</strong> <code>mandateType</code> (<code>task</code> | <code>hybrid</code>), <code>mandateTier</code> (<code>intent</code> | <code>cart</code> | <code>execution</code>), <code>allowed</code> (capability ids), <code>blocked?</code>, <code>taskConstraints</code>, <code>spendingConstraints?</code> (REQUIRED when <code>mandateType</code> is <code>hybrid</code>), <code>invariants?</code>, <code>grantee</code>, <code>grantor</code>, <code>issuedAt</code>, <code>expiresAt</code>, <code>parentMandateId</code>, <code>mandateId</code>. <code>taskConstraints</code> has the optional members <code>actionLimits</code>, <code>computeLimit</code>, <code>dataAccess</code>, <code>outputHandling</code>, <code>reversibleOnly</code>, <code>humanGates</code>, <code>checkpointIntervalMs</code>, <code>requireSandbox</code>, <code>maxDelegationDepth</code>, <code>onBehalfOf</code> and <code>roomId</code>.</p>
+<p><strong>Narrowing.</strong> A verifier of a task-mandate chain MUST reject a child that is not equal to or narrower than its parent. For every constraint the parent sets, the child MUST set it too, to an equal or narrower value; a child that omits a constraint its parent sets is a widening. In particular: <code>allowed</code> is a subset of the parent's; <code>blocked</code> is a superset; each <code>actionLimits</code> and <code>computeLimit</code> value is not greater; <code>dataAccess</code> grants no right the parent lacks; <code>reversibleOnly</code> and <code>requireSandbox</code> stay true once set; <code>humanGates</code> keeps every gate on a capability the child still allows; <code>onBehalfOf</code> and <code>roomId</code>, when the parent sets them, are kept with the same value; <code>expiresAt</code> is not later than the parent's.</p>
+<p><strong>Enforcement.</strong> Before executing a capability under a task mandate, a receiver MUST check the request against the mandate: the capability is allowed and not blocked; <code>reversibleOnly</code> refuses an irreversible capability; a capability in <code>humanGates</code> runs only after a human approval; action, compute and data-access limits hold. When <code>taskConstraints.roomId</code> is set, the receiver MUST refuse a request that does not come from that room, and when <code>taskConstraints.onBehalfOf</code> is set, it MUST refuse a request made for any other member, including a request that names no room or member. The receiver takes the room and member from its own records, never from the request body.</p>
+<p>The vector <code>taskMandateV2</code> in <code>spec-public/vectors/conversation-v1.json</code> covers a guest grant with <code>onBehalfOf</code> and <code>roomId</code>.</p>
+</section>
+<section id="sec-signed-revocation-status">
+<h3>Signed Revocation Status</h3>
+<p>A registry that answers the revocation query of §6.5 SHOULD sign every answer. A signed answer carries <code>statusSignature</code>, <code>statusKeyId</code> and <code>checkedAt</code> beside <code>mandateId</code>, <code>grantor</code>, <code>revoked</code> and, when revoked, <code>revokedAt</code>.</p>
+<p><strong>Signature.</strong> <code>statusSignature</code> is the Ed25519 signature by a registry key over the UTF-8 bytes of the JCS canonicalisation of <code>{ "purpose": "aroha.revocation-status/v1", "mandateId", "grantor", "revoked", "revokedAt"?, "checkedAt" }</code>, base64url without padding; <code>revokedAt</code> is present only when <code>revoked</code> is true.</p>
+<p><strong>Keys.</strong> The registry publishes its keys at <code>/.well-known/aroha-registry-keys.json</code>. A key's <code>keyId</code> is the first 16 hex characters of the SHA-256 of its 32-byte public key. A key marked <code>retired</code> MUST NOT be accepted for revocation status.</p>
+<p><strong>Verification.</strong> A verifier configured with registry keys MUST reject an answer that is unsigned, signed by an unknown or retired key, names a different mandate or grantor, or whose <code>checkedAt</code> is older than its freshness limit (60 seconds in the reference) or in the future beyond its clock-skew allowance. Such an answer MUST be treated as a failure, never as "not revoked", even when the verifier is otherwise configured to tolerate an unreachable registry.</p>
+</section>
+<section id="sec-governed-verifier-profile">
+<h3>Governed Verifier Profile</h3>
+<p>The governed verifier profile is the set of mandate checks a production payment or action gate SHOULD apply. A verifier claiming the governed profile MUST:</p>
+<ol><li>require that the chain root is a person: a <code>did:aroha:E…</code> identity whose Key Event Log verifies, is not revoked and has <code>kind</code> <code>person</code>;</li><li>resolve every E-form grantor's key from its current Key Event Log, and fail when an identity or its controller is revoked or its log cannot be obtained;</li><li>consult a revocation source for every link and treat an unreachable source as a failure;</li><li>require a chain that verifies back to a root before honouring a spend (a bare leaf is not enough);</li><li>pin the root to an expected grantor, an expected person or a non-empty list of trusted roots, because anyone can incept a person identity.</li></ol>
+<p>A verifier that cannot meet one of these prerequisites MUST NOT report a verification as governed. In the reference implementation, <code>governedVerification()</code> in <code>@aroha-sdk/credentials</code> builds these options and refuses to build them when a prerequisite is missing.</p>
+</section>
+<section id="sec-mandate-presentation">
+<h3>Mandate Presentation</h3>
+<p>A mandate token is a bearer credential: anyone holding a copy can present it. A receiver MUST NOT act on a mandate token that arrives without a holder proof. A holder proof is an Ed25519 signature by the holder (the leaf grantee of the token) that binds the token to one receiver, one request and one use. This section defines two bindings, one for MCP tool calls and one for plain HTTP requests. Both share these rules:</p>
+<ol><li>The verifier MUST resolve the holder's public key from the holder DID (as for a grantor in §6.5), never from the presentation.</li><li>The verifier MUST reject a presentation whose holder is not the leaf grantee of the token, either directly or by verifying the token with the holder as the expected grantee.</li><li>The verifier MUST reject a presentation whose <code>expires</code> has passed, or whose <code>expires</code> lies more than 5 minutes plus a clock-skew allowance (30 seconds in the reference) in the future.</li><li>The verifier MUST remember each accepted nonce until its presentation expires and MUST reject a nonce it has already accepted from the same holder. It MUST consume the nonce last, only after every other check has passed, so that a request that fails cannot use up a legitimate holder's nonce.</li><li>A presentation proves possession only. The verifier MUST then verify the token itself (§6.5 or §6.6) with the holder as the expected grantee before acting on it.</li></ol>
+<section id="sec-mcp-binding">
+<h4>MCP Binding</h4>
+<p>An MCP <code>tools/call</code> request carries its presentation in the request <code>_meta</code> under the key <code>aroha/mandate</code>, as the object <code>{ "token", "holder", "nonce", "expires", "proof" }</code>. <code>proof</code> is the holder's Ed25519 signature, base64url without padding, over the UTF-8 bytes of the JCS canonicalisation of <code>{ "purpose": "aroha.mcp-mandate-presentation/v1", "audience", "tool", "argsSha256", "mandateId", "holder", "nonce", "expires" }</code>, where <code>audience</code> is the receiving agent's DID, <code>tool</code> the tool name, <code>argsSha256</code> the lower-case hex SHA-256 of the UTF-8 JCS canonicalisation of the call arguments (<code>{}</code> when there are none), and <code>mandateId</code> the token's leaf <code>mandateId</code>. The reference implementation is <code>presentMandate()</code> and <code>verifyPresentation()</code> in <code>@aroha-sdk/mcp-bridge</code>.</p>
+</section>
+<section id="sec-http-binding">
+<h4>HTTP Binding</h4>
+<p>A plain HTTP request carries its presentation in the <code>Aroha-Mandate</code> request header. The header value is the base64url encoding, without padding, of the UTF-8 bytes of the JCS canonicalisation of an object with exactly the members <code>token</code>, <code>holder</code>, <code>nonce</code>, <code>expires</code> and <code>proof</code>, each a non-empty string. A verifier MUST reject a value that does not decode to such an object, including one with any other member. A verifier MAY refuse a value longer than 32 768 characters.</p>
+<ul><li><code>nonce</code> is 16 to 128 characters from the base64url alphabet (<code>A–Z a–z 0–9 - _</code>). It MUST be unpredictable; 16 random bytes are RECOMMENDED.</li><li><code>expires</code> is a UTC instant in exactly the form <code>YYYY-MM-DDTHH:mm:ss.sssZ</code>; a verifier MUST reject any other form.</li><li><code>proof</code> is the holder's Ed25519 signature, base64url without padding, over the UTF-8 bytes of the JCS canonicalisation of the signed object below.</li></ul>
+<pre class="json">{ "purpose":    "aroha.http-mandate-presentation/v1",
+  "audience":   &lt;the receiving server's identifier&gt;,
+  "method":     &lt;request method, ASCII upper-case&gt;,
+  "target":     &lt;request target, see below&gt;,
+  "bodySha256": &lt;lower-case hex SHA-256 of the exact body bytes&gt;,
+  "mandateId":  &lt;the token's leaf mandateId&gt;,
+  "holder", "nonce", "expires" }</pre>
+<p><strong>Audience.</strong> The audience is the identifier the server is configured with (its DID or its origin, such as <code>https://api.example.com</code>). A verifier MUST use its own configured value, never one taken from the request.</p>
+<p><strong>Method.</strong> The method is an HTTP method token, upper-cased in ASCII only.</p>
+<p><strong>Target.</strong> The target is the path and query of the request exactly as sent on the wire (the origin-form request target): for an absolute <code>http</code> or <code>https</code> URL, everything after the authority; for an origin-form URL, the URL itself. The fragment is dropped, an empty path is <code>/</code>, and a query is kept with its leading <code>?</code>. Percent-escapes are kept exactly as sent and are never decoded or re-encoded. A client MUST refuse to sign, and a verifier MUST refuse to verify, a target that contains a character outside the RFC 3986 unreserved and reserved sets and <code>%</code>, a <code>%</code> not followed by two hex digits, a <code>.</code> or <code>..</code> path segment in any percent-encoded spelling, or user information in the authority, because an HTTP client or proxy can rewrite such a target in transit.</p>
+<p><strong>Body.</strong> The body hash covers the exact bytes of the request body as sent. An empty or absent body hashes as SHA-256 of the empty string. A client MUST sign the bytes it sends, and a verifier MUST hash the bytes it received before any parsing; a body that is parsed and re-serialised will not verify.</p>
+<p><strong>Verification.</strong> A verifier MUST compute the method, target and body hash from the request it received, never from the presentation, and MUST apply the shared rules above. A server SHOULD answer a missing or invalid presentation with status 401 and a valid presentation of a mandate that does not authorise the request with status 403.</p>
+<p><strong>Spending.</strong> A presentation authorises a request, not an amount. A server whose request spends money under the presented mandate checks the amount against the constraints of every link of the verified chain and keeps a running total for every link, keyed by the pair (grantor, mandateId) and capped at <code>min(spendLimitUsd, sessionLimitUsd)</code> as for redemption (§6.5), so that sibling mandates cannot together spend more than their common parent.</p>
+<p><strong>Enrollment (informative).</strong> A server that pins each request to the root DID of one of its customer accounts needs a binding from account to DID. One way to establish it, used by the reference implementation, is: the server issues a fresh, single-use, expiring challenge bound to the account the customer is signed in to; the customer's device signs, with the DID's key, the JCS canonicalisation of <code>{ "purpose": "aroha.enrollment/v1", "audience", "accountId", "did", "challenge" }</code> (Ed25519, base64url without padding); the server spends the challenge whatever the outcome, checks that it was issued to the signed-in account and has not expired, resolves the key from the DID as for a holder, verifies the signature, and records the binding, replacing any earlier one. This note adds no requirement. The reference implementation is <code>issueEnrollmentChallenge()</code>, <code>completeEnrollment()</code>, <code>enrolledDid()</code> and <code>signEnrollment()</code> in <code>@aroha-sdk/credentials</code> and the same names in snake case in the Python SDK's <code>aroha.enrollment</code>; the vectors are in <code>packages/aroha-credentials/test-vectors/enrollment-v1.json</code>.</p>
+<p>The reference implementation is <code>presentMandateHttp()</code>, <code>verifyHttpPresentation()</code>, <code>verifyHttpMandateRequest()</code> and <code>verifyHttpSpendRequest()</code> in <code>@aroha-sdk/credentials</code>, and <code>present_mandate_http()</code>, <code>verify_http_presentation()</code>, <code>verify_http_mandate_request()</code> and <code>verify_http_spend_request()</code> in the Python SDK's <code>aroha.http_mandate</code>. The conformance vectors are in <code>packages/aroha-credentials/test-vectors/http-presentation-v1.json</code> and <code>packages/aroha-credentials/test-vectors/http-spend-v1.json</code> in the reference repository.</p>
+</section>
+</section>
+</section>
+
+<!-- ═══════════════════════════════════════════════════ 8. ORCHESTRATION (MOVED) -->
+<section id="layer-4-orchestration">
+  <h2>Orchestration (moved)</h2>
+  <p>
+    Orchestration primitives (sagas: reserve, commit, cancel, idempotency,
+    compensation order and hold duration), formerly Layer 4, are specified in
+    §1 of the extensions document (<code>extensions.md</code>). The rules are
+    unchanged.
+  </p>
+</section>
+
+<!-- ═══════════════════════════════════════════════════ 9. PREFERENCE CONTEXT (MOVED) -->
+<section id="layer-5-preferences">
+  <h2>Preference Context (moved)</h2>
+  <p>
+    Preference context (format, provider obligations and satisfaction
+    signals), formerly Layer 5, is specified in §2 of the extensions document
+    (<code>extensions.md</code>). The rules are unchanged.
+  </p>
+</section>
+
+<!-- ═══════════════════════════════════════════════════ SECURITY REQUIREMENTS -->
+<section id="security-requirements">
+  <h2>Security Requirements</h2>
+  <table class="simple">
+    <thead><tr><th>Requirement</th><th>Specification</th></tr></thead>
+    <tbody>
+      <tr><td>Transport</td>
+          <td>TLS 1.3+ required. mTLS recommended for providers.</td></tr>
+      <tr><td>Message integrity</td>
+          <td>Ed25519 signature on every message.</td></tr>
+      <tr><td>Replay prevention</td>
+          <td>Envelope lifetime capped (default 5 minutes), <code>created</code>
+              checked against clock skew, signature verified before the nonce
+              store is touched, nonces keyed per sender and retained until
+              <code>expires</code> (<a href="#validation-rules"></a>).</td></tr>
+      <tr><td>Encryption</td>
+          <td>DIDComm v2 JWE for sensitive body fields.</td></tr>
+      <tr><td>Key storage</td>
+          <td>Private keys MUST be stored in HSM or secure enclave.</td></tr>
+      <tr><td>Key rotation</td>
+          <td>E-form DIDs rotate by appending a rotation event to their Key
+              Event Log, using the pre-committed next key
+              (<a href="did-aroha-method-1.0.html">DID Method</a>); z-form DIDs
+              cannot rotate (migrate to E-form); named DIDs rotate through
+              their registry. With the optional blockchain registry,
+              <code>updatePublicKey</code> (<a href="#smart-contract-interface"></a>)
+              also applies.</td></tr>
+      <tr><td>Sybil resistance</td>
+          <td>HTTP registries (§5.1a): operator controls (org verification,
+              subscription tiers, rate limits). Optional blockchain registry
+              (§5.1b) only: a minimum stake MAY be required.</td></tr>
+      <tr><td>Bad actor penalties</td>
+          <td>Optional blockchain registry (§5.1b) only: stake slashing via a
+              dispute contract. Otherwise, registry de-listing and reputation
+              (<a href="#reputation"></a>).</td></tr>
+      <tr><td>Access control</td>
+          <td>RBAC enforced at transport layer before application dispatch
+              (§4.6, <a href="#rbac"></a>).</td></tr>
+      <tr><td>Caller identity</td>
+          <td>Agents restricting who may invoke them MUST verify
+              <code>aroha-sig</code> (§3.5, <a href="#caller-authentication"></a>)
+              and fail closed on a missing or unverifiable signature.</td></tr>
+      <tr><td>Discovery privacy</td>
+          <td>Registries MUST filter by visibility inside the retrieval query,
+              and MUST NOT distinguish "no access" from "does not exist"
+              (§5.4.3, <a href="#filtering-requirements"></a>).</td></tr>
+      <tr><td>Human credential integrity</td>
+          <td>Ed25519 signature over canonical credential body; expiry checked
+              on every use.</td></tr>
+      <tr><td>Credential revocation</td>
+          <td>Revoked credentials (<code>DELETE /aroha/credentials/:id</code>)
+              MUST be rejected on the next use by any verifier that consults
+              the credential registry. A verifier that works offline cannot
+              observe a revocation before the credential expires.</td></tr>
+      <tr><td>Mandate revocation</td>
+          <td>Implementations MUST check a revocation source when one is
+              configured, for every mandate in a delegation chain, and MUST
+              reject a chain containing a revoked mandate. When no revocation
+              source is configured, a mandate remains valid until it expires.
+              (The reference mandate-chain verifier accepts an
+              <code>isRevoked</code> hook for this.)</td></tr>
+      <tr><td>Identity revocation (E-form)</td>
+          <td>A verifier holding a Key Event Log source MUST reject a
+              delegation chain in which any E-form grantor or grantee, or its
+              controller, is revoked, and MUST verify each E-form grantor's
+              signature against its current key
+              (<a href="did-aroha-method-1.0.html#delegation-roots">DID Method →
+              Delegation roots</a>).</td></tr>
+      <tr><td>Delegation root</td>
+          <td>A verifier MAY require the root grantor of a delegation chain to
+              be a person (an unrevoked E-form identity of kind
+              <code>person</code>).</td></tr>
+      <tr><td>Key Event Log freshness</td>
+          <td>Verifiers SHOULD retain the longest verified KEL per identifier,
+              MUST NOT accept a shorter one as current, and MUST treat two
+              different events at one sequence number as duplicity.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ═══════════════════════════════════════════════════ 10. INTEROPERABILITY -->
+<section id="interoperability">
+  <h2>Interoperability</h2>
+  <p>
+    Aroha agents SHOULD advertise protocol compatibility in their manifest:
+  </p>
+  <pre class="json">{ "protocols": ["aroha/1.0", "mcp/2024-11", "a2a/1.0"] }</pre>
+  <table>
+    <thead>
+      <tr><th>External Protocol</th><th>Integration Method</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>MCP (Model Context Protocol)</td>
+          <td>Wrap capabilities as MCP tools via bridge package</td></tr>
+      <tr><td>A2A (Agent2Agent, Linux Foundation)</td>
+          <td>Map A2A message fields to Aroha envelope fields</td></tr>
+      <tr><td>OpenAPI / REST</td>
+          <td>Convert OpenAPI spec to capability manifest via adapter</td></tr>
+      <tr><td>LangChain (Python)</td>
+          <td><code>aroha.bridges.langchain_bridge</code> — <code>ArohaCapabilityTool</code> extends <code>BaseTool</code></td></tr>
+      <tr><td>CrewAI (Python)</td>
+          <td><code>aroha.bridges.crewai_bridge</code> — <code>ArohaCrewTool</code> extends <code>CrewBaseTool</code></td></tr>
+      <tr><td>AutoGen (Python)</td>
+          <td><code>aroha.bridges.autogen_bridge</code> — <code>aroha_tools_for_autogen()</code> returns <code>FunctionTool</code> list</td></tr>
+      <tr><td>LangChainGo (Go), Spring AI / LangChain4j (Java)</td>
+          <td><em>Coming soon, with the Go and Java SDKs</em></td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ═══════════════════════════════════════════════════ 11. PRIVACY -->
+<section id="privacy-considerations" class="informative">
+  <h2>Privacy Considerations</h2>
+
+  <section id="privacy-preference-context">
+    <h3>Preference Context</h3>
+    <p>
+      The <a>preference context</a> may contain sensitive personal information:
+      financial budget, accessibility requirements, dietary constraints, and
+      other user-specific data. Implementers MUST treat this data as personal
+      data under applicable privacy regulations (e.g., GDPR, CCPA).
+    </p>
+    <p>
+      The protocol enforces minimum data exposure through two mechanisms:
+    </p>
+    <ol>
+      <li><strong>Purpose limitation</strong> — providers MUST NOT retain
+          preference data beyond the immediate request unless a
+          <a>consent token</a> explicitly authorizes extended use.</li>
+      <li><strong>Consent tokens</strong> — implemented as W3C Verifiable
+          Credentials [[vc-data-model-2.0]], enabling selective disclosure
+          and revocable consent.</li>
+    </ol>
+  </section>
+
+  <section id="privacy-registry-discovery">
+    <h3>Registry Discovery</h3>
+    <p>
+      A registry record is itself disclosure: its existence, its owning
+      organisation, and its capability list reveal what a party is building
+      before that party may wish it known. Visibility levels and access grants
+      exist to bound that disclosure.
+    </p>
+    <p>
+      The privacy property depends on <em>how</em> a registry filters, not merely
+      that it filters. An implementation that retrieves records and then removes
+      the ones the viewer may not see still leaks their existence through result
+      counts, pagination boundaries, and response timing. Filtering MUST
+      therefore happen inside the retrieval query.
+    </p>
+    <p>
+      Status codes leak in the same way. Answering <code>403 Forbidden</code> for
+      a private record confirms that the record exists — an oracle an attacker
+      can use to enumerate DIDs. A viewer without access MUST receive the same
+      response as a viewer asking about a record that does not exist.
+    </p>
+    <p>
+      Credentials presented for discovery are themselves a probing channel: if an
+      unrecognised credential produces an authentication error while a valid one
+      produces "not found", the difference discloses record existence. An invalid
+      credential MUST degrade to the anonymous view instead.
+    </p>
+    <p>
+      <code>unlisted</code> withholds a record from capability queries but leaves
+      it resolvable to anyone who learns its <code>didHash</code>. It is
+      obscurity, and implementers MUST NOT describe it to users as a privacy
+      guarantee.
+    </p>
+  </section>
+
+  <section id="privacy-did-correlation">
+    <h3>DID Correlation</h3>
+    <p>
+      Agent DIDs are persistent identifiers. The use of a stable DID across
+      multiple transactions enables correlation of agent behavior by any party
+      that observes the blockchain or HTTPS traffic. Implementers should be
+      aware that:
+    </p>
+    <ul>
+      <li>All messages carry <code>from</code> and <code>to</code> DID fields
+          in plaintext.</li>
+      <li>A blockchain registry, where one is used, creates a permanent, public
+          record of agent registration.</li>
+      <li>Orchestrators that wish to prevent behavioral fingerprinting MAY
+          rotate their DID or use pairwise DIDs per provider relationship.</li>
+    </ul>
+  </section>
+
+  <section id="privacy-satisfaction-signals">
+    <h3>Satisfaction Signals</h3>
+    <p>
+      <a>ArohaSatisfactionSignal</a> messages reveal the user's satisfaction
+      with provider agents. These messages MUST remain private to the
+      orchestrating agent and MUST NOT be transmitted to third parties without
+      explicit user consent.
+    </p>
+  </section>
+
+  <section id="privacy-encrypted-bodies">
+    <h3>Encrypted Message Bodies</h3>
+    <p>
+      For capabilities that transmit sensitive data (e.g., medical records,
+      financial details), implementers SHOULD encrypt the <code>body</code>
+      field using DIDComm v2 JWE [[DIDComm]] with the recipient's public key.
+      Encryption prevents intermediary infrastructure (TLS terminators, load
+      balancers) from observing payload content.
+    </p>
+  </section>
+</section>
+
+<!-- ═══════════════════════════════════════════════════ 12. SECURITY -->
+<section id="security-considerations">
+  <h2>Security Considerations</h2>
+
+  <section id="security-message-authentication">
+    <h3>Message Authentication</h3>
+    <p>
+      Every Aroha message carries an Ed25519 [[RFC8032]] signature over its
+      canonical form. Receivers MUST verify this signature against the sender's
+      public key, resolved for its DID as described in
+      <a href="#validation-rules"></a>, before processing the message. Unsigned messages MUST
+      be rejected.
+    </p>
+    <p>
+      The canonical form excludes the <code>proof</code> field and sorts all
+      object keys lexicographically. This prevents malleability attacks that
+      add or reorder fields without invalidating the signature.
+    </p>
+  </section>
+
+  <section id="security-replay-attacks">
+    <h3>Replay Attacks</h3>
+    <p>
+      Each message carries a random 32-byte <a>nonce</a>. Recipients MUST
+      maintain a nonce registry and reject any message whose nonce was seen
+      within the message's validity window (the period between <code>created</code>
+      and <code>expires</code>). The validity window MUST be enforced: messages
+      with an <code>expires</code> timestamp in the past MUST be rejected
+      regardless of signature validity.
+    </p>
+    <p>
+      The window is bounded (a maximum lifetime and a <code>created</code>
+      skew check), nonces are scoped per sender, and the nonce store is
+      written only after the signature verifies — see
+      <a href="#validation-rules"></a> for the normative rules. An in-memory
+      nonce store protects only the process that holds it; a deployment with
+      several instances for one DID needs a shared store.
+    </p>
+  </section>
+
+  <section id="security-impersonation">
+    <h3>Impersonation</h3>
+    <p>
+      An attacker who does not possess an agent's Ed25519 private key cannot
+      produce valid signatures for that agent's DID. The Layer 2 registry
+      binds public keys to DIDs, preventing an attacker from substituting
+      their own key; an E-form DID is self-certifying and binds its keys
+      through its <a>Key Event Log</a>. Key rotation requires authorisation by
+      the previous key holder (a transition message signed by the old key, or,
+      for an E-form DID, the pre-committed next key), preventing unilateral key
+      replacement.
+    </p>
+  </section>
+
+  <section id="security-sybil">
+    <h3>Sybil Attacks</h3>
+    <p>
+      With the optional blockchain registry, registration can require staking
+      a minimum amount of cryptocurrency. This raises the cost of creating
+      large numbers of fake agent identities, and agents that behave
+      maliciously can have their stake slashed via the dispute contract,
+      providing an economic disincentive for misbehavior. HTTP registries
+      enforce Sybil resistance through subscription tiers, org verification,
+      or rate limiting instead.
+    </p>
+  </section>
+
+  <section id="security-partial-saga">
+    <h3>Partial Saga Failure</h3>
+    <p>
+      If an orchestrator crashes after sending <a>ArohaReserve</a> but before
+      sending <a>ArohaCommit</a> or <a>ArohaCancel</a>, provider agents will
+      auto-cancel after <code>holdDurationMs</code>. Implementations SHOULD
+      persist saga state to durable storage before sending each reserve, to
+      enable recovery and explicit cancellation on restart.
+    </p>
+  </section>
+
+  <section id="security-key-storage">
+    <h3>Private Key Storage</h3>
+    <p>
+      Private keys MUST be stored in a Hardware Security Module (HSM) or
+      secure enclave in production deployments. Software-only key storage is
+      permissible for development and testing environments only.
+    </p>
+  </section>
+
+  <section id="security-caller-identity">
+    <h3>Caller Identity</h3>
+    <p>
+      A bearer token authenticates the <em>credential</em>, not the caller.
+      Every holder of a leaked token is indistinguishable from its owner, so a
+      token alone cannot answer "which agent is calling?" — the question an agent
+      restricting its callers actually needs answered. The
+      <code>aroha-sig</code> scheme answers it by having the caller sign the
+      request with the private key behind its DID.
+    </p>
+    <p>
+      Ordering within verification is itself a security property, not an
+      implementation detail:
+    </p>
+    <ul>
+      <li>
+        The caller's DID MUST be checked against the allow-list <em>before</em>
+        its key is resolved. Resolving first means an unauthorised DID takes a
+        measurably different amount of time depending on whether it is known to
+        the registry, which turns the endpoint into an identity oracle.
+      </li>
+      <li>
+        The nonce MUST be consumed <em>last</em>, after every other check has
+        passed. A verifier that burns the nonce first lets an attacker who can
+        observe or guess a nonce invalidate a legitimate caller's request by
+        replaying it with a bad signature — a denial-of-service against the
+        honest party, delivered through the replay defence itself.
+      </li>
+    </ul>
+    <p>
+      Registry visibility is not an invocation control. A record marked
+      <code>private</code> is concealed from discovery, but an endpoint URL that
+      has already been observed, logged, or shared remains reachable. Agents that
+      must restrict invocation MUST enforce it themselves and MUST fail closed.
+    </p>
+  </section>
+
+  <section id="security-rbac">
+    <h3>Access Control</h3>
+    <p>
+      When an <a>RBAC</a> policy is configured, it is enforced at the transport
+      layer before the message reaches application code. This prevents
+      privilege escalation attacks where a low-trust sender crafts a message
+      type it is not permitted to send.
+    </p>
+    <p>
+      The enforcement model distinguishes two failure modes:
+    </p>
+    <ul>
+      <li><strong>Authentication failure</strong> (401) — the identity claim
+          cannot be verified: missing credential, malformed token, expired
+          credential, unknown issuer, or revoked <a>credentialId</a>. The
+          error code is <code>Aroha_UNAUTHORIZED</code>.</li>
+      <li><strong>Authorization failure</strong> (403) — the identity is
+          verified but the principal's roles do not permit the requested
+          action. The error code is <code>Aroha_FORBIDDEN</code>.</li>
+    </ul>
+    <p>
+      Credential revocation takes effect on the next use for any verifier that
+      consults the credential registry: once a <a>credentialId</a> is deleted
+      via <code>DELETE /aroha/credentials/:id</code>, a subsequent message
+      bearing that ID is rejected by such a verifier. A verifier that works
+      offline cannot observe a revocation before the credential expires.
+    </p>
+  </section>
+
+  <section id="security-credential-integrity">
+    <h3>Human Credential Integrity</h3>
+    <p>
+      <a>HumanCredential</a> objects carry an Ed25519 signature over their
+      canonical body (identical canonicalization to the message envelope
+      proof). A receiving agent MUST verify this signature before trusting
+      the roles listed in the credential. This prevents a sender from
+      fabricating or tampering with credentials to elevate their own
+      permissions.
+    </p>
+    <p>
+      Credentials include an <code>expiresAt</code> timestamp that MUST be
+      checked on every use. Short-lived credentials (24–168 hours) are
+      RECOMMENDED to limit the window of exposure if a credential is
+      compromised before explicit revocation.
+    </p>
+  </section>
+</section>
+
+<!-- ═══════════════════════════════════════════════════ CONVERSATION PROFILE -->
+<section id="sec-conversation-and-memory-profile">
+<h2>Conversation and Memory Profile</h2>
+<p>This profile defines how a shared conversation (a room with more than one person, and possibly more than one agent) carries authority and attribution as signed data, so that an implementation can enforce who may read, write, approve and remember outside the model. It adds no message type: its objects are stored by the runtime and carried inside existing bodies (for example a <code>capability: "invite"</code> request). The JSON Schemas are in <code>spec-public/schemas/</code> and the conformance vectors in <code>spec-public/vectors/conversation-v1.json</code>.</p>
+<p>All signatures in this section are Ed25519 over the UTF-8 bytes of an RFC 8785 (JCS) canonical form, encoded as base64url without padding. Each signed object carries a <code>purpose</code> tag inside the signed bytes, so a signature made for one kind of object never verifies as another.</p>
+<p>A signature proves possession of a key that the signer's Key Event Log names. When a runtime holds a person's key and signs on their behalf, the signature does not prove that the person was present.</p>
+<section id="sec-room">
+<h3>Room</h3>
+<p>A room is a signed record held by its host:</p>
+<pre class="example json">{
+  "v": 1, "purpose": "aroha.room/v1",
+  "roomId": "&lt;string&gt;", "threadId": "&lt;string&gt;", "ownerDid": "did:aroha:E…",
+  "epoch": 2,
+  "members": [{ "did": "&lt;DID&gt;", "kind": "person | agent", "principalId?": "&lt;string&gt;",
+                "displayName": "&lt;string&gt;", "role": "host | guest | own | invited | delegated",
+                "joinedEpoch": 0, "leftEpoch?": 3, "consentRef?": "&lt;recordId&gt;" }],
+  "historyVisibility": "joined | shared", "invocation": "explicit | implicit",
+  "memoryPolicy": { "personalRead": false, "personalWrite": false,
+                    "roomMemory": "off | consented", "agentRead?": "none | members" },
+  "disclosure": { "…": "ArohaDisclosure, §12.7" },
+  "updatedAt": "&lt;ISO8601&gt;", "signature": "&lt;base64url&gt;"
+}</pre>
+<p><strong>Signature.</strong> <code>signature</code> is made by the current key of <code>ownerDid</code> over JCS of the record with <code>signature</code> removed. <code>ownerDid</code> MUST resolve, through its Key Event Log, to an identity of kind <code>person</code>; a verifier MUST reject a room signed by any other key.</p>
+<p><strong>Rules.</strong> Exactly one member has role <code>host</code>, and that member is <code>ownerDid</code> with kind <code>person</code>. Member DIDs are unique. <code>joinedEpoch</code> is not greater than <code>epoch</code>; <code>leftEpoch</code>, when present, is greater than <code>joinedEpoch</code> and not greater than <code>epoch</code>. A person with role <code>guest</code> MUST have a <code>consentRef</code>. A verifier MUST reject a record that has a field this section does not define.</p>
+<p><strong>Epochs.</strong> The host MUST increment <code>epoch</code> and re-sign the record on every membership change. A member is a member at epoch <code>e</code> when <code>joinedEpoch ≤ e &lt; leftEpoch</code> (or <code>leftEpoch</code> is absent). Turns and facts from a member are bounded by that interval.</p>
+<p><strong>Defaults.</strong> A host SHOULD create rooms with <code>historyVisibility: "joined"</code> (a late guest sees nothing before their join), <code>invocation: "explicit"</code> (the agent answers only turns whose <code>addressedTo</code> includes it) and a <code>memoryPolicy</code> with every member off.</p>
+</section>
+<section id="sec-person-identities-in-conversations">
+<h3>Person Identities in Conversations</h3>
+<p>A person DID (an E-form DID whose Key Event Log inception has <code>kind: "person"</code>) MAY sign chat turns, consent records and approvals. A person DID MUST NOT be the <code>from</code> of an <code>ArohaRequest</code> carrying a capability request it did not author; an agent that acts on a person's words sends the request under its own DID and carries the person's authority as a mandate or a signed approval.</p>
+<p><strong>Speaker kind.</strong> A verifier MUST resolve the kind of a signer (<code>person</code> or <code>agent</code>) from the signer's verified Key Event Log, and MUST NOT take it from the signed object or from the message that carries it. A DID whose kind cannot be resolved that way (a z-form or named DID, an unavailable or invalid log) MUST be treated as <code>agent</code>, because the lesser authority is the safe default. A receiver resolves a person's log from the registry's KEL endpoint or from a log the person supplied, verified as in the DID method specification.</p>
+</section>
+<section id="sec-person-invitation-and-consent-record">
+<h3>Person Invitation and Consent Record</h3>
+<p>A person invitation is a <code>capability: "invite"</code> request whose invitee is a person DID. It MUST NOT be accepted automatically: it stays pending until the invitee accepts with their own person key, and the acceptance carries a consent record shaped after ISO/IEC TS 27560:</p>
+<pre class="example json">{
+  "v": 1, "purpose": "aroha.consent/v1",
+  "recordId": "&lt;string&gt;", "subjectDid": "&lt;person DID&gt;", "roomId": "&lt;string&gt;",
+  "purposes": ["transcript_retention", "agent_use_of_messages", "memory_write", "provider_processing"],
+  "withdrawalRoute": "&lt;URL or instruction&gt;",
+  "events": [{ "event": "given | withdrawn", "purposes": ["…"], "at": "&lt;ISO8601&gt;",
+               "actorDid": "&lt;DID&gt;", "epoch": 1, "sig": "&lt;base64url&gt;" }]
+}</pre>
+<p><strong>Event signatures.</strong> Each event is signed by its own <code>actorDid</code>. The signature covers JCS of <code>{ "purpose": "aroha.consent-event/v1", "recordId", "subjectDid", "roomId", "purposes", "withdrawalRoute", "index", "prevHash", "entry" }</code>, where <code>index</code> is the event's position, <code>entry</code> is the event without <code>sig</code>, and <code>prevHash</code> is the lowercase hex SHA-256 of JCS of the previous event including its <code>sig</code> (null for the first event). Because every event is bound to its actor, its position and its predecessor, nobody who appends an event can alter, insert or remove an earlier one.</p>
+<p><strong>Rules.</strong> A verifier MUST check every event's signature against the current key of that event's <code>actorDid</code>, and every actor MUST resolve to a person. The first event MUST be <code>given</code>. A <code>given</code> event MUST be signed by <code>subjectDid</code>. Any current room member MAY record a <code>withdrawn</code> event for any purpose. When any event's actor is not the subject, the verifier MUST have the room record and MUST reject the consent record unless that actor was a room member at the event's <code>epoch</code>; a member who has left cannot withdraw on someone's behalf. Event purposes are a subset of the record's <code>purposes</code>; <code>at</code> and <code>epoch</code> do not decrease.</p>
+<p><strong>Effect.</strong> The purposes in force are those given and not later withdrawn, replayed in order. When <code>agent_use_of_messages</code> is not in force for a member, that member's turns MUST be shown to people only and MUST NOT be passed to an agent. When <code>memory_write</code> is not in force, nothing that member says may be written to room memory.</p>
+</section>
+<section id="sec-turn-signature">
+<h3>Turn Signature</h3>
+<p>A turn is one message in a room. An authored turn is:</p>
+<pre class="example json">{ "threadId": "&lt;string&gt;", "roomId": "&lt;string&gt;", "epoch": 2, "at": "&lt;ISO8601&gt;",
+  "contentHash": "&lt;sha256 hex&gt;", "addressedTo": ["&lt;DID&gt;"],
+  "authorDid": "&lt;DID&gt;", "content": "&lt;text&gt;", "authorSignature": "&lt;base64url&gt;" }</pre>
+<p><code>contentHash</code> is the lowercase hex SHA-256 of the UTF-8 bytes of <code>content</code>. <code>authorSignature</code> is made by the author's current key over JCS of <code>{ "purpose": "aroha.turn/v1", "threadId", "roomId", "epoch", "at", "contentHash", "addressedTo" }</code>.</p>
+<p>A verifier MUST reject a turn whose <code>contentHash</code> does not match its content, whose signature does not verify, or (when it holds the room record) whose author was not a member at the turn's <code>epoch</code>. The runtime sets a turn's author from the authenticated caller, never from the request body. A turn from a guest is untrusted input for gating purposes: an action it leads to requires an approval bound to the host, or to the member who holds the relevant mandate, never to the guest.</p>
+</section>
+<section id="sec-memory-record">
+<h3>Memory Record</h3>
+<p>A memory record (<code>MemoryFact</code>) has the fields <code>v</code> (1), <code>factId</code>, <code>text</code>, <code>speakerDid</code>, <code>speakerKind</code> (<code>person</code> | <code>agent</code>), <code>subjectDid</code> (<code>self</code>, <code>room</code>, or a member's DID, person or agent), <code>scope</code> (<code>private</code> or <code>room:&lt;roomId&gt;</code>), <code>audience</code> (<code>host</code> | <code>persons</code> | <code>members</code>), <code>epoch</code>, <code>origin</code> (the hash of the signed turn or envelope the fact came from), <code>derivedFrom</code> (the <code>factId</code>s it was derived from), <code>status</code> (<code>fact</code> | <code>claim</code>), <code>consentRef?</code> and <code>createdAt</code>.</p>
+<p><code>speakerKind</code> MUST be resolved as in §12.2 at write time. A fact whose speaker is an agent MUST be stored with <code>status: "claim"</code> and MAY become a <code>fact</code> only through an approval bound to the person it concerns. In a room whose <code>memoryPolicy.personalWrite</code> is false, nothing said in the room may be written to a personal scope. Recall MUST return a fact only when its <code>scope</code> is the asker's private scope or a room the asker is a member of at the current epoch. A fact derived from others MUST carry the strongest taint among its <code>derivedFrom</code> set. When a member leaves, withdraws consent or is deleted, facts with that member as <code>speakerDid</code> or <code>subjectDid</code> in room scope, and facts derived from them, MUST be deleted.</p>
+<p>This profile defines the record and these rules; it does not define storage or retrieval structure.</p>
+</section>
+<section id="sec-signed-action-receipts">
+<h3>Signed Action Receipts</h3>
+<p>An action receipt is a statement, signed by the acting agent's key, of what it did (or refused to do) and under which approval and mandate. The signature covers JCS of the receipt with <code>signature</code> removed. It proves the agent made these claims; it does not prove they are true.</p>
+<p><strong>v1</strong> (<code>"v": 1</code>, <code>"purpose": "aroha.action-receipt/v1"</code>): <code>agentDid</code>, <code>action</code>, <code>argsSha256</code> (lowercase hex SHA-256 of JCS of the action's arguments), <code>at</code>, <code>tainted</code>, <code>provenance?</code>, <code>approval?</code> (<code>approverDid</code>, <code>approvedAt</code>, <code>approvalId</code>), <code>mandateId?</code>, <code>mandateGrantor?</code>, <code>correlationId?</code>, <code>signature</code>.</p>
+<p><strong>v2</strong> (<code>"v": 2</code>, <code>"purpose": "aroha.action-receipt/v2"</code>): every v1 field, plus <code>requesterDid?</code> (who asked), <code>principalDid?</code> (whose authority it ran under), <code>executorDid?</code> (who executed or refused it), <code>presentedHash?</code>, <code>traceparent?</code> (W3C Trace Context), <code>outcome</code> (<code>executed</code> | <code>denied</code>), <code>denialReason?</code>, <code>roomId?</code>, <code>onBehalfOf?</code>; <code>approval</code> gains <code>presentedHash?</code> and <code>approverSignature?</code>.</p>
+<p>A verifier MUST accept both versions, and MUST reject a receipt that carries a field its version does not define, a <code>denied</code> receipt without a <code>denialReason</code>, or an <code>executed</code> receipt with one. An implementation SHOULD issue a receipt for a refused action as well as for an executed one.</p>
+<p><strong>Presented hash.</strong> <code>presentedHash</code> is the lowercase hex SHA-256 of JCS of exactly what was shown to the approver. A <code>UserApproval</code> that carries <code>presentedHash</code> MUST have its <code>userSignature</code> made over JCS of <code>{ "invariants", "presentedHash", "purpose": "aroha.user-approval/v2" }</code>; one without it is a legacy approval signed over the key-sorted invariants. A party holding the presented content checks a verified receipt by recomputing the hash; a verifier MUST treat a mismatch with any <code>presentedHash</code> in the receipt as a failure.</p>
+</section>
+<section id="sec-arohadisclosure">
+<h3>ArohaDisclosure</h3>
+<p>An <code>ArohaDisclosure</code> states that a message comes from an AI agent and names the principal it acts for:</p>
+<pre class="example json">{ "v": 1, "agentDid": "&lt;DID&gt;", "principalDid": "&lt;DID&gt;",
+  "principalKind": "person | organization", "purpose": "&lt;text, at most 512 characters&gt;",
+  "hop": 0, "aiGenerated": true }</pre>
+<p><code>hop</code> is 0 for the agent its principal addressed directly and increases by one per delegation. An envelope MAY carry a disclosure in its optional <code>disclosure</code> field; it is then covered by the envelope signature (§6.2). A receiver MUST reject an envelope whose disclosure is malformed or whose <code>agentDid</code> differs from <code>from</code>. A room carries its agent's disclosure (§12.1), and an implementation SHOULD show it to every member on joining. A disclosure is a statement by the agent; that the principal authorised the agent is shown by a mandate chain rooted in that principal, not by the disclosure.</p>
+</section>
+</section>
+
+<!-- ═══════════════════════════════════════════════════ 13. ACCESSIBILITY -->
+<section id="accessibility-considerations" class="informative">
+  <h2>Accessibility Considerations</h2>
+  <p>
+    Aroha is a machine-to-machine protocol with no direct user interface surface.
+    The protocol itself does not create accessibility barriers. However,
+    implementers of agent applications built on Aroha SHOULD ensure that:
+  </p>
+  <ul>
+    <li>User-facing interfaces that trigger Aroha tasks (web apps, voice
+        assistants, chat interfaces) conform to WCAG 2.1 Level AA.</li>
+    <li>The <a>preference context</a> mechanism can faithfully represent
+        accessibility requirements (e.g., <code>wheelchairAccess</code>,
+        screen reader compatibility) so providers can accommodate them.</li>
+    <li>Error messages returned in <a>ArohaError</a> bodies use plain language
+        suitable for display to end users.</li>
+  </ul>
+</section>
+
+<!-- ═══════════════════════════════════════════════════ 14. I18N -->
+<section id="i18n-considerations" class="informative">
+  <h2>Internationalization Considerations</h2>
+  <ul>
+    <li>All string fields in Aroha messages (capability IDs, error messages,
+        agent names) MUST be encoded in UTF-8.</li>
+    <li>Capability IDs MUST use lowercase ASCII letters, digits, and hyphens
+        only, to ensure consistent hashing across implementations.</li>
+    <li>Human-readable fields (agent <code>name</code>, capability
+        <code>description</code>) MAY contain any Unicode characters.</li>
+    <li>Timestamps MUST use ISO 8601 UTC format (e.g.,
+        <code>2026-04-14T10:00:00Z</code>).</li>
+    <li>Currency values in <a>preference context</a> MUST use ISO 4217
+        currency codes (e.g., <code>"USD"</code>, <code>"EUR"</code>).</li>
+  </ul>
+</section>
+
+<!-- ═══════════════════════════════════════════════════ 15. IANA -->
+<section id="iana-considerations">
+  <h2>IANA Considerations</h2>
+  <p>
+    This specification requests registration of the following well-known URI
+    suffix in the IANA Well-Known URI Registry [[RFC8615]]:
+  </p>
+  <dl>
+    <dt>URI Suffix</dt>       <dd><code>aroha-agent.json</code></dd>
+    <dt>Change Controller</dt><dd>Aroha Labs</dd>
+    <dt>Specification Document</dt>
+      <dd>This document, <a href="#well-known-endpoint">§ Well-Known Endpoint</a></dd>
+    <dt>Related Information</dt>
+      <dd>The response is a JSON-LD DID Document conforming to [[did-core]]
+          with a <code>ArohaEndpoint</code> service entry.</dd>
+  </dl>
+</section>
+
+<!-- ═══════════════════════════════════════════════════ APPENDIX A -->
+<section id="error-codes" class="appendix">
+  <h2>Appendix A — Error Codes</h2>
+  <table>
+    <thead><tr><th>Code</th><th>HTTP</th><th>Meaning</th></tr></thead>
+    <tbody>
+      <tr><td><code>Aroha_INVALID_SIGNATURE</code></td><td>401</td>
+          <td>Ed25519 signature verification failed</td></tr>
+      <tr><td><code>Aroha_EXPIRED_MESSAGE</code></td><td>401</td>
+          <td>Message <code>expires</code> is in the past</td></tr>
+      <tr><td><code>Aroha_REPLAY_DETECTED</code></td><td>401</td>
+          <td>Nonce has been seen before</td></tr>
+      <tr><td><code>Aroha_UNAUTHORIZED</code></td><td>401</td>
+          <td>Credential missing, malformed, expired, or from unknown issuer</td></tr>
+      <tr><td><code>Aroha_FORBIDDEN</code></td><td>403</td>
+          <td>Principal is authenticated but lacks the required action permission</td></tr>
+      <tr><td><code>Aroha_UNKNOWN_CAPABILITY</code></td><td>400</td>
+          <td>Capability ID not recognized</td></tr>
+      <tr><td><code>Aroha_TRUST_LEVEL_INSUFFICIENT</code></td><td>403</td>
+          <td>Sender's trust level too low for this operation</td></tr>
+      <tr><td><code>Aroha_RESERVATION_FAILED</code></td><td>409</td>
+          <td>Could not reserve the resource</td></tr>
+      <tr><td><code>Aroha_RESERVATION_EXPIRED</code></td><td>410</td>
+          <td>Reservation hold window has passed</td></tr>
+      <tr><td><code>Aroha_COMMIT_FAILED</code></td><td>409</td>
+          <td>Could not commit the reservation</td></tr>
+      <tr><td><code>Aroha_CANCEL_FAILED</code></td><td>409</td>
+          <td>Could not cancel (operation non-reversible)</td></tr>
+      <tr><td><code>Aroha_INVALID_TOKEN</code></td><td>404</td>
+          <td>Unknown reservation token</td></tr>
+      <tr><td><code>Aroha_NO_INVENTORY</code></td><td>409</td>
+          <td>Resource not available</td></tr>
+      <tr><td><code>Aroha_CAPACITY_EXCEEDED</code></td><td>503</td>
+          <td>Agent capacity limit reached; retry later</td></tr>
+      <tr><td><code>Aroha_SERVICE_UNAVAILABLE</code></td><td>503</td>
+          <td>Agent temporarily unavailable</td></tr>
+      <tr><td><code>Aroha_INTERNAL_ERROR</code></td><td>500</td>
+          <td>Unspecified internal error</td></tr>
+      <tr><td><code>Aroha_INVALID_PARAMS</code></td><td>400</td>
+          <td>Request parameters failed schema validation</td></tr>
+      <tr><td><code>CSN_NO_STRUCTURAL_MATCH</code></td><td>404</td>
+          <td>No capability matched the request's structure (CSN extension;
+              note: no <code>Aroha_</code> prefix)</td></tr>
+      <tr><td><code>Aroha_ACTION_LIMIT_EXCEEDED</code></td><td>403</td>
+          <td>Invocation count exceeds the task mandate's <code>actionLimits</code></td></tr>
+      <tr><td><code>Aroha_COMPUTE_LIMIT_EXCEEDED</code></td><td>403</td>
+          <td>Compute budget (tokens, requests, time) exhausted</td></tr>
+      <tr><td><code>Aroha_REVERSIBILITY_VIOLATION</code></td><td>403</td>
+          <td>Capability is irreversible but the mandate requires reversible actions only</td></tr>
+      <tr><td><code>Aroha_HUMAN_GATE_REQUIRED</code></td><td>403</td>
+          <td>Capability requires human approval before execution</td></tr>
+      <tr><td><code>Aroha_DATA_ACCESS_VIOLATION</code></td><td>403</td>
+          <td>Access to a data resource beyond the mandate's scope</td></tr>
+      <tr><td><code>Aroha_SANDBOX_REQUIRED</code></td><td>403</td>
+          <td>Code execution attempted outside a declared sandbox</td></tr>
+      <tr><td><code>Aroha_DELEGATION_DEPTH_EXCEEDED</code></td><td>403</td>
+          <td>Delegation chain deeper than allowed</td></tr>
+      <tr><td><code>Aroha_CAPABILITY_NOT_PERMITTED</code></td><td>403</td>
+          <td>Capability not in the mandate's allowed list</td></tr>
+      <tr><td><code>Aroha_SETTLEMENT_RAIL_MISMATCH</code></td><td>409</td>
+          <td>Requester's and provider's settlement rails have nothing in common</td></tr>
+      <tr><td><code>Aroha_COMMIT_DISPUTED</code></td><td>409</td>
+          <td>Commit result disputed in the challenge window, or resolved against the provider</td></tr>
+    </tbody>
+  </table>
+  <p>
+    The <code>code</code> string in the <code>ArohaError</code> body is
+    normative; the HTTP status is a recommendation for HTTP transports. The
+    first 17 codes are shared by every reference SDK; the remaining 11 are
+    implemented in the TypeScript reference only, and a receiver MUST treat an
+    unknown code as a generic, non-retryable error unless retryable says
+    otherwise.
+  </p>
+</section>
+
+<!-- ═══════════════════════════════════════════════════ APPENDIX B -->
+<section id="reference-implementation" class="appendix informative">
+  <h2>Appendix B — Reference Implementations</h2>
+  <p>
+    Reference SDKs implement the protocol in four languages. Their use is
+    optional — any software that correctly implements the rules in this
+    document is a conformant Aroha implementation.
+  </p>
+
+  <section id="ref-typescript">
+    <h3>TypeScript SDK (<code>@aroha-sdk/*</code>)</h3>
+    <p>Organized to mirror the protocol layers exactly:</p>
+    <pre>
+@aroha-sdk/core          → Layers 0–3 (transport, identity, crypto, messaging)
+  @aroha-sdk/core/identity  — DID generation (z-form, E-form, named), Key Event
+                              Logs (inception, rotation, recovery, revocation),
+                              z→E migration linkage, W3C VP issuance
+  @aroha-sdk/core/crypto    — Ed25519 sign/verify, RFC 8785 JCS, DIDComm v2 JWE
+  @aroha-sdk/core/messages  — Envelope build/validate (§6.3 rules), nonce
+                              registry, the 19 message types, error codes
+  @aroha-sdk/core/transport — HTTPS + WebSocket server and client
+  (the package root re-exports all of these; the subpaths let runtimes without
+   Node APIs, such as edge workers, import identity/crypto/messages alone)
+
+@aroha-sdk/credentials   → Spending mandates (v2 tokens, §6.5: issue, attenuate,
+                           verifyMandateChain, redemption), task mandates, RBAC,
+                           Human Credentials, auth middleware
+@aroha-sdk/delegation    → Multi-hop delegated serving: attenuated task-mandate
+                           chains verified against trust anchors at every hop
+@aroha-sdk/settlement    → Extension: ApiKey, Quota, Escrow Settlement
+@aroha-sdk/commerce      → Extension: B2B, B2C, C2B Commerce Agreements
+@aroha-sdk/registry      → Layer 2 (HTTP client, discovery; subpaths
+                           /contract, /ipfs, /discover, /server, /sar,
+                           /personal-name)
+@aroha-sdk/orchestrator  → Extension: orchestration (saga engine, agent selector, negotiator)
+@aroha-sdk/preferences   → Extension: preference context (profile, filter, scorer, satisfaction)
+@aroha-sdk/mcp-bridge    → MCP interoperability adapter
+@aroha-sdk/a2a-bridge    → A2A interoperability adapter</pre>
+    <p>
+      The v2 mandate token format (<a href="#spending-mandate-token-v2"></a>),
+      the envelope validation rules of <a href="#validation-rules"></a> and
+      E-form DID / Key Event Log verification are implemented in TypeScript,
+      Python, Go and Java, each tested against the shared vectors in
+      <code>packages/aroha-credentials/test-vectors/mandate-v2.json</code>.
+    </p>
+  </section>
+
+  <section id="ref-python">
+    <h3>Python SDK (<code>aroha</code> on PyPI)</h3>
+    <pre>
+aroha.identity       → DID generation, Ed25519 keys, multibase encoding
+aroha.crypto         → Sign/verify/canonicalize, AES-256-GCM encryption
+aroha.messages       → Envelope build/validate, nonce registry
+aroha.transport      → FastAPI server, httpx client
+aroha.orchestrator   → SagaEngine, AgentSelector
+aroha.bridges.langchain_bridge  → ArohaCapabilityTool (LangChain BaseTool)
+aroha.bridges.crewai_bridge     → ArohaCrewTool (CrewAI BaseTool)
+aroha.bridges.autogen_bridge    → aroha_tools_for_autogen() (AutoGen FunctionTool)</pre>
+    <p>
+      Install extras: <code>pip install aroha[langchain]</code>,
+      <code>[crewai]</code>, <code>[autogen]</code>
+    </p>
+  </section>
+
+  <section id="ref-go-java">
+    <h3>Go and Java SDKs — partial</h3>
+    <p>
+      Partial Go and Java implementations exist in the reference repository
+      (<code>sdks/go</code>, <code>sdks/java</code>). They cover the envelope,
+      signature validation, v2 mandate chains, E-form DID verification and sagas,
+      but not the full protocol surface. Neither is published as a stable artifact yet.
+    </p>
+    <p>
+      <strong>Status of the non-TypeScript SDKs:</strong> Python, Go and Java
+      implement v2 mandate tokens (issue, attenuate, chain verification), the
+      envelope rules and E-form DID / Key Event Log verification. Their
+      <code>did:aroha-web</code> support still follows the earlier schema, and
+      they do not implement the four TypeScript-only message types or the 11
+      TypeScript-only error codes; see each SDK's README.
+    </p>
+    <p>
+      Nothing in this specification depends on either. The normative
+      requirements are language agnostic, so an implementer in any language can
+      conform today by following the protocol directly — the conformance
+      matrix, not any particular codebase, is the definition of correctness.
+    </p>
+  </section>
+
+  <section id="ref-smart-contracts">
+    <h3>Smart Contracts (Solidity 0.8+, Polygon PoS)</h3>
+    <pre>
+contracts/ArohaRegistry.sol    → Agent registration, capability indexing, staking, key rotation
+contracts/ArohaEscrow.sol      → Payment escrow for saga transactions
+contracts/ArohaReputation.sol  → Outcome recording, reputation oracle (EMA scoring)</pre>
+    <p class="note">
+      These contracts are not wired into DID resolution in the reference
+      implementation; see the implementation note in
+      <a href="#did-document-format"></a>.
+    </p>
+  </section>
+</section>
+
+<!-- ═══════════════════════════════════════════════════ APPENDIX C -->
+<section id="post-quantum-migration" class="appendix informative">
+  <h2>Appendix C — Post-Quantum Cryptography Migration</h2>
+  <p class="note">
+    <strong>This appendix is non-normative and describes future work.</strong>
+    No reference implementation supports post-quantum keys today. RFC 2119
+    keywords in this appendix describe intended future requirements, not
+    requirements of Aroha 1.0 conformance.
+  </p>
+  <p>
+    This appendix defines how implementations transition from Ed25519 to
+    post-quantum (PQ) signature schemes without a protocol flag-day or
+    breaking change.
+  </p>
+
+  <section id="pqc-motivation">
+    <h3>Motivation</h3>
+    <p>
+      Ed25519 (128-bit classical security) is vulnerable to Shor's algorithm
+      on a sufficiently powerful quantum computer. NIST has standardized three
+      post-quantum signature schemes:
+    </p>
+    <table class="simple">
+      <thead>
+        <tr><th>Algorithm</th><th>Standard</th><th>Public key</th>
+            <th>Signature</th><th>Notes</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>ML-DSA-44 (Dilithium2)</td><td>FIPS 204</td>
+            <td>1,312 bytes</td><td>2,420 bytes</td>
+            <td>Recommended for most Aroha deployments</td></tr>
+        <tr><td>SLH-DSA-128s (SPHINCS+)</td><td>FIPS 205</td>
+            <td>32 bytes</td><td>7,856 bytes</td>
+            <td>Conservative / hash-based; largest signatures</td></tr>
+        <tr><td>FN-DSA-512 (Falcon-512)</td><td>FIPS 206</td>
+            <td>897 bytes</td><td>~666 bytes</td>
+            <td>Compact signatures; complex implementation</td></tr>
+      </tbody>
+    </table>
+    <p>All three are supported as primary or additional keys in <code>did:aroha</code> DID Documents.</p>
+  </section>
+
+  <section id="pqc-isolation">
+    <h3>Cryptographic Isolation</h3>
+    <p>
+      The entire signing surface in the Aroha TypeScript SDK is isolated to
+      two files:
+    </p>
+    <ul>
+      <li><code>packages/aroha-core/src/crypto/signing.ts</code> — exports
+          <code>sign(message, privateKey)</code>,
+          <code>verify(message, sig, publicKey)</code>,
+          <code>canonicalize(obj)</code>. Replace the
+          <code>@noble/ed25519</code> import here.</li>
+      <li><code>packages/aroha-core/src/identity/did.ts</code> — generates
+          keypairs; update to produce PQ keys and the correct multibase
+          prefix.</li>
+    </ul>
+    <p>
+      All callers — <code>buildEnvelope</code>, <code>validateEnvelope</code>,
+      or <code>issueHumanCredential</code>/<code>verifyHumanCredential</code>
+      (if using <code>@aroha-sdk/credentials</code>) — are unaffected.
+    </p>
+  </section>
+
+  <section id="pqc-did-document">
+    <h3>DID Document Changes</h3>
+    <p>
+      Add a second <code>verificationMethod</code> entry for the PQ key. The
+      existing Ed25519 entry remains valid during the hybrid period:
+    </p>
+    <pre class="example json" title="Hybrid DID Document (Ed25519 + ML-DSA-44)">
+{
+  "verificationMethod": [
+    {
+      "id": "did:aroha:example#key-1",
+      "type": "Ed25519VerificationKey2020",
+      "publicKeyMultibase": "z6Mk..."
+    },
+    {
+      "id": "did:aroha:example#key-pq",
+      "type": "Mldsa44VerificationKey2025",
+      "publicKeyMultibase": "u&lt;base64url-1312-bytes&gt;"
+    }
+  ],
+  "authentication": [
+    "did:aroha:example#key-1",
+    "did:aroha:example#key-pq"
+  ]
+}</pre>
+
+    <p>Supported <code>type</code> strings:</p>
+    <table class="simple">
+      <thead>
+        <tr><th>Algorithm</th><th><code>verificationMethod.type</code></th>
+            <th>Multibase prefix</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>ML-DSA-44</td><td><code>Mldsa44VerificationKey2025</code></td>
+            <td><code>u</code> (base64url)</td></tr>
+        <tr><td>SLH-DSA-128s</td><td><code>SlhDsa128sVerificationKey2025</code></td>
+            <td><code>u</code> (base64url)</td></tr>
+        <tr><td>FN-DSA-512</td><td><code>FnDsa512VerificationKey2025</code></td>
+            <td><code>u</code> (base64url)</td></tr>
+      </tbody>
+    </table>
+
+    <p>
+      The <code>proof.verificationMethod</code> field in each message
+      envelope specifies which key was used. Receivers MUST support any
+      key type listed in the sender's DID Document.
+    </p>
+  </section>
+
+  <section id="pqc-migration-procedure">
+    <h3>Migration Procedure (No Flag Day)</h3>
+    <p>
+      The hybrid period allows Aroha agents to accept both Ed25519 and PQ
+      signatures simultaneously. Four steps, zero downtime:
+    </p>
+    <ol>
+      <li>
+        <strong>Add PQ key (non-breaking).</strong> Generate a PQ key pair.
+        Add it to the DID Document alongside the existing Ed25519 key. Push the
+        updated well-known document. Begin
+        signing new outbound messages with the PQ key; reference the PQ key
+        in <code>proof.verificationMethod</code>.
+      </li>
+      <li>
+        <strong>Hybrid acceptance (grace period — 90 days recommended).</strong>
+        All agents MUST accept messages signed with either key during this
+        period. Backward compatibility is automatic: the
+        <code>proof.verificationMethod</code> field tells the receiver exactly
+        which key to use.
+      </li>
+      <li>
+        <strong>Drop Ed25519 key.</strong> Remove the Ed25519 entry from the
+        DID Document. Rotate on-chain via <code>updatePublicKey()</code>,
+        replacing the 32-byte Ed25519 public key with the PQ public key.
+        Sign the rotation proof with the Ed25519 private key one final
+        time.
+      </li>
+      <li>
+        <strong>PQ-only (target state).</strong> All agents sign and verify
+        with PQ keys only.
+      </li>
+    </ol>
+  </section>
+
+  <section id="pqc-on-chain">
+    <h3>On-Chain Registry Compatibility</h3>
+    <p>
+      The <code>ArohaRegistry</code> contract stores
+      <code>bytes calldata publicKey</code> without type annotation.
+      For PQ keys, pass the full serialized public key bytes (e.g.,
+      1,312 bytes for ML-DSA-44). The contract requires no modification.
+    </p>
+    <p>
+      Key rotation follows the same <code>updatePublicKey</code> flow — sign
+      the rotation message with the current key (whether Ed25519 or PQ) and
+      provide the new PQ public key.
+    </p>
+  </section>
+
+  <section id="pqc-conformance">
+    <h3>Conformance Timeline</h3>
+    <p>
+      Implementations SHOULD add PQ key support before quantum computers
+      capable of breaking 128-bit elliptic curve keys become publicly
+      available. Aroha Working Group estimates this as a 10–15 year horizon
+      from the date of this specification.
+    </p>
+    <p>
+      A Aroha agent that supports only Ed25519 remains conformant with
+      Aroha 1.0. Support for at least one NIST-standardized PQ scheme will be
+      REQUIRED in Aroha 2.0. The Aroha Working
+      Group will publish a migration deadline notice at least 24 months
+      before Aroha 2.0 becomes the required version.
+    </p>
+  </section>
+</section>
+
+<!-- ═══════════════════════════════════════════════════ REFERENCES -->
+<section id="references">
+  <h2>References</h2>
+  <!-- ReSpec auto-generates normative and informative reference sections -->
+</section>
+
+</body>
+</html>
+

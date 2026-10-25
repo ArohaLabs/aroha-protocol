@@ -1,0 +1,195 @@
+# Copyright (c) 2026 Aroha Labs
+# SPDX-License-Identifier: Apache-2.0
+
+name: Release Quality Gate
+
+# Checks ONLY the product the release tag names (scheme in CONTRIBUTING.md
+# "Releasing"). Packages in this monorepo version independently, so requiring
+# every package.json to equal one tag could never pass.
+#
+#   @aroha-sdk/<name>@<version>   that workspace's package.json version
+#   create-aroha-agent@<version>  same, for the unscoped scaffolder
+#   python-v<version>             sdks/aroha-py/pyproject.toml version
+#   java-v<version>               sdks/java/pom.xml project version
+#   sdks/go/v<version>            Go module tag (no version file to compare)
+#   npm-v<anything>               batch npm release; no single version to compare
+#
+# CHANGELOG.md must list the exact tag string under a DATED release heading
+# ("## [x.y.z] — YYYY-MM-DD"), not under "## [Unreleased]"
+# (.github/scripts/check-changelog-tag.mjs).
+#
+# How publishing depends on this gate
+# -----------------------------------
+# Every publish workflow (publish-npm, publish-pypi, publish-go, publish-maven)
+# CALLS this workflow as its first job (`uses:
+# ./.github/workflows/release-gate.yml`) and its publish job `needs:` it. That
+# was chosen over a `workflow_run` trigger because:
+#   - the gate and the publish job run in the same workflow run, on the same
+#     commit (both check out github.sha), so there is no cross-run tag/SHA
+#     correlation to get wrong;
+#   - a failed or skipped gate makes the publish job skip — there is no path
+#     to publish that does not pass through it;
+#   - workflow_run always runs the default-branch copy of the workflow and
+#     cannot see the release event's inputs, which makes it easy to gate the
+#     wrong thing.
+# The gate no longer runs on bare tag pushes: each publish workflow runs it,
+# and running it twice per release spends metered private-repo minutes for no
+# extra assurance. Run it by hand (workflow_dispatch) to pre-check a tag.
+
+on:
+  workflow_call:
+    inputs:
+      tag:
+        description: "Release tag to validate"
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to validate, e.g. @aroha-sdk/core@1.10.0 or python-v1.6.0"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  quality-gate:
+    name: Release Quality Gate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: 22.x
+          cache: "npm"
+
+      - name: Resolve release tag
+        id: tag
+        env:
+          INPUT_TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          TAG="$INPUT_TAG"
+          if [ -z "$TAG" ]; then
+            echo "::error::No release tag was given to the gate"
+            exit 1
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "Validating release tag: $TAG at $GITHUB_SHA"
+
+      # If the tag already exists it must point at the commit being gated (and
+      # therefore published). Dispatching a publish from a branch whose head is
+      # not the tagged commit would otherwise gate and ship different code than
+      # the tag names. A tag that does not exist yet (Go manual
+      # runs create it later) is allowed.
+      - name: Tag points at the commit being gated
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          set -euo pipefail
+          if TAG_SHA=$(git rev-parse -q --verify "refs/tags/$TAG^{commit}"); then
+            if [ "$TAG_SHA" != "$GITHUB_SHA" ]; then
+              echo "::error::Tag $TAG points at $TAG_SHA but this run is on $GITHUB_SHA. Run the workflow from the tag ref."
+              exit 1
+            fi
+            echo "OK: $TAG points at $GITHUB_SHA"
+          else
+            echo "::notice::Tag $TAG does not exist yet; gating $GITHUB_SHA"
+          fi
+
+      - name: Version in the tag matches the product it names
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          set -euo pipefail
+          node --input-type=module -e '
+            import { readFileSync, readdirSync, existsSync } from "node:fs";
+            const tag = process.env.TAG;
+            const fail = (m) => { console.error("ERROR: " + m); process.exit(1); };
+            const ok = (m) => console.log("OK: " + m);
+
+            function workspaceVersion(name) {
+              for (const ws of ["packages", "agents", "apps"]) {
+                if (!existsSync(ws)) continue;
+                for (const d of readdirSync(ws)) {
+                  const p = `${ws}/${d}/package.json`;
+                  if (!existsSync(p)) continue;
+                  const j = JSON.parse(readFileSync(p, "utf8"));
+                  if (j.name === name) return { path: p, version: j.version };
+                }
+              }
+              return null;
+            }
+
+            let m;
+            if ((m = /^(@aroha-sdk\/[a-z0-9-]+|create-aroha-agent)@(.+)$/.exec(tag))) {
+              const [, name, version] = m;
+              const ws = workspaceVersion(name);
+              if (!ws) fail(`no workspace is named ${name}`);
+              if (ws.version !== version) fail(`${ws.path} is at ${ws.version}, tag says ${version}`);
+              ok(`${name} is at ${version}`);
+            } else if ((m = /^python-v(.+)$/.exec(tag))) {
+              const v = /^version\s*=\s*"([^"]+)"/m.exec(readFileSync("sdks/aroha-py/pyproject.toml", "utf8"))?.[1];
+              if (v !== m[1]) fail(`sdks/aroha-py/pyproject.toml is at ${v}, tag says ${m[1]}`);
+              ok(`Python SDK is at ${v}`);
+            } else if ((m = /^java-v(.+)$/.exec(tag))) {
+              // The first <version> after the project <artifactId> (no <parent> block in this pom).
+              const pom = readFileSync("sdks/java/pom.xml", "utf8");
+              const v = /<artifactId>[^<]+<\/artifactId>\s*<version>([^<]+)<\/version>/.exec(pom)?.[1];
+              if (v !== m[1]) fail(`sdks/java/pom.xml is at ${v}, tag says ${m[1]}`);
+              ok(`Java SDK is at ${v}`);
+            } else if (/^sdks\/go\/v[01]\.\d+\.\d+/.test(tag)) {
+              ok("Go module tag (version lives in the tag only)");
+            } else if (/^npm-v/.test(tag)) {
+              ok("batch npm release (per-package versions are checked at publish time)");
+            } else {
+              fail(`"${tag}" is not a recognised release tag (see CONTRIBUTING.md "Releasing")`);
+            }
+          '
+
+      - name: CHANGELOG.md lists this release under a dated heading
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: node .github/scripts/check-changelog-tag.mjs "$TAG" CHANGELOG.md
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build all packages
+        run: npm run build
+
+      - name: Run full test suite
+        run: npm test
+
+      - name: Check for known-bad dependency patterns
+        run: |
+          # Fail if any workspace depends on a file: path (local dev artifact leakage)
+          if grep -r '"file:' packages/*/package.json agents/*/package.json apps/*/package.json 2>/dev/null; then
+            echo "ERROR: file: dependencies found — remove before release"
+            exit 1
+          fi
+          echo "Dependency check passed"
+
+      - name: Publish release gate summary
+        if: always()
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+          STATUS: ${{ job.status }}
+        run: |
+          {
+            echo "## Release Gate Summary — \`$TAG\`"
+            echo ""
+            echo "Overall: $STATUS"
+            echo ""
+            echo "Checks: tag points at the gated commit; tag version matches the named product; CHANGELOG lists the tag under a dated heading; build; tests; no file: dependencies."
+          } >> "$GITHUB_STEP_SUMMARY"

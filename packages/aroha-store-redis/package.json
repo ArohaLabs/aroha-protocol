@@ -1,0 +1,50 @@
+{
+  "name": "@aroha-sdk/store-redis",
+  "version": "0.1.0",
+  "description": "Durable, shared Redis stores for @aroha-sdk/credentials: presentation nonces, enrollment challenges and bindings, and the spending ledger",
+  "files": [
+    "dist",
+    "src",
+    "NOTICE",
+    "!**/*.test.*",
+    "!**/test-utils/**",
+    "!**/*.tsbuildinfo"
+  ],
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "prepack": "node ../../scripts/clean-dist.mjs && tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@aroha-sdk/credentials": "^2.0.0"
+  },
+  "peerDependencies": {
+    "ioredis": "^5.0.0"
+  },
+  "devDependencies": {
+    "@aroha-sdk/core": "^2.0.0",
+    "@noble/ed25519": "^2.1.0",
+    "@types/node": "^22.0.0",
+    "ioredis": "^5.11.1",
+    "typescript": "^5.4.0",
+    "vitest": "^5.0.3"
+  },
+  "keywords": ["aroha", "redis", "nonce", "replay-protection", "spending-ledger", "enrollment"],
+  "license": "Apache-2.0",
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

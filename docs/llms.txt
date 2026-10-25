@@ -1,0 +1,32 @@
+# Aroha
+
+> Aroha is an open protocol (Apache-2.0) for bounded, verifiable agent authority: a person signs a mandate, each agent can pass on only a narrower one, a tool verifies the chain offline before acting, revocation reaches every verifier, and every allowed or refused action leaves a signed receipt. It works with MCP, A2A and existing identity providers; it is not an agent framework, a transport or an IdP.
+
+To add Aroha to an existing agent, follow the `aroha-integrate` Agent Skill: wrap an MCP server with `@aroha-sdk/mcp-guard` (config only), verify mandates in a handler with `verifyMandateChain`, present a mandate over MCP in `_meta["aroha/mandate"]` with `presentMandate`, or run the Aroha runtime. Prove each refusal case fails closed. Repository versions are ahead of npm/PyPI; check the support matrix before pinning.
+
+## Start here
+
+- [What Aroha is (and is not)](positioning.md): scope, the four questions, market fit
+- [Support matrix](support-matrix.md): frameworks, harnesses, agents, models, SDKs, status and published versions
+- [Quickstart](quickstart.md): issue and verify a mandate chain
+- [MCP quickstart](quickstart-mcp.md): mandates over MCP
+
+## Agent Skills (SKILL.md, load into any Agent Skills host)
+
+- [aroha-integrate](https://github.com/ArohaLabs/aroha-protocol/blob/main/skills/aroha-integrate/SKILL.md): add Aroha to an existing agent; start here
+- [aroha-mandates](https://github.com/ArohaLabs/aroha-protocol/blob/main/skills/aroha-mandates/SKILL.md): issue, attenuate and verify spending and task mandates
+- [aroha-receipts](https://github.com/ArohaLabs/aroha-protocol/blob/main/skills/aroha-receipts/SKILL.md): sign and verify action receipts for executed and denied actions
+- [aroha-python-sdk](https://github.com/ArohaLabs/aroha-protocol/blob/main/skills/aroha-python-sdk/SKILL.md): verification from Python
+
+## Reference
+
+- [Specification 1.0](spec/aroha-1.0.md)
+- [SDK feature matrix](sdks/feature-matrix.md): TypeScript, Python, Go, Java
+- [Remote MCP connector](integrations/remote-mcp-connector.md): Streamable HTTP + OAuth server and its verified scope
+- [Trust and status](trust.md): CI, standards status, security posture
+
+## Optional
+
+- [Protocol layers](protocol-layers.md)
+- [Architecture](architecture.md)
+- [Benchmark methodology](benchmark-methodology.md)

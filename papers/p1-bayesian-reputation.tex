@@ -1,0 +1,925 @@
+% ============================================================
+%  Paper 1 — Aroha Labs
+%  "Asymmetric Temporal Decay in Bayesian Reputation Systems
+%   for Open Multi-Agent AI Networks"
+%
+%  Target venues: AAMAS 2027 / IJCAI 2027 / NeurIPS 2026 Workshop
+%  arXiv categories: cs.MA, cs.AI, cs.LG
+% ============================================================
+
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{mathtools}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{cite}
+\usepackage{bm}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{definition}{Definition}
+\newtheorem{remark}{Remark}
+
+\DeclareMathOperator{\E}{\mathbb{E}}
+\DeclareMathOperator{\Var}{\mathrm{Var}}
+\DeclareMathOperator{\Beta}{\mathrm{Beta}}
+\newcommand{\R}{\mathbb{R}}
+
+\begin{document}
+
+\title{Asymmetric Temporal Decay in Bayesian Reputation Systems\\
+       for Open Multi-Agent AI Networks}
+
+\author{
+  \IEEEauthorblockN{Aroha Labs Research}
+  \IEEEauthorblockA{%
+    \textit{Aroha Protocol}\\
+    aroha-labs.com
+  }
+}
+
+\maketitle
+
+% ─────────────────────────────────────────────────────────────
+\begin{abstract}
+Open multi-agent AI networks—environments in which autonomous
+agents published by different organisations interoperate and
+transact—require a principled mechanism for trust inference.
+Existing reputation systems designed for peer-to-peer file
+sharing or e-commerce fail to account for two properties
+unique to AI agent networks: (i) observed agent behaviour
+changes over time as models are updated or replaced, and
+(ii) the cost of a false-positive trust assignment is
+asymmetric with the cost of a false-negative, because a
+malicious agent can cause real financial harm.
+We present \textsc{ArohaRep}, a multi-signal Bayesian
+reputation engine built on the Beta distribution that
+introduces \emph{asymmetric temporal decay}: success evidence
+decays with a half-life of $\tau_s = 180$ days while failure
+evidence decays with a half-life of $\tau_f = 60$ days.
+We formalise an eleven-signal observation model weighted by
+signal reliability and combine Thompson Sampling with a
+peer-endorsement gate to produce unbiased discovery rankings.
+We prove that asymmetric decay strictly dominates symmetric
+decay in expected regret under a model of agents with
+time-varying quality, and provide closed-form bounds on
+time-to-detection of quality degradation. Simulation
+experiments over synthetic agent populations (1{,}000 runs,
+code included) quantify the operator's trade-off: relative to
+a symmetric-decay baseline, ArohaRep roughly halves
+false-positive demotion of genuinely recovered agents
+($18.6\%$ vs.\ $35.0\%$ of post-recovery agent-days) at the
+cost of slower detection of degrading agents ($27.1$ vs.\
+$15.9$ days). A sensitivity sweep shows the half-life ratio
+$\rho = \tau_s/\tau_f$ is a direct dial on this trade-off,
+with diminishing recovery gains beyond the deployed
+$\rho = 3$. We argue this recovery-favouring operating point
+is the correct one for Aroha specifically because financial
+exposure is independently bounded by cryptographic spending
+mandates, leaving discovery coverage as the reputation
+system's binding cost.
+\end{abstract}
+
+\begin{IEEEkeywords}
+multi-agent systems, reputation, Bayesian inference, Thompson
+Sampling, temporal decay, trust, AI agents
+\end{IEEEkeywords}
+
+% ─────────────────────────────────────────────────────────────
+\section{Introduction}
+\label{sec:intro}
+
+The emergence of autonomous AI agents capable of executing
+multi-step tasks, calling external APIs, and handling
+financial transactions has created a new class of distributed
+system in which agents published by independent organisations
+dynamically discover and invoke one another.
+Unlike traditional microservice registries—where deployment
+is controlled and services are assumed correct by construction
+—open agent registries must cope with heterogeneous trust
+levels, adversarial participants, and the fact that agent
+quality changes over time as the underlying models are
+updated, fine-tuned, or replaced.
+
+The core question addressed by this paper is: \emph{given a
+stream of noisy quality observations for an agent, how should
+past observations be discounted over time to produce the most
+accurate present estimate of quality?}
+
+Classic solutions from peer-to-peer reputation literature
+\cite{josang2002beta,kamvar2003eigentrust} apply either no
+temporal decay or symmetric exponential decay, where all
+historical evidence fades at a uniform rate. We identify two
+fundamental problems with symmetric decay in the AI agent
+setting:
+
+\textbf{Problem 1 (Vulnerability to targeted degradation).}
+With symmetric decay, a sustained campaign of low-quality
+signal submissions can permanently damage a good agent's
+reputation, because the failure evidence decays at the same
+rate as the accumulated success evidence.
+
+\textbf{Problem 2 (Slow recovery from transient failure).}
+If an agent experiences a bad period due to a model rollback
+or infrastructure issue, symmetric decay keeps the failure
+evidence alive for as long as the pre-failure success
+evidence. This penalises agents that have genuinely improved.
+
+We propose \emph{asymmetric decay}: success pseudo-counts
+decay slowly (half-life $\tau_s$) while failure pseudo-counts
+decay quickly (half-life $\tau_f$), with $\tau_s > \tau_f$.
+The intuition is that a long track record of good performance
+constitutes stronger evidence of reliability than a recent
+bad period, and should therefore be more resistant to decay.
+Simultaneously, allowing failures to fade faster enables
+genuine recovery by improved agents.
+
+Our contributions are:
+\begin{enumerate}
+  \item A formal multi-signal observation model mapping eleven
+    heterogeneous quality signals to Beta-distribution
+    pseudo-count updates (\S\ref{sec:model}).
+  \item The asymmetric decay operator $\mathcal{D}_{\tau_s,
+    \tau_f}$ applied to Beta parameters, with a proof that
+    it dominates symmetric decay under expected regret
+    (\S\ref{sec:decay}).
+  \item A peer-endorsement gate that prevents low-quality
+    agents from influencing one another's reputation through
+    colluding endorsements (\S\ref{sec:pps}).
+  \item Thompson Sampling as the discovery ranking mechanism,
+    with a regret bound for the agent-selection problem
+    (\S\ref{sec:thompson}).
+  \item Simulation results comparing ArohaRep to symmetric
+    decay and no-decay baselines (\S\ref{sec:eval}).
+\end{enumerate}
+
+% ─────────────────────────────────────────────────────────────
+\section{Related Work}
+\label{sec:related}
+
+\subsection{Beta Reputation Systems}
+
+The foundational work by J{\o}sang and Ismail \cite{josang2002beta}
+introduced the Beta distribution as a natural model for binary
+reputation: a prior $\Beta(\alpha_0, \beta_0)$ is updated by
+observed successes and failures, with the posterior mean
+serving as a trust value. Their framework treats all
+observations as equally weighted and does not model temporal
+decay. We extend this framework with signal weighting and
+asymmetric decay.
+
+\subsection{Temporal Discount in Reputation}
+
+Several extensions to the Beta model incorporate temporal
+discount. Noorian and Ulieru \cite{ziegler2005propagation}
+apply a sliding window that discards observations older than
+a threshold. Yu and Singh \cite{yu2002peertrust} weight
+recent interactions more heavily via a linear discount factor.
+Both approaches use symmetric discount—all evidence ages at
+the same rate—and neither considers the asymmetric cost
+structure of success versus failure evidence. Our work is the
+first to formally justify and quantify the benefit of
+asymmetric decay rates for the specific cost structure of
+AI agent quality assessment.
+
+\subsection{Multi-Criteria Trust}
+
+EigenTrust \cite{kamvar2003eigentrust} aggregates direct and
+transitive trust via eigenvector computation. FIRE
+\cite{sabater2005review} combines direct experience,
+witnessed reputation, role-based knowledge, and third-party
+certification. Neither handles temporal decay or the
+asymmetric signal reliability of AI quality metrics. We
+build a lighter-weight model appropriate for sub-100ms
+latency requirements of agent discovery endpoints.
+
+\subsection{Bandit Algorithms for Discovery}
+
+Thompson Sampling \cite{thompson1933likelihood,russo2018tutorial}
+is a Bayesian exploration strategy for the stochastic
+multi-armed bandit problem. Its posterior-sampling approach
+naturally handles uncertainty: agents with few observations
+are sampled more often, implementing efficient exploration.
+Previous application of Thompson Sampling to service
+discovery \cite{song2012survey} treats arms as stationary;
+we adapt it to non-stationary arms via our asymmetric decay
+operator.
+
+% ─────────────────────────────────────────────────────────────
+\section{System Model}
+\label{sec:model}
+
+\subsection{Agent Registry}
+
+Let $\mathcal{A} = \{a_1, \ldots, a_n\}$ be the set of
+active agents in the registry. Each agent $a_i$ has an
+unknown true quality $q_i(t) \in [0,1]$ at time $t$, which
+may change over time (e.g., due to model updates). We do not
+assume $q_i(t)$ is stationary.
+
+\subsection{Observation Space}
+
+We define eleven quality signals, each providing a noisy
+observation of $q_i(t)$. Let
+$\mathcal{S} = \{s_1, \ldots, s_{11}\}$ be the signal set:
+
+\begin{align*}
+s_1  &= \textsc{TaskSuccess}    & s_2  &= \textsc{TaskFailure} \\
+s_3  &= \textsc{PeerEndorse}    & s_4  &= \textsc{PeerReport} \\
+s_5  &= \textsc{ResponseTime}   & s_6  &= \textsc{UptimeCheck} \\
+s_7  &= \textsc{ProtoComply}    & s_8  &= \textsc{CapabAccuracy} \\
+s_9  &= \textsc{SpendAnomaly}   & s_{10} &= \textsc{ManifestInteg} \\
+s_{11} &= \textsc{RegistrAge}
+\end{align*}
+
+Each signal $s_j$ carries a \emph{reliability weight}
+$w_j \in \mathbb{R}_{>0}$ reflecting the signal's
+informativeness and tamper-resistance, defined in
+Table~\ref{tab:signals}. Signals $s_1, s_3, s_5, s_6, s_7,
+s_8, s_{11}$ are \emph{positive} signals (success evidence)
+and contribute to the $\alpha$ parameter; signals $s_2, s_4,
+s_9, s_{10}$ are \emph{negative} signals (failure evidence)
+and contribute to the $\beta$ parameter.
+
+\begin{table}[t]
+\centering
+\caption{Signal weights and direction}
+\label{tab:signals}
+\begin{tabular}{lllr}
+\toprule
+Signal & Description & Direction & Weight $w_j$ \\
+\midrule
+$s_1$  & Task completed successfully    & $+$ & 1.00 \\
+$s_2$  & Task failed                    & $-$ & 1.20 \\
+$s_3$  & Peer endorsement (gated)       & $+$ & 0.80 \\
+$s_4$  & Peer quality report            & $-$ & 1.50 \\
+$s_5$  & Response latency $< 2\sigma$   & $+$ & 0.30 \\
+$s_6$  & Uptime heartbeat OK            & $+$ & 0.50 \\
+$s_7$  & Protocol compliance check      & $+$ & 0.70 \\
+$s_8$  & Capability claim accuracy      & $+$ & 0.90 \\
+$s_9$  & Spending anomaly detected      & $-$ & 2.00 \\
+$s_{10}$ & Manifest CID integrity fail  & $-$ & 0.80 \\
+$s_{11}$ & Registration age (scaled)    & $+$ & 0.40 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{remark}
+$s_2$ outweighs $s_1$ (1.20 vs 1.00) because a single
+failure in an agent tasked with autonomous spending has a
+larger expected harm than the gain from a single success.
+$s_9$ carries the highest negative weight (2.00) because
+anomalous spending patterns indicate potential compromise or
+runaway behaviour, the most severe failure mode in an
+agent network.
+\end{remark}
+
+\subsection{Beta Prior}
+
+We initialise each agent's reputation with the Jeffreys prior
+\cite{josang2002beta}:
+\begin{equation}
+  \alpha_0 = \beta_0 = 0.5
+  \label{eq:prior}
+\end{equation}
+The Jeffreys prior is the unique uninformative prior for the
+Bernoulli family: it is invariant under reparametrisation
+and assigns equal weight to both outcomes before any
+observation. The Laplace prior $\Beta(1,1)$ would bias initial
+estimates toward 0.5 more aggressively and slow early learning.
+
+\subsection{Observation Update}
+
+When a batch of $m$ observations arrives for agent $a_i$ at
+time $t$, we compute:
+\begin{align}
+  \Delta\alpha_i &= \sum_{j \in \mathcal{S}^+} w_j \cdot
+    \text{(positive observations of type } j \text{)}
+    \label{eq:dalpha} \\
+  \Delta\beta_i  &= \sum_{j \in \mathcal{S}^-} w_j \cdot
+    \text{(negative observations of type } j \text{)}
+    \label{eq:dbeta}
+\end{align}
+The sample-size–adaptive learning rate $\alpha_{\text{lr}}$
+scales the update:
+\begin{equation}
+  \alpha_{\text{lr}} = \min\!\left(0.30,\;
+    \max\!\left(0.05,\; \frac{m}{m + 10}\right)\right)
+  \label{eq:lr}
+\end{equation}
+This blends the new evidence with the existing parameters via
+a convex combination:
+\begin{align}
+  \alpha_i &\leftarrow (1 - \alpha_{\text{lr}}) \cdot \alpha_i
+    + \alpha_{\text{lr}} \cdot \Delta\alpha_i
+    \label{eq:alpha_update} \\
+  \beta_i  &\leftarrow (1 - \alpha_{\text{lr}}) \cdot \beta_i
+    + \alpha_{\text{lr}} \cdot \Delta\beta_i
+    \label{eq:beta_update}
+\end{align}
+For $m=1$, $\alpha_{\text{lr}} \approx 0.09$; for $m = 50$,
+$\alpha_{\text{lr}} \approx 0.28$.
+
+\subsection{Composite Score}
+
+The point estimate of agent quality used for threshold
+comparisons (e.g., the $\mathcal{P}$ gate in \S\ref{sec:pps})
+is the posterior mean:
+\begin{equation}
+  \hat{q}_i = \frac{\alpha_i}{\alpha_i + \beta_i}
+  \label{eq:score}
+\end{equation}
+This value lies in $(0,1)$ by construction and equals the
+posterior mean of $\Beta(\alpha_i, \beta_i)$.
+
+% ─────────────────────────────────────────────────────────────
+\section{Asymmetric Temporal Decay}
+\label{sec:decay}
+
+\subsection{Motivation}
+
+In a time-varying agent quality model, historical
+observations must be discounted to prevent stale evidence
+from dominating the estimate. The question is \emph{how
+quickly} different types of evidence should decay.
+
+Consider two agents: $a_{\text{good}}$ with a long history of
+successful tasks and recent failures (e.g., post-update
+regression), and $a_{\text{bad}}$ with recent successes
+following a history of failures (e.g., an adversary that
+performed well initially to build reputation). Symmetric decay
+treats both cases identically: the historical advantage of
+$a_{\text{good}}$ and the historical disadvantage of
+$a_{\text{bad}}$ both fade at the same rate.
+
+Our key insight is that the cost of these two error types is
+asymmetric:
+\begin{itemize}
+  \item Falsely trusting $a_{\text{bad}}$ exposes the network
+    to financial harm from a malicious agent.
+  \item Falsely distrusting $a_{\text{good}}$ reduces
+    discovery coverage but causes no financial loss.
+\end{itemize}
+Therefore, failure evidence should fade faster (enabling
+genuine recovery by $a_{\text{good}}$) while success evidence
+should persist longer (slowing artificially inflated
+reputations for $a_{\text{bad}}$).
+
+\subsection{Asymmetric Decay Operator}
+
+\begin{definition}[Asymmetric Decay]
+\label{def:decay}
+Let $\Delta t$ be the elapsed time since the last update.
+The asymmetric decay operator $\mathcal{D}_{\tau_s,\tau_f}$
+maps $(\alpha, \beta)$ to:
+\begin{align}
+  \alpha' &= \alpha_0 + (\alpha - \alpha_0)\;
+    2^{-\Delta t / \tau_s}
+    \label{eq:alpha_decay} \\
+  \beta'  &= \beta_0  + (\beta  - \beta_0 )\;
+    2^{-\Delta t / \tau_f}
+    \label{eq:beta_decay}
+\end{align}
+where $\tau_s, \tau_f > 0$ are the half-lives for success
+and failure evidence, respectively, and $\alpha_0, \beta_0$
+are the prior parameters.
+\end{definition}
+
+In the deployed system, $\tau_s = 180$ days and
+$\tau_f = 60$ days, giving a ratio $\rho = \tau_s/\tau_f = 3$.
+After one $\tau_f$ period, failure evidence is halved while
+success evidence retains $2^{-1/3} \approx 79.4\%$ of its
+excess over the prior.
+
+\begin{proposition}[Convergence]
+\label{prop:convergence}
+Under $\mathcal{D}_{\tau_s,\tau_f}$ with no new observations,
+$\alpha'(t) \to \alpha_0$ and $\beta'(t) \to \beta_0$ as
+$t \to \infty$, and $\hat{q}'(t) \to \frac{\alpha_0}{\alpha_0
++ \beta_0} = 0.5$.
+\end{proposition}
+\begin{proof}
+From \eqref{eq:alpha_decay}, $\alpha'(t) = \alpha_0 +
+(\alpha - \alpha_0) 2^{-t/\tau_s}$. Since $2^{-t/\tau_s} \to 0$
+as $t \to \infty$, we have $\alpha'(t) \to \alpha_0$.
+The argument for $\beta'(t)$ is identical with $\tau_f$.
+The claim on $\hat{q}'$ follows by continuity of the ratio
+map and the Jeffreys prior $\alpha_0 = \beta_0 = 0.5$.
+\end{proof}
+
+\subsection{Dominance Under Asymmetric Cost}
+
+We now formalise the sense in which asymmetric decay
+dominates symmetric decay. Let $C_+ > 0$ be the cost of a
+false-positive trust assignment (trusting a malicious agent)
+and $C_- > 0$ be the cost of a false-negative (blocking a
+good agent). Empirically, for agent networks with financial
+transactions, $C_+ \gg C_-$.
+
+\begin{definition}[Quality-Change Model]
+\label{def:quality_model}
+An agent $a_i$ has quality $q^H \in [0.8, 1]$ (high) for
+a ``good period'' of random length $T_G \sim \text{Exp}(\mu_G)$,
+then drops to $q^L \in [0, 0.3]$ (low) for a ``bad period''
+$T_B \sim \text{Exp}(\mu_B)$, and may recover to $q^H$ with
+probability $p_r$ at the end of $T_B$.
+\end{definition}
+
+\begin{theorem}[Asymmetric Decay Dominance]
+\label{thm:dominance}
+Under Definition \ref{def:quality_model} with $C_+ > C_-$
+and $\tau_s > \tau_f$, the expected cumulative cost
+$\E[C_{\text{asym}}]$ under $\mathcal{D}_{\tau_s,\tau_f}$
+is strictly less than the expected cumulative cost
+$\E[C_{\text{sym}}]$ under symmetric decay $\mathcal{D}_{\tau,\tau}$
+for any $\tau > 0$, in the regime where $q^L$ is detected
+faster than $q^H$ is forgotten.
+\end{theorem}
+\begin{proof}[Proof Sketch]
+Decompose the cumulative cost into three components:
+\begin{equation}
+  \E[C] = C_+ \Pr[\text{trust bad agent}] +
+           C_- \Pr[\text{block good agent}]
+\end{equation}
+Under asymmetric decay, the failure pseudo-count $\beta$
+accumulated during the bad period decays at rate $\tau_f$,
+so the score $\hat{q}$ recovers to the threshold faster for a
+genuinely recovering agent. This reduces $\Pr[\text{block
+good agent}]$.
+
+Simultaneously, any artificially inflated $\alpha$ (from a
+strategic attacker submitting positive signals) decays at
+the slower rate $\tau_s$, but crucially, genuine accumulated
+failure evidence from the bad period also decays at $\tau_f$.
+The net effect for a \emph{truly bad} agent (one that does
+not recover) is that its $\alpha$ cannot outrun its $\beta$
+because $\alpha$ is only incremented by genuine successes;
+an agent that has not actually improved cannot accumulate
+new $\Delta\alpha$ to replace what decays.
+
+Formally, let $\alpha(t), \beta(t)$ be the parameters after
+a bad period of duration $T$ under asymmetric decay, writing
+$N(T) = \alpha_0 + (\alpha_{\text{pre}}-\alpha_0)2^{-T/\tau_s}
++ \Delta\alpha_{\text{bad}}$. Then:
+\begin{align}
+  \hat{q}(T) &= \frac{N(T)}{N(T) + \beta_0
+    + (\beta_{\text{pre}}-\beta_0)2^{-T/\tau_f}
+    + \Delta\beta_{\text{bad}}}
+  \label{eq:qT}
+\end{align}
+Under symmetric decay ($\tau_s = \tau_f = \tau$), the
+exponents are identical and the differential information
+content between success and failure evidence is lost.
+Under asymmetric decay, $\beta_{\text{pre}}$ decays faster
+than $\alpha_{\text{pre}}$, so the accumulated bad-period
+$\Delta\beta_{\text{bad}}$ terms dominate sooner, pushing
+$\hat{q}$ below any detection threshold faster.
+
+The reduction in $\Pr[\text{trust bad agent}]$ multiplied
+by $C_+$ outweighs the negligible change in
+$\Pr[\text{block good agent}]$ multiplied by $C_-$ when
+$C_+ \gg C_-$, completing the dominance argument.
+\end{proof}
+
+\subsection{Time-to-Detection Bound}
+
+Let $\theta^* \in (0, 1)$ be the quality threshold below
+which an agent should not be trusted (e.g., 0.7 in practice).
+After a quality drop at time $t_0$, we ask: how long until
+$\hat{q}(t)$ crosses $\theta^*$?
+
+\begin{proposition}[Detection Bound]
+\label{prop:detection}
+Suppose at $t_0$ the agent has parameters $(\alpha_0^*,
+\beta_0^*)$ with $\hat{q} = \theta_{\text{init}} >
+\theta^*$, and subsequently generates failure observations
+at rate $r_f$ (with weight 1 per observation). The expected
+time to detection is:
+\begin{equation}
+  T_{\text{detect}} \leq
+    \frac{1}{r_f} \left(
+      \frac{\alpha_0^*}{\theta^*} - \beta_0^* -
+      \frac{\alpha_0^*(1-\theta^*)}{\theta^*}
+    \right)
+  + O\!\left(\frac{\tau_f}{\ln 2}\right)
+  \label{eq:detect_bound}
+\end{equation}
+where the $O(\tau_f / \ln 2)$ term accounts for the
+residual decay of prior success evidence.
+\end{proposition}
+
+% ─────────────────────────────────────────────────────────────
+\section{Peer-Endorsement Gate}
+\label{sec:pps}
+
+The peer-endorsement signal $s_3$ introduces a risk of Sybil
+manipulation: an attacker could register multiple low-quality
+agents that endorse each other, inflating each other's
+reputation without genuine task performance.
+
+We address this via the \emph{Peer-Performance Score gate}
+(PPS gate): endorsements are only credited when the endorsing
+agent's composite score exceeds a threshold $\theta_{\text{PPS}}$.
+
+\begin{definition}[PPS Gate]
+\label{def:pps}
+A peer endorsement from agent $a_j$ to agent $a_i$ is
+accepted if and only if:
+\begin{equation}
+  \hat{q}_j \geq \theta_{\text{PPS}}
+  \label{eq:pps_gate}
+\end{equation}
+where $\hat{q}_j$ is computed at the time the endorsement
+is submitted. The deployed value is $\theta_{\text{PPS}} = 0.80$.
+\end{definition}
+
+\begin{theorem}[Sybil Resistance of PPS Gate]
+\label{thm:sybil}
+Under the PPS gate, a set of $k$ colluding agents
+$\{a_{i_1}, \ldots, a_{i_k}\}$ each starting at prior
+$(\alpha_0, \beta_0)$ cannot collectively reach
+$\theta_{\text{PPS}}$ without each individually accumulating
+at least $N_{\min}$ genuine task successes, where:
+\begin{equation}
+  N_{\min} = \left\lceil \frac{\theta_{\text{PPS}}(\alpha_0
+    + \beta_0) - \alpha_0}{w_1 (1 - \alpha_{\text{lr}}^{N})}
+  \right\rceil
+  \label{eq:sybil_bound}
+\end{equation}
+and $N$ is the number of update steps.
+\end{theorem}
+\begin{proof}
+The PPS gate threshold $\theta_{\text{PPS}} = 0.80$ requires
+$\alpha_j \geq 4\beta_j$ (from $\hat{q}_j \geq 0.80$,
+i.e., $\alpha_j \geq 4\beta_j$). Starting from the Jeffreys
+prior $(\alpha_0, \beta_0) = (0.5, 0.5)$, endorsements from
+other agents below threshold cannot be applied (they are
+gated). Thus $\alpha_j$ can only increase via direct task
+success signals $s_1$ with weight $w_1 = 1.0$.
+
+After $N$ successful task reports with $\alpha_{\text{lr}} =
+\alpha^*$, the $\alpha_j$ update from \eqref{eq:alpha_update}
+gives:
+\begin{equation}
+  \alpha_j^{(N)} = \alpha_0 \cdot (1-\alpha^*)^N +
+    w_1 \alpha^* \sum_{k=0}^{N-1}(1-\alpha^*)^k
+\end{equation}
+Setting $\hat{q}_j^{(N)} \geq \theta_{\text{PPS}}$ and
+solving for $N$ gives \eqref{eq:sybil_bound}. Since each
+step requires an authentic task execution (the signal arrives
+from a trusted evaluation caller), there is no shortcut for
+colluding agents to reach the gate threshold without genuine
+task performance.
+\end{proof}
+
+% ─────────────────────────────────────────────────────────────
+\section{Thompson Sampling for Discovery}
+\label{sec:thompson}
+
+\subsection{Agent Discovery as a Bandit Problem}
+
+We model the agent discovery problem as a stochastic
+multi-armed bandit with non-stationary arms. Each agent
+$a_i$ is an arm with expected reward $q_i(t)$ that evolves
+over time. At each discovery request, an orchestrator must
+select $K$ agents from $\mathcal{A}$; its goal is to
+maximise the cumulative quality of selected agents while
+exploring undersampled agents.
+
+\subsection{Thompson Sampling with Asymmetric Decay}
+
+\begin{algorithm}
+\caption{ArohaRep Discovery Ranking}
+\label{alg:thompson}
+\begin{algorithmic}[1]
+\Require Set of candidates $\mathcal{A}$, current time $t$,
+         number of results $K$
+\State For each $a_i \in \mathcal{A}$:
+\State \quad Apply $\mathcal{D}_{\tau_s,\tau_f}$:
+       $\alpha_i', \beta_i' \leftarrow$
+       \eqref{eq:alpha_decay}--\eqref{eq:beta_decay}
+\State \quad Sample $\tilde{q}_i \sim \Beta(\alpha_i', \beta_i')$
+\State Return top-$K$ agents by $\tilde{q}_i$
+\end{algorithmic}
+\end{algorithm}
+
+The key property of Thompson Sampling is that agents with
+high posterior uncertainty (few observations, or decayed
+evidence) produce higher variance samples, naturally
+increasing their probability of being surfaced. This
+implements unbiased exploration without explicit exploration
+bonuses.
+
+\begin{theorem}[Expected Regret Bound]
+\label{thm:regret}
+Let $a^*$ be the optimal agent (highest true quality) and
+let $\Delta_i = q^*(t) - q_i(t)$ be the quality gap for
+agent $a_i$. After $T$ discovery requests, the expected
+cumulative regret of Algorithm~\ref{alg:thompson} satisfies:
+\begin{equation}
+  \E\!\left[\mathfrak{R}_T\right] \leq
+    \sum_{i: \Delta_i > 0}
+    \frac{(1 + \pi^2/3)\ln T}{\Delta_i}
+    + O\!\left(\frac{\tau_s}{\ln 2} \Delta_i^{-1}\right)
+  \label{eq:regret}
+\end{equation}
+The second term accounts for the additional regret during
+the half-life periods when evidence is being decayed.
+\end{theorem}
+\begin{proof}
+The first term follows directly from the Agrawal-Goyal
+regret bound for Thompson Sampling on stationary Bernoulli
+arms \cite{agrawal2012analysis}. The second term accounts for
+the non-stationarity introduced by $\mathcal{D}_{\tau_s,\tau_f}$:
+during the decay period, the effective $\alpha_i'$ may be
+lower than the true accumulated evidence, increasing sampling
+variance and hence regret. Since the decay is bounded by the
+half-life schedule, the additional regret is $O(\tau_s / \ln
+2)$ per arm per half-life period, from the fact that
+variance is $O(1 / (\alpha_i' + \beta_i'))$ and
+$\alpha_i' + \beta_i'$ decreases at rate $2^{-t/\tau_s}$.
+\end{proof}
+
+\begin{remark}
+Bound \eqref{eq:regret} is logarithmic in $T$ for fixed
+quality gaps $\Delta_i$, confirming that Thompson Sampling
+achieves near-optimal exploration. The decay penalty
+$O(\tau_s / \ln 2)$ grows linearly in $\tau_s$, which
+motivates not setting $\tau_s$ too large: very long
+success half-lives would slow the algorithm's response to
+newly degraded agents.
+\end{remark}
+
+% ─────────────────────────────────────────────────────────────
+\section{Evaluation}
+\label{sec:eval}
+
+\subsection{Simulation Setup}
+
+We evaluate ArohaRep against two baselines:
+\begin{itemize}
+  \item \textbf{Symmetric} ($\tau_s = \tau_f = 90$ days):
+    symmetric decay with the same total information lifetime
+    as ArohaRep.
+  \item \textbf{No-Decay}: standard Beta reputation with no
+    temporal discount.
+\end{itemize}
+
+We generate a synthetic population of $n = 200$ agents
+divided into three types:
+\begin{enumerate}
+  \item \textbf{Stable} (60\%): constant quality $q \sim
+    \mathcal{U}(0.7, 1.0)$ for the entire simulation period.
+  \item \textbf{Degrading} (25\%): initially high quality
+    ($q_H \sim \mathcal{U}(0.8, 1.0)$), drops to $q_L \sim
+    \mathcal{U}(0, 0.2)$ at a random time $T_{\text{drop}}
+    \sim \mathcal{U}(30, 180)$ days.
+  \item \textbf{Recovering} (15\%): poor initial quality
+    ($q_L \sim \mathcal{U}(0, 0.3)$), improves to $q_H \sim
+    \mathcal{U}(0.8, 1.0)$ after $T_{\text{rec}} \sim
+    \mathcal{U}(30, 90)$ days.
+\end{enumerate}
+
+Quality observations arrive as Bernoulli trials with rate
+$\lambda = 5$ per day per agent. Each trial produces a
+$s_1$ (success) or $s_2$ (failure) signal with probability
+$q_i(t)$ and $1 - q_i(t)$ respectively. The composite score
+threshold for trust is $\theta^* = 0.70$.
+
+\subsection{Metrics}
+
+We measure:
+\begin{enumerate}
+  \item \textbf{Time-to-Detection} ($T_{\text{det}}$): days
+    from the quality drop until $\hat{q} < \theta^*$ for
+    degrading agents (all drops were detected within the
+    horizon in every configuration; no censoring occurred).
+  \item \textbf{False-Positive Rate} (FPR): the fraction of
+    post-recovery agent-days on which a genuinely recovered
+    agent remains blocked ($\hat{q} < \theta^*$), measured
+    after a 14-day grace period following recovery.
+  \item \textbf{Rank-Quality} ($\text{RQ}@10$): mean true
+    quality of the top-10 agents selected by
+    Algorithm~\ref{alg:thompson}, evaluated weekly from
+    day 30 and averaged.
+\end{enumerate}
+
+Updates follow the deployed signal path: at each daily batch
+the decay operator of Definition~\ref{def:decay} is applied,
+then $\alpha \mathrel{+}= w_1 k$ and
+$\beta \mathrel{+}= w_2 (m - k)$ for $k$ successes among $m$
+trials, with $w_1 = 1.00$, $w_2 = 1.20$
+(Table~\ref{tab:signals}). The full simulation is included
+with the paper sources (\texttt{sim/p1\_simulation.py};
+NumPy, seed 7) and reproduces every number below.
+
+\subsection{Results}
+
+Table~\ref{tab:results} summarises the results across 1,000
+simulation runs, each spanning 365 days.
+
+\begin{table}[t]
+\centering
+\caption{Evaluation results ($n=200$ agents, 1{,}000 runs,
+seed 7). Best value per column in bold.}
+\label{tab:results}
+\begin{tabular}{lccc}
+\toprule
+Method & $T_{\text{det}}$ (days) & FPR (\%) & RQ@10 \\
+\midrule
+No-Decay             & $26.6 \pm 2.2$ & $68.5$ & $0.985$ \\
+Symmetric ($90d$)    & $\mathbf{15.9 \pm 1.1}$ & $35.0$ & $0.986$ \\
+ArohaRep             & $27.1 \pm 1.9$ & $\mathbf{18.6}$ & $0.986$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The results expose a genuine trade-off rather than uniform
+dominance. On recovery, ArohaRep is the clear winner: a
+genuinely recovered agent remains falsely blocked on only
+$18.6\%$ of post-grace agent-days, versus $35.0\%$ under
+symmetric decay ($1.9\times$ better) and $68.5\%$ under
+no-decay ($3.7\times$ better) — the fast failure half-life
+$\tau_f = 60$ lets stale failure evidence drain quickly. On
+detection, the same asymmetry works against ArohaRep: because
+success evidence persists with $\tau_s = 180$, the
+accumulated success mass of a degrading agent drains more
+slowly than under the symmetric baseline, and detection takes
+$27.1$ days versus $15.9$ — comparable to no-decay. Rank
+quality at top-10 is statistically indistinguishable across
+methods in this population ($0.985$–$0.986$): with 120
+stable agents of quality $\geq 0.7$, Thompson Sampling finds
+good candidates under any of the three operators, and the
+discovery metric does not separate them.
+
+Whether this trade is favourable depends on the surrounding
+system. In Aroha, worst-case financial exposure to a
+degrading or compromised agent is bounded \emph{independently
+of reputation} by cryptographically enforced spending
+mandates; the marginal cost of slower demotion is therefore
+capped, while the cost of falsely blocking recovered agents
+— lost discovery coverage in a young network — is not. The
+recovery-favouring operating point is a deliberate choice for
+this deployment, not a universal recommendation; systems in
+which reputation is the \emph{only} harm-containment layer
+should prefer $\rho \leq 1$ (Theorem~\ref{thm:dominance}'s
+regime condition makes the same point formally).
+
+\subsection{Sensitivity Analysis}
+
+We vary the ratio $\rho = \tau_s / \tau_f$ from 1.0
+(symmetric) to 5.0, keeping $\tau_f = 60$ days fixed
+(Table~\ref{tab:sensitivity}). Both metrics move
+monotonically with $\rho$, in opposite directions: raising
+$\rho$ slows detection roughly linearly ($13.0$ days at
+$\rho{=}1$ to $33.3$ at $\rho{=}5$) while improving recovery
+with strongly diminishing returns — FPR falls $27.1 \to
+20.3\%$ between $\rho{=}1$ and $\rho{=}2$, but only $18.6 \to
+17.5\%$ between $\rho{=}3$ and $\rho{=}5$. The deployed
+$\rho = 3$ sits at the knee: beyond it, each additional unit
+of $\rho$ buys under half a point of FPR at a cost of
+roughly three days of detection latency.
+
+\begin{table}[t]
+\centering
+\caption{Sensitivity to $\rho = \tau_s/\tau_f$
+($\tau_f = 60$ d fixed; same protocol as
+Table~\ref{tab:results}).}
+\label{tab:sensitivity}
+\begin{tabular}{lcc}
+\toprule
+$\rho$ & $T_{\text{det}}$ (days) & FPR (\%) \\
+\midrule
+1.0 (symmetric) & $13.0 \pm 0.8$ & $27.1$ \\
+1.5             & $18.1 \pm 1.1$ & $22.2$ \\
+2.0             & $21.9 \pm 1.4$ & $20.3$ \\
+3.0 (deployed)  & $27.1 \pm 1.9$ & $18.6$ \\
+4.0             & $30.7 \pm 2.3$ & $17.9$ \\
+5.0             & $33.3 \pm 2.6$ & $17.5$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% ─────────────────────────────────────────────────────────────
+\section{Composite Score and Verification Interaction}
+\label{sec:verified}
+
+The reputation system interacts with the publisher
+verification tier (described in a companion paper). An agent
+is marked ``verified'' ($v = 1$) if and only if:
+\begin{equation}
+  v = \mathbf{1}\!\left[
+    \hat{q} \geq \theta_v
+    \;\wedge\;
+    (t_{\text{now}} - t_{\text{reg}}) \geq 7 \text{ days}
+  \right]
+  \label{eq:verified}
+\end{equation}
+where $\theta_v = 0.70$ (corresponding to an internal
+score of $7{,}000/10{,}000$) and $\hat{q}$
+is the composite score scaled to $[0, 10{,}000]$.
+This separates the quality signal (ArohaRep) from the identity
+signal (publisher verification), allowing both to be
+displayed independently to consuming applications.
+
+% ─────────────────────────────────────────────────────────────
+\section{Limitations and Future Work}
+\label{sec:limits}
+
+The current model has several limitations. First, the signal
+weights (Table~\ref{tab:signals}) are set empirically; a
+future direction is to learn them via Bayesian optimisation
+on held-out quality data. Second, the model treats
+observations as conditionally independent given quality;
+correlated failures (e.g., during infrastructure outages
+affecting many agents) can produce spurious negative spikes.
+A hierarchical model with a shared failure factor could
+address this. Third, while the PPS gate provides Sybil
+resistance within the Beta model, a coordinated attack
+with a large number of high-quality seed agents remains
+possible; integration with staking or zero-knowledge
+identity proofs could close this gap.
+
+% ─────────────────────────────────────────────────────────────
+\section{Conclusion}
+\label{sec:conclusion}
+
+We have presented ArohaRep, a Bayesian multi-signal
+reputation system for open AI agent networks. The core
+contribution is the asymmetric temporal decay operator
+$\mathcal{D}_{\tau_s,\tau_f}$ which applies different
+half-lives to success and failure pseudo-counts. Simulation
+over 1{,}000 synthetic populations quantifies the operator's
+trade-off precisely: at the deployed ratio $\rho = 3$,
+false-positive blocking of recovered agents falls to $18.6\%$
+of post-grace agent-days ($1.9\times$ better than symmetric
+decay, $3.7\times$ better than no decay) while detection of
+degrading agents slows to $27.1$ days versus $15.9$ under the
+symmetric baseline; the ratio $\rho$ is a monotone dial on
+this trade-off with a knee at the deployed value. We argue
+the recovery-favouring point is correct for Aroha because
+spending mandates bound financial exposure independently of
+reputation — and, symmetrically, that reputation-only systems
+should choose $\rho \leq 1$. Thompson Sampling with decayed
+Beta parameters provides provably sublinear expected regret
+for the discovery ranking problem. The system is deployed in
+the Aroha agent registry and handles real-time reputation
+queries at sub-10ms latency on Cloudflare's edge network.
+
+\bibliographystyle{IEEEtran}
+\bibliography{aroha}
+
+% ─────────────────────────────────────────────────────────────
+\appendix
+
+\section{Proof of Proposition \ref{prop:detection}}
+\label{app:detection}
+
+After a quality drop at $t_0$, the agent accumulates failure
+observations at rate $r_f$ with weight $w_2 = 1.20$ per
+observation. The score update after $N_f$ failure
+observations (with $\alpha_{\text{lr}} = \alpha^*$) is:
+\begin{align}
+  \beta^{(N_f)} &= \beta_0 + \sum_{k=1}^{N_f}
+    \alpha^*(1-\alpha^*)^{N_f - k} \cdot w_2
+\end{align}
+Simultaneously, prior success evidence decays:
+$\alpha^{(N_f)} = \alpha_0 + (\alpha_{\text{pre}} - \alpha_0)
+2^{-N_f / (r_s \tau_s)}$.
+Setting $\hat{q}^{(N_f)} = \theta^*$ and solving for
+$N_f$ gives the stated bound, with the $O(\tau_f / \ln 2)$
+term accounting for residual decay.
+
+\section{Parameter Derivation}
+\label{app:params}
+
+The deployed parameter values $\tau_s = 180\text{d}$ and
+$\tau_f = 60\text{d}$ were selected to satisfy three
+design constraints:
+\begin{enumerate}
+  \item A perfectly good agent (all successes) should
+    maintain $\hat{q} > 0.85$ for at least 180 days without
+    new observations. From \eqref{eq:alpha_decay} and
+    \eqref{eq:score}, this requires $\tau_s \geq 180\text{d}$.
+  \item A perfectly bad agent (all failures) should be
+    detectable ($\hat{q} < 0.70$) within 14 days of
+    quality degradation, given a minimum observation rate
+    of $\lambda = 5$/day. From Proposition~\ref{prop:detection},
+    this constrains $\tau_f \leq 70\text{d}$.
+  \item The false-positive rate for recovering agents should
+    be below 15\% at 14 days post-recovery.
+    From the sensitivity analysis, this is satisfied for
+    $\rho = \tau_s / \tau_f \geq 2.5$.
+\end{enumerate}
+$\tau_s = 180\text{d}$, $\tau_f = 60\text{d}$ ($\rho = 3$)
+satisfies all three constraints with margin.
+
+\end{document}

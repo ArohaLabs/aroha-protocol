@@ -1,0 +1,21 @@
+# Copyright (c) 2026 Aroha Labs
+# SPDX-License-Identifier: Apache-2.0
+
+name = "aroha-agent"
+main = "aroha-worker.ts"
+compatibility_date = "2026-06-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Identity and peers are NOT committed here. Set them per deployment:
+#
+#   npx wrangler secret put AROHA_PRIVATE_KEY        # base64 of the 32-byte Ed25519 seed
+#   npx wrangler secret put AROHA_AGENT_DID          # e.g. did:aroha:my-cloudflare-agent
+#   npx wrangler secret put ORCHESTRATOR_DID         # DID allowed to call this agent
+#   npx wrangler secret put ORCHESTRATOR_PUBLIC_KEY  # base64 of its 32-byte public key
+#
+# For local `wrangler dev`, put the same keys in a .dev.vars file (git-ignored).
+
+# Optional: bind a KV namespace for durable nonce storage
+# [[kv_namespaces]]
+# binding = "AROHA_NONCES"
+# id = "your-kv-namespace-id"

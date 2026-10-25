@@ -1,0 +1,103 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+*.tsbuildinfo
+
+# Local /graphify pipeline output
+graphify-out/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+/tmp/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/settings.json
+.idea/
+
+# Hardhat
+artifacts/
+cache/
+typechain-types/
+.claude/
+.github/skills
+
+# Virtual environments
+.venv/
+
+# Playwright
+.playwright-mcp
+.vercel
+.env*
+
+# Root-level screenshots from Playwright/audit sessions
+/*.png
+/*.jpeg
+/*.jpg
+
+# LaTeX build artifacts
+papers/*.aux
+papers/*.bbl
+papers/*.blg
+papers/*.log
+papers/*.out
+papers/*.pdf
+papers/pdf/*.aux
+papers/pdf/*.bbl
+papers/pdf/*.blg
+papers/pdf/*.log
+papers/pdf/*.out
+# Compiled paper PDFs are build output of papers/*.tex (nothing in docs/,
+# mkdocs.yml or README links them). Untracked 2026-10-09; earlier copies
+# remain in git history.
+papers/pdf/*.pdf
+docs/**/*.aux
+docs/**/*.bbl
+docs/**/*.blg
+docs/**/*.out
+docs/**/*.toc
+docs/**/*.synctex.gz
+
+# Office lock files (e.g. docs/pitch/~$deck.pptx)
+~$*
+
+# Foundry build output (forge build). Nothing reads the ABIs from out/;
+# regenerate with `forge build`.
+out/
+
+# Local Anvil deployment addresses written by scripts/setup-chain.mjs.
+# (The committed copy is kept: scripts/chat-demo.mjs reads it.)
+
+# Cloudflare Workers local secrets (wrangler dev)
+.dev.vars
+
+# Local conformance run output (CI uploads its own copy as an artifact)
+conformance-results.json
+
+# Temporary scaffold checks
+.scaffold-check/
+
+# GTM, launch and pitch material lives in the private aroha-gtm repository.
+# Ignored here so it cannot be committed back into the public repo by accident.
+/docs/gtm/
+/docs/launch/
+/docs/pitch/
+
+# scripts/check-readme-examples.mjs scratch output
+.readme-check/
+
+# Built from docs/whitepaper.tex (see docs/whitepaper.md)
+docs/whitepaper.pdf
+
+# Package-manager manifests are release artifacts (packaging/generate-manifests.mjs)
+packaging/out/

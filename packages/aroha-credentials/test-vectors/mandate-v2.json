@@ -1,0 +1,146 @@
+{
+  "description": "Aroha spending-mandate v2 conformance vectors. Canonicalisation is RFC 8785 (JCS). A v2 signature is Ed25519(privateKey, UTF-8(JCS({\"mandate\": <body>, \"v\": 2}))), base64url without padding. Tokens are base64url(JSON({v: 2, mandate, signature, chain})) with chain root-first, excluding the leaf. Public keys resolve from content-addressed DIDs (did:aroha:z<base58btc(pubkey)>). Keys are the RFC 8032 §7.1 test keys — never use them for anything real.",
+  "generatedBy": "packages/aroha-credentials/scripts/gen-test-vectors.ts",
+  "keys": {
+    "human": {
+      "privateKeyHex": "9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60",
+      "publicKeyHex": "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a",
+      "did": "did:aroha:zFVen3X669xLzsi6N2V91DoiyzHzg1uAgqiT8jZ9nS96Z"
+    },
+    "agent": {
+      "privateKeyHex": "4ccd089b28ff96da9db6c346ec114e0f5b8a319f35aba624da8cf6ed4fb8a6fb",
+      "publicKeyHex": "3d4017c3e843895a92b70aa74d1b7ebc9c982ccf2ec4968cc0cd55f12af4660c",
+      "did": "did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5"
+    },
+    "provider": {
+      "privateKeyHex": "c5aa8df43f9f837bedb7442f31dcb7b166d38535076f094b85ce3a2e0b4458f7",
+      "publicKeyHex": "fc51cd8e6218a1a38da47ed00230f0580816ed13ba3303ac5deb911548908025",
+      "did": "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr"
+    }
+  },
+  "jcs": [
+    {
+      "name": "rfc8785-3.2.2-sample",
+      "input": "{\"numbers\":[333333333.33333329,1E30,4.50,2e-3,0.000000000000000000000000001],\"string\":\"\\u20ac$\\u000F\\u000aA'\\u0042\\u0022\\u005c\\\\\\\"\\/\",\"literals\":[null,true,false]}",
+      "expected": "{\"literals\":[null,true,false],\"numbers\":[333333333.3333333,1e+30,4.5,0.002,1e-27],\"string\":\"€$\\u000f\\nA'B\\\"\\\\\\\\\\\"/\"}"
+    },
+    {
+      "name": "rfc8785-3.2.3-key-sorting",
+      "input": "{\"\\u20ac\":\"Euro Sign\",\"\\r\":\"Carriage Return\",\"\\ufb33\":\"Hebrew Letter Dalet With Dagesh\",\"1\":\"One\",\"\\ud83d\\ude00\":\"Emoji: Grinning Face\",\"\\u0080\":\"Control\",\"\\u00f6\":\"Latin Small Letter O With Diaeresis\"}",
+      "expected": "{\"\\r\":\"Carriage Return\",\"1\":\"One\",\"\":\"Control\",\"ö\":\"Latin Small Letter O With Diaeresis\",\"€\":\"Euro Sign\",\"😀\":\"Emoji: Grinning Face\",\"דּ\":\"Hebrew Letter Dalet With Dagesh\"}"
+    },
+    {
+      "name": "amounts",
+      "input": "{\"a\":42,\"b\":42.50,\"c\":42.07,\"d\":0.1,\"e\":1e21,\"f\":-0,\"g\":100.0,\"h\":1e-7}",
+      "expected": "{\"a\":42,\"b\":42.5,\"c\":42.07,\"d\":0.1,\"e\":1e+21,\"f\":0,\"g\":100,\"h\":1e-7}"
+    },
+    {
+      "name": "nested-and-whitespace",
+      "input": "{ \"z\" : [ 1 , { \"y\" : null , \"x\" : \"é\" } ] , \"a\" : { } }",
+      "expected": "{\"a\":{},\"z\":[1,{\"x\":\"é\",\"y\":null}]}"
+    }
+  ],
+  "mandates": [
+    {
+      "name": "intent-root",
+      "signer": "human",
+      "mandate": {
+        "mandateTier": "intent",
+        "constraints": {
+          "spendLimitUsd": 500,
+          "sessionLimitUsd": 200.5,
+          "requireHumanApprovalAboveUsd": 100,
+          "allowedMerchants": [
+            "did:aroha:merchant-a",
+            "did:aroha:merchant-b"
+          ],
+          "validUntil": "2099-01-01T00:00:00.000Z"
+        },
+        "grantee": "did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5",
+        "grantor": "did:aroha:zFVen3X669xLzsi6N2V91DoiyzHzg1uAgqiT8jZ9nS96Z",
+        "issuedAt": "2026-01-01T00:00:00.000Z",
+        "expiresAt": "2099-01-01T00:00:00.000Z",
+        "parentMandateId": null,
+        "mandateId": "00000000-0000-4000-8000-000000000001"
+      },
+      "expectedSigningPayload": "{\"mandate\":{\"constraints\":{\"allowedMerchants\":[\"did:aroha:merchant-a\",\"did:aroha:merchant-b\"],\"requireHumanApprovalAboveUsd\":100,\"sessionLimitUsd\":200.5,\"spendLimitUsd\":500,\"validUntil\":\"2099-01-01T00:00:00.000Z\"},\"expiresAt\":\"2099-01-01T00:00:00.000Z\",\"grantee\":\"did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5\",\"grantor\":\"did:aroha:zFVen3X669xLzsi6N2V91DoiyzHzg1uAgqiT8jZ9nS96Z\",\"issuedAt\":\"2026-01-01T00:00:00.000Z\",\"mandateId\":\"00000000-0000-4000-8000-000000000001\",\"mandateTier\":\"intent\",\"parentMandateId\":null},\"v\":2}",
+      "expectedSignature": "coa8Ysmk3gvZ88T5lXPO-T0Tmk7dN63cxnIJgYFCiDV62juyKRznGljT_rpxsCPidpEvc3uWsoKPbNbDWYeQCw"
+    },
+    {
+      "name": "cart-child",
+      "signer": "agent",
+      "mandate": {
+        "mandateTier": "cart",
+        "constraints": {
+          "spendLimitUsd": 42.07,
+          "sessionLimitUsd": 42.07,
+          "requireHumanApprovalAboveUsd": 100,
+          "allowedMerchants": [
+            "did:aroha:merchant-a"
+          ],
+          "validUntil": "2099-01-01T00:00:00.000Z"
+        },
+        "grantee": "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr",
+        "grantor": "did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5",
+        "issuedAt": "2026-01-01T00:00:01.000Z",
+        "expiresAt": "2099-01-01T00:00:00.000Z",
+        "parentMandateId": "00000000-0000-4000-8000-000000000001",
+        "mandateId": "00000000-0000-4000-8000-000000000002"
+      },
+      "expectedSigningPayload": "{\"mandate\":{\"constraints\":{\"allowedMerchants\":[\"did:aroha:merchant-a\"],\"requireHumanApprovalAboveUsd\":100,\"sessionLimitUsd\":42.07,\"spendLimitUsd\":42.07,\"validUntil\":\"2099-01-01T00:00:00.000Z\"},\"expiresAt\":\"2099-01-01T00:00:00.000Z\",\"grantee\":\"did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr\",\"grantor\":\"did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5\",\"issuedAt\":\"2026-01-01T00:00:01.000Z\",\"mandateId\":\"00000000-0000-4000-8000-000000000002\",\"mandateTier\":\"cart\",\"parentMandateId\":\"00000000-0000-4000-8000-000000000001\"},\"v\":2}",
+      "expectedSignature": "G57scnpbP04WXVTMkXJVQ0RseKwNrYpsaZAxZQZrmKzoFKIjxWJMPz4hTagUJMwyi7qSvhX5fxqc-86LsbXRDw"
+    },
+    {
+      "name": "cart-widened",
+      "signer": "agent",
+      "mandate": {
+        "mandateTier": "cart",
+        "constraints": {
+          "spendLimitUsd": 1000,
+          "allowedMerchants": [
+            "did:aroha:merchant-a"
+          ],
+          "validUntil": "2099-01-01T00:00:00.000Z"
+        },
+        "grantee": "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr",
+        "grantor": "did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5",
+        "issuedAt": "2026-01-01T00:00:01.000Z",
+        "expiresAt": "2099-01-01T00:00:00.000Z",
+        "parentMandateId": "00000000-0000-4000-8000-000000000001",
+        "mandateId": "00000000-0000-4000-8000-000000000003"
+      },
+      "expectedSigningPayload": "{\"mandate\":{\"constraints\":{\"allowedMerchants\":[\"did:aroha:merchant-a\"],\"spendLimitUsd\":1000,\"validUntil\":\"2099-01-01T00:00:00.000Z\"},\"expiresAt\":\"2099-01-01T00:00:00.000Z\",\"grantee\":\"did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr\",\"grantor\":\"did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5\",\"issuedAt\":\"2026-01-01T00:00:01.000Z\",\"mandateId\":\"00000000-0000-4000-8000-000000000003\",\"mandateTier\":\"cart\",\"parentMandateId\":\"00000000-0000-4000-8000-000000000001\"},\"v\":2}",
+      "expectedSignature": "93K83m3ICa7o2hMNUUVgyKfzgktf1ERIB5Z8dsmp-Mcewt7UkTTY8CcwRzKZfUt0HSGVUh_C32HLFIvaTEbdAg"
+    }
+  ],
+  "tokens": [
+    {
+      "name": "valid-intent-to-cart",
+      "token": "eyJ2IjoyLCJtYW5kYXRlIjp7Im1hbmRhdGVUaWVyIjoiY2FydCIsImNvbnN0cmFpbnRzIjp7InNwZW5kTGltaXRVc2QiOjQyLjA3LCJzZXNzaW9uTGltaXRVc2QiOjQyLjA3LCJyZXF1aXJlSHVtYW5BcHByb3ZhbEFib3ZlVXNkIjoxMDAsImFsbG93ZWRNZXJjaGFudHMiOlsiZGlkOmFyb2hhOm1lcmNoYW50LWEiXSwidmFsaWRVbnRpbCI6IjIwOTktMDEtMDFUMDA6MDA6MDAuMDAwWiJ9LCJncmFudGVlIjoiZGlkOmFyb2hhOnpIeXg2MndQUUd5dlhDb2loWnExQnJiVWpCUmgyTHVOeFdpaXFNa2ZBdVNaciIsImdyYW50b3IiOiJkaWQ6YXJvaGE6ejU4Nlo3SDJ2cFg5cU5oTjJUNGU5VXR1Z2llM29namJ4ekdhTXRNM0U2SFI1IiwiaXNzdWVkQXQiOiIyMDI2LTAxLTAxVDAwOjAwOjAxLjAwMFoiLCJleHBpcmVzQXQiOiIyMDk5LTAxLTAxVDAwOjAwOjAwLjAwMFoiLCJwYXJlbnRNYW5kYXRlSWQiOiIwMDAwMDAwMC0wMDAwLTQwMDAtODAwMC0wMDAwMDAwMDAwMDEiLCJtYW5kYXRlSWQiOiIwMDAwMDAwMC0wMDAwLTQwMDAtODAwMC0wMDAwMDAwMDAwMDIifSwic2lnbmF0dXJlIjoiRzU3c2NucGJQMDRXWFZUTWtYSlZRMFJzZUt3TnJZcHNhWkF4WlFacm1Lem9GS0lqeFdKTVB6NGhUYWdVSk13eWk3cVN2aFg1ZnhxYy04NkxzYlhSRHciLCJjaGFpbiI6W3sidiI6MiwibWFuZGF0ZSI6eyJtYW5kYXRlVGllciI6ImludGVudCIsImNvbnN0cmFpbnRzIjp7InNwZW5kTGltaXRVc2QiOjUwMCwic2Vzc2lvbkxpbWl0VXNkIjoyMDAuNSwicmVxdWlyZUh1bWFuQXBwcm92YWxBYm92ZVVzZCI6MTAwLCJhbGxvd2VkTWVyY2hhbnRzIjpbImRpZDphcm9oYTptZXJjaGFudC1hIiwiZGlkOmFyb2hhOm1lcmNoYW50LWIiXSwidmFsaWRVbnRpbCI6IjIwOTktMDEtMDFUMDA6MDA6MDAuMDAwWiJ9LCJncmFudGVlIjoiZGlkOmFyb2hhOno1ODZaN0gydnBYOXFOaE4yVDRlOVV0dWdpZTNvZ2pieHpHYU10TTNFNkhSNSIsImdyYW50b3IiOiJkaWQ6YXJvaGE6ekZWZW4zWDY2OXhMenNpNk4yVjkxRG9peXpIemcxdUFncWlUOGpaOW5TOTZaIiwiaXNzdWVkQXQiOiIyMDI2LTAxLTAxVDAwOjAwOjAwLjAwMFoiLCJleHBpcmVzQXQiOiIyMDk5LTAxLTAxVDAwOjAwOjAwLjAwMFoiLCJwYXJlbnRNYW5kYXRlSWQiOm51bGwsIm1hbmRhdGVJZCI6IjAwMDAwMDAwLTAwMDAtNDAwMC04MDAwLTAwMDAwMDAwMDAwMSJ9LCJzaWduYXR1cmUiOiJjb2E4WXNtazNndlo4OFQ1bFhQTy1UMFRtazdkTjYzY3huSUpnWUZDaURWNjJqdXlLUnpuR2xqVF9ycHhzQ1BpZHBFdmMzdVdzb0tQYk5iRFdZZVFDdyJ9XX0",
+      "verifyAt": "2027-01-01T00:00:00.000Z",
+      "expected": {
+        "valid": true,
+        "rootGrantor": "did:aroha:zFVen3X669xLzsi6N2V91DoiyzHzg1uAgqiT8jZ9nS96Z",
+        "leafMandateId": "00000000-0000-4000-8000-000000000002"
+      }
+    },
+    {
+      "name": "widened-child-rejected",
+      "token": "eyJ2IjoyLCJtYW5kYXRlIjp7Im1hbmRhdGVUaWVyIjoiY2FydCIsImNvbnN0cmFpbnRzIjp7InNwZW5kTGltaXRVc2QiOjEwMDAsImFsbG93ZWRNZXJjaGFudHMiOlsiZGlkOmFyb2hhOm1lcmNoYW50LWEiXSwidmFsaWRVbnRpbCI6IjIwOTktMDEtMDFUMDA6MDA6MDAuMDAwWiJ9LCJncmFudGVlIjoiZGlkOmFyb2hhOnpIeXg2MndQUUd5dlhDb2loWnExQnJiVWpCUmgyTHVOeFdpaXFNa2ZBdVNaciIsImdyYW50b3IiOiJkaWQ6YXJvaGE6ejU4Nlo3SDJ2cFg5cU5oTjJUNGU5VXR1Z2llM29namJ4ekdhTXRNM0U2SFI1IiwiaXNzdWVkQXQiOiIyMDI2LTAxLTAxVDAwOjAwOjAxLjAwMFoiLCJleHBpcmVzQXQiOiIyMDk5LTAxLTAxVDAwOjAwOjAwLjAwMFoiLCJwYXJlbnRNYW5kYXRlSWQiOiIwMDAwMDAwMC0wMDAwLTQwMDAtODAwMC0wMDAwMDAwMDAwMDEiLCJtYW5kYXRlSWQiOiIwMDAwMDAwMC0wMDAwLTQwMDAtODAwMC0wMDAwMDAwMDAwMDMifSwic2lnbmF0dXJlIjoiOTNLODNtM0lDYTdvMmhNTlVVVmd5S2Z6Z2t0ZjFFUklCNVo4ZHNtcC1NY2V3dDdVa1RUWThDY3dSektaZlV0MEhTR1ZVaF9DMzJITEZJdmFURWJkQWciLCJjaGFpbiI6W3sidiI6MiwibWFuZGF0ZSI6eyJtYW5kYXRlVGllciI6ImludGVudCIsImNvbnN0cmFpbnRzIjp7InNwZW5kTGltaXRVc2QiOjUwMCwic2Vzc2lvbkxpbWl0VXNkIjoyMDAuNSwicmVxdWlyZUh1bWFuQXBwcm92YWxBYm92ZVVzZCI6MTAwLCJhbGxvd2VkTWVyY2hhbnRzIjpbImRpZDphcm9oYTptZXJjaGFudC1hIiwiZGlkOmFyb2hhOm1lcmNoYW50LWIiXSwidmFsaWRVbnRpbCI6IjIwOTktMDEtMDFUMDA6MDA6MDAuMDAwWiJ9LCJncmFudGVlIjoiZGlkOmFyb2hhOno1ODZaN0gydnBYOXFOaE4yVDRlOVV0dWdpZTNvZ2pieHpHYU10TTNFNkhSNSIsImdyYW50b3IiOiJkaWQ6YXJvaGE6ekZWZW4zWDY2OXhMenNpNk4yVjkxRG9peXpIemcxdUFncWlUOGpaOW5TOTZaIiwiaXNzdWVkQXQiOiIyMDI2LTAxLTAxVDAwOjAwOjAwLjAwMFoiLCJleHBpcmVzQXQiOiIyMDk5LTAxLTAxVDAwOjAwOjAwLjAwMFoiLCJwYXJlbnRNYW5kYXRlSWQiOm51bGwsIm1hbmRhdGVJZCI6IjAwMDAwMDAwLTAwMDAtNDAwMC04MDAwLTAwMDAwMDAwMDAwMSJ9LCJzaWduYXR1cmUiOiJjb2E4WXNtazNndlo4OFQ1bFhQTy1UMFRtazdkTjYzY3huSUpnWUZDaURWNjJqdXlLUnpuR2xqVF9ycHhzQ1BpZHBFdmMzdVdzb0tQYk5iRFdZZVFDdyJ9XX0",
+      "verifyAt": "2027-01-01T00:00:00.000Z",
+      "expected": {
+        "valid": false,
+        "reasonClass": "narrowing"
+      }
+    },
+    {
+      "name": "expired-validUntil-rejected",
+      "token": "eyJ2IjoyLCJtYW5kYXRlIjp7Im1hbmRhdGVUaWVyIjoiY2FydCIsImNvbnN0cmFpbnRzIjp7InNwZW5kTGltaXRVc2QiOjQyLjA3LCJzZXNzaW9uTGltaXRVc2QiOjQyLjA3LCJyZXF1aXJlSHVtYW5BcHByb3ZhbEFib3ZlVXNkIjoxMDAsImFsbG93ZWRNZXJjaGFudHMiOlsiZGlkOmFyb2hhOm1lcmNoYW50LWEiXSwidmFsaWRVbnRpbCI6IjIwOTktMDEtMDFUMDA6MDA6MDAuMDAwWiJ9LCJncmFudGVlIjoiZGlkOmFyb2hhOnpIeXg2MndQUUd5dlhDb2loWnExQnJiVWpCUmgyTHVOeFdpaXFNa2ZBdVNaciIsImdyYW50b3IiOiJkaWQ6YXJvaGE6ejU4Nlo3SDJ2cFg5cU5oTjJUNGU5VXR1Z2llM29namJ4ekdhTXRNM0U2SFI1IiwiaXNzdWVkQXQiOiIyMDI2LTAxLTAxVDAwOjAwOjAxLjAwMFoiLCJleHBpcmVzQXQiOiIyMDk5LTAxLTAxVDAwOjAwOjAwLjAwMFoiLCJwYXJlbnRNYW5kYXRlSWQiOiIwMDAwMDAwMC0wMDAwLTQwMDAtODAwMC0wMDAwMDAwMDAwMDEiLCJtYW5kYXRlSWQiOiIwMDAwMDAwMC0wMDAwLTQwMDAtODAwMC0wMDAwMDAwMDAwMDIifSwic2lnbmF0dXJlIjoiRzU3c2NucGJQMDRXWFZUTWtYSlZRMFJzZUt3TnJZcHNhWkF4WlFacm1Lem9GS0lqeFdKTVB6NGhUYWdVSk13eWk3cVN2aFg1ZnhxYy04NkxzYlhSRHciLCJjaGFpbiI6W3sidiI6MiwibWFuZGF0ZSI6eyJtYW5kYXRlVGllciI6ImludGVudCIsImNvbnN0cmFpbnRzIjp7InNwZW5kTGltaXRVc2QiOjUwMCwic2Vzc2lvbkxpbWl0VXNkIjoyMDAuNSwicmVxdWlyZUh1bWFuQXBwcm92YWxBYm92ZVVzZCI6MTAwLCJhbGxvd2VkTWVyY2hhbnRzIjpbImRpZDphcm9oYTptZXJjaGFudC1hIiwiZGlkOmFyb2hhOm1lcmNoYW50LWIiXSwidmFsaWRVbnRpbCI6IjIwOTktMDEtMDFUMDA6MDA6MDAuMDAwWiJ9LCJncmFudGVlIjoiZGlkOmFyb2hhOno1ODZaN0gydnBYOXFOaE4yVDRlOVV0dWdpZTNvZ2pieHpHYU10TTNFNkhSNSIsImdyYW50b3IiOiJkaWQ6YXJvaGE6ekZWZW4zWDY2OXhMenNpNk4yVjkxRG9peXpIemcxdUFncWlUOGpaOW5TOTZaIiwiaXNzdWVkQXQiOiIyMDI2LTAxLTAxVDAwOjAwOjAwLjAwMFoiLCJleHBpcmVzQXQiOiIyMDk5LTAxLTAxVDAwOjAwOjAwLjAwMFoiLCJwYXJlbnRNYW5kYXRlSWQiOm51bGwsIm1hbmRhdGVJZCI6IjAwMDAwMDAwLTAwMDAtNDAwMC04MDAwLTAwMDAwMDAwMDAwMSJ9LCJzaWduYXR1cmUiOiJjb2E4WXNtazNndlo4OFQ1bFhQTy1UMFRtazdkTjYzY3huSUpnWUZDaURWNjJqdXlLUnpuR2xqVF9ycHhzQ1BpZHBFdmMzdVdzb0tQYk5iRFdZZVFDdyJ9XX0",
+      "verifyAt": "2099-06-01T00:00:00.000Z",
+      "expected": {
+        "valid": false,
+        "reasonClass": "time"
+      }
+    }
+  ]
+}

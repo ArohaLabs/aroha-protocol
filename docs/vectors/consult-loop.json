@@ -1,0 +1,172 @@
+{
+  "description": "Consult loop-prevention vectors (design spec §3.2). Every Aroha implementation MUST produce these results. A disagreement between implementations means two agents disagree about whether a consult chain is legal, which surfaces only in production between two parties with no shared log.",
+  "maxHopsDefault": 3,
+  "checkLoopLimits": [
+    {
+      "name": "first hop is allowed",
+      "hopCount": 1,
+      "consultChain": [
+        "did:aroha:zA"
+      ],
+      "ownDid": "did:aroha:zB",
+      "maxHops": 3,
+      "expectOk": true
+    },
+    {
+      "name": "third hop is allowed at maxHops 3",
+      "hopCount": 3,
+      "consultChain": [
+        "did:aroha:zA",
+        "did:aroha:zB",
+        "did:aroha:zC"
+      ],
+      "ownDid": "did:aroha:zD",
+      "maxHops": 3,
+      "expectOk": true
+    },
+    {
+      "name": "fourth hop is refused at maxHops 3",
+      "hopCount": 4,
+      "consultChain": [
+        "did:aroha:zA",
+        "did:aroha:zB",
+        "did:aroha:zC",
+        "did:aroha:zD"
+      ],
+      "ownDid": "did:aroha:zE",
+      "maxHops": 3,
+      "expectOk": false,
+      "expectReasonContains": "hop"
+    },
+    {
+      "name": "two-cycle is refused inside the hop limit",
+      "hopCount": 2,
+      "consultChain": [
+        "did:aroha:zA",
+        "did:aroha:zB"
+      ],
+      "ownDid": "did:aroha:zA",
+      "maxHops": 3,
+      "expectOk": false,
+      "expectReasonContains": "cycle"
+    },
+    {
+      "name": "self-consult on the first hop is refused",
+      "hopCount": 1,
+      "consultChain": [
+        "did:aroha:zA"
+      ],
+      "ownDid": "did:aroha:zA",
+      "maxHops": 3,
+      "expectOk": false,
+      "expectReasonContains": "cycle"
+    },
+    {
+      "name": "hop count of zero is malformed",
+      "hopCount": 0,
+      "consultChain": [],
+      "ownDid": "did:aroha:zB",
+      "maxHops": 3,
+      "expectOk": false,
+      "expectReasonContains": "malformed"
+    },
+    {
+      "name": "negative hop count is malformed",
+      "hopCount": -1,
+      "consultChain": [],
+      "ownDid": "did:aroha:zB",
+      "maxHops": 3,
+      "expectOk": false,
+      "expectReasonContains": "malformed"
+    },
+    {
+      "name": "empty chain with a valid hop count is allowed",
+      "hopCount": 1,
+      "consultChain": [],
+      "ownDid": "did:aroha:zB",
+      "maxHops": 3,
+      "expectOk": true
+    },
+    {
+      "name": "maxHops 1 allows exactly one call",
+      "hopCount": 1,
+      "consultChain": [
+        "did:aroha:zA"
+      ],
+      "ownDid": "did:aroha:zB",
+      "maxHops": 1,
+      "expectOk": true
+    },
+    {
+      "name": "maxHops 1 refuses the second",
+      "hopCount": 2,
+      "consultChain": [
+        "did:aroha:zA",
+        "did:aroha:zB"
+      ],
+      "ownDid": "did:aroha:zC",
+      "maxHops": 1,
+      "expectOk": false,
+      "expectReasonContains": "hop"
+    },
+    {
+      "name": "a chain longer than the hop count is malformed",
+      "hopCount": 1,
+      "consultChain": [
+        "did:aroha:zA",
+        "did:aroha:zB",
+        "did:aroha:zC"
+      ],
+      "ownDid": "did:aroha:zD",
+      "maxHops": 3,
+      "expectOk": false,
+      "expectReasonContains": "malformed"
+    },
+    {
+      "name": "hop count equal to chain length is the well-formed case",
+      "hopCount": 2,
+      "consultChain": [
+        "did:aroha:zA",
+        "did:aroha:zB"
+      ],
+      "ownDid": "did:aroha:zC",
+      "maxHops": 3,
+      "expectOk": true
+    },
+    {
+      "name": "hop count ahead of the chain is allowed — a chain may be omitted",
+      "hopCount": 3,
+      "consultChain": [
+        "did:aroha:zA"
+      ],
+      "ownDid": "did:aroha:zD",
+      "maxHops": 3,
+      "expectOk": true
+    }
+  ],
+  "nextHop": [
+    {
+      "name": "first hop from empty state",
+      "hopCount": 0,
+      "consultChain": [],
+      "ownDid": "did:aroha:zSELF",
+      "expectHopCount": 1,
+      "expectChain": [
+        "did:aroha:zSELF"
+      ]
+    },
+    {
+      "name": "relaying an inbound consult",
+      "hopCount": 1,
+      "consultChain": [
+        "did:aroha:zORIGIN"
+      ],
+      "ownDid": "did:aroha:zSELF",
+      "expectHopCount": 2,
+      "expectChain": [
+        "did:aroha:zORIGIN",
+        "did:aroha:zSELF"
+      ]
+    }
+  ]
+}

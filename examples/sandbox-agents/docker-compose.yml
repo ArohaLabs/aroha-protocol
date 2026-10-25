@@ -1,0 +1,54 @@
+# Copyright (c) 2026 Aroha Labs
+# SPDX-License-Identifier: Apache-2.0
+#
+# Runs all 5 sandbox agents locally.
+# Usage: docker-compose up
+# Or individually: docker-compose up flight
+#
+# Ports are published on the host's loopback only. To reach the agents from
+# another machine, change "127.0.0.1:3010:3010" to "3010:3010" (and put them
+# behind a firewall — they are sandbox agents with no peer authentication).
+
+version: "3.9"
+
+services:
+  flight:
+    build: ./flight
+    ports: ["127.0.0.1:3010:3010"]
+    environment:
+      AROHA_AGENT_DID: did:aroha:sandbox-flight
+      PORT: "3010"
+      AGENT_HOST: "0.0.0.0"   # bind all interfaces inside the container so the published port works
+
+  hotel:
+    build: ./hotel
+    ports: ["127.0.0.1:3011:3011"]
+    environment:
+      AROHA_AGENT_DID: did:aroha:sandbox-hotel
+      PORT: "3011"
+      AGENT_HOST: "0.0.0.0"   # bind all interfaces inside the container so the published port works
+
+  weather:
+    build: ./weather
+    ports: ["127.0.0.1:3012:3012"]
+    environment:
+      AROHA_AGENT_DID: did:aroha:sandbox-weather
+      PORT: "3012"
+      AGENT_HOST: "0.0.0.0"   # bind all interfaces inside the container so the published port works
+
+  web-search:
+    build: ./web-search
+    ports: ["127.0.0.1:3013:3013"]
+    environment:
+      AROHA_AGENT_DID: did:aroha:sandbox-web-search
+      PORT: "3013"
+      AGENT_HOST: "0.0.0.0"   # bind all interfaces inside the container so the published port works
+
+  summarizer:
+    build: ./summarizer
+    ports: ["127.0.0.1:3014:3014"]
+    environment:
+      AROHA_AGENT_DID: did:aroha:sandbox-summarizer
+      PORT: "3014"
+      AGENT_HOST: "0.0.0.0"   # bind all interfaces inside the container so the published port works
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}

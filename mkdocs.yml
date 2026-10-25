@@ -1,0 +1,246 @@
+# Copyright (c) 2026 Aroha Labs
+# SPDX-License-Identifier: Apache-2.0
+
+site_name: Aroha Protocol
+site_description: >-
+  An open protocol for autonomous AI agents to discover each other,
+  communicate securely, and transact — across vendors, platforms, and languages.
+site_url: https://aroha-labs.com/
+repo_url: https://github.com/ArohaLabs/aroha-protocol
+repo_name: ArohaLabs/aroha-protocol
+copyright: Copyright &copy; 2026 Aroha Working Group
+
+# ── Theme ──────────────────────────────────────────────────────────────────────
+theme:
+  name: material
+  custom_dir: docs/overrides
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: custom
+      accent: deep purple
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: custom
+      accent: deep purple
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  font:
+    text: Inter
+    code: JetBrains Mono
+  icon:
+    logo: material/robot-outline
+    repo: fontawesome/brands/github
+  features:
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.instant
+    - navigation.instant.progress
+    - navigation.tracking
+    - navigation.top
+    - navigation.footer
+    - search.suggest
+    - search.highlight
+    - search.share
+    - content.code.copy
+    - content.code.annotate
+    - content.tabs.link
+    - content.tooltips
+    - toc.follow
+    - announce.dismiss
+
+# ── Plugins ───────────────────────────────────────────────────────────────────
+plugins:
+  - search:
+      separator: '[\s\-,:!=\[\]()"/]+|(?!\b)(?=[A-Z][a-z])|\.(?!\d)|&[lg]t;'
+  - minify:
+      minify_html: true
+
+# ── Markdown extensions ───────────────────────────────────────────────────────
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+      title: On this page
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.betterem:
+      smart_enable: all
+  - pymdownx.caret
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.snippets:
+      auto_append:
+        - docs/includes/abbreviations.md
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+      combine_header_slug: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+
+# ── Extra ──────────────────────────────────────────────────────────────────────
+extra:
+  version:
+    provider: mike
+    default: stable
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/ArohaLabs/aroha-protocol
+    - icon: fontawesome/brands/x-twitter
+      link: https://x.com/aroha_protocol
+  analytics:
+    provider: google
+    property: !ENV [GOOGLE_ANALYTICS_ID, ""]
+  generator: false
+
+extra_css:
+  - stylesheets/extra.css
+
+extra_javascript:
+  - javascripts/mathjax.js
+  - https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js
+
+# ── Navigation ────────────────────────────────────────────────────────────────
+nav:
+  - Home: index.md
+
+  - Get Started:
+    - Quickstart: quickstart.md
+    - MCP Quickstart: quickstart-mcp.md
+    - Remote MCP Connector: integrations/remote-mcp-connector.md
+    - LangChain Quickstart: quickstart-langchain.md
+    - Sandbox Registry: sandbox.md
+    - Developer Journey: developer-journey.md
+    - The Problem: problem-statement.md
+    - What Aroha Is (and Is Not): positioning.md
+    - Support Matrix: support-matrix.md
+    - Architecture: architecture.md
+    - Protocol Layers: protocol-layers.md
+
+  - SDKs:
+    - Overview: sdks/index.md
+    - Feature Matrix: sdks/feature-matrix.md
+    - Python: sdks/python.md
+    - Go: sdks/go.md
+    - Java: sdks/java.md
+    - CLI: cli.md
+
+  - Packages:
+    - Overview: packages/index.md
+    - Kernel:
+      - aroha-core: packages/core.md
+      - aroha-registry: packages/registry.md
+    - Extensions:
+      - aroha-credentials: packages/credentials.md
+      - "aroha-settlement (aroha-extensions)": packages/settlement.md
+      - "aroha-reputation (aroha-extensions)": packages/reputation.md
+      - "aroha-commerce (aroha-extensions)": packages/commerce.md
+      - "aroha-orchestrator (aroha-extensions)": packages/orchestrator.md
+      - aroha-preferences: packages/preferences.md
+    - Bridges:
+      - aroha-mcp-bridge: packages/mcp-bridge.md
+      - aroha-a2a-bridge: packages/a2a-bridge.md
+      - aroha-langchain-bridge: packages/langchain-bridge.md
+      - aroha-hermes-bridge: packages/hermes-bridge.md
+      - aroha-openclaw-bridge: packages/openclaw-bridge.md
+      - aroha-composio-bridge: packages/composio-bridge.md
+    - Enterprise:
+      - aroha-telemetry: packages/telemetry.md
+      - aroha-trusted-mesh: packages/trusted-mesh.md
+      - aroha-cache: packages/cache.md
+      - aroha-policy: packages/policy.md
+    - Agent Lifecycle:
+      - aroha-run: packages/run.md
+      - aroha-micro: packages/micro.md
+      - aroha-evals: packages/evals.md
+      - aroha-audit: packages/audit.md
+    - Testing & Reliability:
+      - aroha-resilience: packages/resilience.md
+      - aroha-chaos: packages/chaos.md
+
+  - Ecosystem:
+    - Community Directory: ecosystem.md
+    - Wrap Any REST API: wrap-any-rest-api.md
+    - Smart Contracts: contracts/overview.md
+    - Governance: governance.md
+
+  - Spec:
+    - Full Specification: spec/aroha-1.0.md
+    - Extensions (sagas, preference context): spec/extensions.md
+    - Message Types: spec/messages.md
+    - DID Method: spec/did-method.md
+    - Web Identity (did:aroha-web:): spec/web-did.md
+    - Capability Schema Negotiation: spec/csn.md
+    - Security Model: spec/security.md
+    - CNCF Sandbox Proposal: spec/cncf-sandbox-proposal.md
+
+  - Recipes:
+    - Converting Existing Agents: recipes/converting-existing-agents.md
+    - From A2A: recipes/convert-from-a2a.md
+    - From Agntcy: recipes/convert-from-agntcy.md
+    - From MCP: recipes/convert-from-mcp.md
+    - From LangChain: recipes/convert-from-langchain.md
+
+  - Demos:
+    - Agent Playground: demos/playground.md
+    - Browser Demos: demos/browser.md
+    - Terminal Demo: demos/terminal.md
+    - Deploy: deploy.md
+
+  - Trust & Security:
+    - Trust Overview: trust.md
+    - Conformance:
+      - Test Matrix: conformance/test-matrix.md
+      - Implementer Onboarding: conformance/implementer-packet.md
+      - Conformance Tiers: conformance/tiers.md
+    - Security:
+      - Threat Model: security/threat-model.md
+      - Production Hardening: security/hardening.md
+      - Incident Response: security/incident-response.md
+      - Key Management: security/key-management.md
+      - Compliance Narrative (SOC 2 / ISO 27001): security/compliance-narrative.md
+      - Security Review Scope: security/review-scope.md
+      - Evidence Preservation: security/evidence-preservation.md
+    - Integrations:
+      - UCP Mapping (draft): integrations/ucp-mapping.md
+      - ID-JAG Profile (draft): integrations/id-jag-profile.md
+
+  - Ecosystem Program:
+    - Quality Tiers: ecosystem/quality-tiers.md
+    - Partner Onboarding Kit: ecosystem/partner-onboarding-kit.md
+    - Verification Checklist: ecosystem/verification-checklist.md
+    - Monthly Report Template: ecosystem/monthly-report-template.md
+
+  - Reference:
+    - Environment Variables: reference/env-vars.md
+    - RBAC & Credentials: reference/rbac.md
+    - Error Codes: reference/errors.md
+    - Post-Quantum Migration: reference/post-quantum.md
+    - Authorization & Reputation: agent-authorization-and-reputation.md
+    - Reputation Model v1.1: reputation-model.md

@@ -1,0 +1,150 @@
+# Copyright (c) 2026 Aroha Labs
+# SPDX-License-Identifier: Apache-2.0
+
+name: Publish — Go (pkg.go.dev)
+
+# The Go module lives in a subdirectory (module path
+# github.com/ArohaLabs/aroha-protocol/sdks/go). The Go toolchain only recognises a
+# version of a subdirectory module from a tag prefixed with that directory:
+#   sdks/go/vX.Y.Z
+# A plain repo tag such as v1.3.0 is NOT a version of this module.
+#
+# Two ways to publish:
+#   1. push a tag `sdks/go/vX.Y.Z` yourself, or
+#   2. run this workflow manually with `version: vX.Y.Z`; it creates and pushes
+#      that tag at the run's commit after the gate and tests pass.
+# Either way the Release Quality Gate (release-gate.yml) runs first on the same
+# commit and the publish job `needs:` it.
+#
+# Note: while the repository is private, proxy.golang.org cannot fetch the
+# module, so the final step fails until the repository is public. That is the
+# correct outcome — it reports that the module is not publicly resolvable.
+
+on:
+  push:
+    tags:
+      - "sdks/go/v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Go module version to tag and publish, e.g. v1.0.0 (tag becomes sdks/go/v1.0.0)"
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  resolve:
+    name: Resolve tag
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.tag.outputs.version }}
+      tag: ${{ steps.tag.outputs.tag }}
+    steps:
+      - id: tag
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
+            VERSION="${INPUT_VERSION}"
+          else
+            VERSION="${GITHUB_REF_NAME#sdks/go/}"
+          fi
+          # The module path has no /vN suffix, so only v0.x and v1.x are valid.
+          if ! echo "$VERSION" | grep -Eq '^v[01]\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'; then
+            echo "::error::Invalid Go module version '$VERSION' (expected v0.x.y or v1.x.y; v2+ needs a /v2 module path)"
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=sdks/go/$VERSION" >> "$GITHUB_OUTPUT"
+
+  gate:
+    name: Release Quality Gate
+    needs: resolve
+    uses: ./.github/workflows/release-gate.yml
+    with:
+      tag: ${{ needs.resolve.outputs.tag }}
+    permissions:
+      contents: read
+
+  test:
+    name: Test Go SDK
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: sdks/go
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
+        with:
+          go-version-file: sdks/go/go.mod
+          cache: false
+
+      # go.sum is committed: verify the module cache against it and build in
+      # the default -mod=readonly mode.
+      - name: Verify module checksums
+        run: go mod verify
+
+      - name: Vet
+        run: go vet ./...
+
+      # A green tick must mean tests ran: fail when no test passed at all.
+      - name: Test
+        run: |
+          set -euo pipefail
+          go test -count=1 -v ./... | tee "$RUNNER_TEMP/go-test.log"
+          if ! grep -q -- '--- PASS' "$RUNNER_TEMP/go-test.log"; then
+            echo "::error::go test reported no passing test — the suite did not run"
+            exit 1
+          fi
+
+  publish:
+    name: Tag and index on proxy.golang.org
+    needs: [resolve, gate, test]
+    runs-on: ubuntu-latest
+    # Required reviewers on `release` are a manual owner setting — see
+    # CONTRIBUTING.md "Releasing".
+    environment: release
+    permissions:
+      contents: write   # to push the sdks/go/vX.Y.Z tag on manual dispatch
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Create and push tag (manual dispatch only)
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          TAG: ${{ needs.resolve.outputs.tag }}
+        run: |
+          set -euo pipefail
+          if git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null; then
+            echo "::error::Tag $TAG already exists"
+            exit 1
+          fi
+          git tag "$TAG" "$GITHUB_SHA"
+          git push origin "refs/tags/$TAG"
+
+      - name: Fetch from the Go module proxy (fails if the version is not resolvable)
+        env:
+          VERSION: ${{ needs.resolve.outputs.version }}
+        run: |
+          set -euo pipefail
+          MODULE="github.com/ArohaLabs/aroha-protocol/sdks/go"
+          URL="https://proxy.golang.org/${MODULE}/@v/${VERSION}.info"
+          for attempt in 1 2 3 4 5 6; do
+            if curl -sSf "$URL"; then
+              echo
+              echo "Proxy has ${MODULE}@${VERSION}; pkg.go.dev will index it shortly."
+              exit 0
+            fi
+            echo "Attempt $attempt: proxy has not resolved ${MODULE}@${VERSION} yet; retrying in 20s"
+            sleep 20
+          done
+          echo "::error::proxy.golang.org could not resolve ${MODULE}@${VERSION}"
+          exit 1

@@ -1,0 +1,124 @@
+# Copyright (c) 2026 Aroha Labs
+# SPDX-License-Identifier: Apache-2.0
+
+name: Publish — Maven Central
+
+# Acts only on a published GitHub Release tagged java-v<version>, where
+# <version> equals the project <version> in sdks/java/pom.xml (see
+# CONTRIBUTING.md "Releasing").
+#
+# STATUS: NOT OPERATIONAL. The repository has no SONATYPE_USERNAME,
+# SONATYPE_PASSWORD, GPG_PRIVATE_KEY or GPG_PASSPHRASE secrets, so the first
+# job fails fast with a clear message instead of failing mid-build. The owner
+# must provision them (and a Central Portal namespace for com.aroha-labs)
+# before a java-v* release can publish.
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  preflight:
+    name: Maven publishing secrets present
+    if: startsWith(github.event.release.tag_name, 'java-v')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail fast when publishing is not provisioned
+        env:
+          SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
+          SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: |
+          missing=""
+          for v in SONATYPE_USERNAME SONATYPE_PASSWORD GPG_PRIVATE_KEY GPG_PASSPHRASE; do
+            [ -n "${!v}" ] || missing="$missing $v"
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::Maven Central publishing is not operational: missing secret(s):$missing. The owner must provision them (see CONTRIBUTING.md \"Releasing\")."
+            exit 1
+          fi
+          echo "All Maven publishing secrets are present."
+
+  gate:
+    name: Release Quality Gate
+    needs: preflight
+    uses: ./.github/workflows/release-gate.yml
+    with:
+      tag: ${{ github.event.release.tag_name }}
+    permissions:
+      contents: read
+
+  test:
+    name: Test Java SDK
+    needs: preflight
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Setup Java
+        uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4.9.1
+        with:
+          java-version: 21
+          distribution: temurin
+
+      - name: Tag matches pom version
+        working-directory: sdks/java
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          set -euo pipefail
+          WANT="${RELEASE_TAG#java-v}"
+          HAVE=$(mvn -B -q help:evaluate -Dexpression=project.version -DforceStdout)
+          if [ "$WANT" != "$HAVE" ]; then
+            echo "::error::Tag $RELEASE_TAG does not match pom version $HAVE"
+            exit 1
+          fi
+
+      # failIfNoTests: a release must not ship on a test phase that ran nothing.
+      - name: Test
+        working-directory: sdks/java
+        run: mvn -B test -DfailIfNoTests=true
+
+  publish:
+    name: Publish to Maven Central
+    needs: [gate, test]
+    runs-on: ubuntu-latest
+    # Required reviewers on `release` are a manual owner setting — see
+    # CONTRIBUTING.md "Releasing".
+    environment: release
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Setup Java
+        uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4.9.1
+        with:
+          java-version: 21
+          distribution: temurin
+          server-id: central
+          server-username: MAVEN_USERNAME
+          server-password: MAVEN_PASSWORD
+          gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
+          gpg-passphrase: MAVEN_GPG_PASSPHRASE
+
+      - name: Publish
+        working-directory: sdks/java
+        run: mvn --batch-mode deploy -P release
+        env:
+          MAVEN_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
+          MAVEN_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
+          MAVEN_GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}

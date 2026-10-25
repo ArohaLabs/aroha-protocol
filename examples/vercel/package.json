@@ -1,0 +1,21 @@
+{
+  "name": "aroha-vercel-agent",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "deploy": "vercel deploy"
+  },
+  "dependencies": {
+    "@aroha-sdk/core": "^1.9.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@vercel/node": "^22.0.0",
+    "typescript": "^5.4.5"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "name": "aroha",
+  "status": "registered",
+  "verifiableDataRegistry": "Aroha Registry (HTTPS service with content-addressed IPFS manifests)",
+  "contactName": "Rajagopal Ganesan",
+  "contactEmail": "contact@aroha-labs.com",
+  "contactWebsite": "https://www.aroha-labs.com",
+  "specification": "https://github.com/ArohaLabs/aroha-spec/blob/main/spec/did-method.md"
+}

@@ -1,0 +1,24 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ES2022",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022"],
+    // Node types alongside the Workers ones: wrangler.toml enables
+    // nodejs_compat, and src/routes/trust.ts genuinely uses Buffer at
+    // runtime. Buffer only resolved before by accident — the excluded
+    // test-utils/sqlite-d1.ts imported node:sqlite, which dragged the
+    // Node globals in with it.
+    "types": ["@cloudflare/workers-types", "node"],
+    "strict": true,
+    "noEmit": true,
+    "rootDir": "./src"
+  },
+  "include": ["src/**/*.ts"],
+  // src/test-utils/sqlite-d1.ts imports node:sqlite (Node 22+), which the
+  // @types/node in this workspace does not declare — and this project
+  // types against @cloudflare/workers-types anyway, where a Node built-in
+  // has no place. Tests are still type-checked by the test run.
+  "exclude": ["src/**/*.test.ts", "src/test-utils/**"]
+}

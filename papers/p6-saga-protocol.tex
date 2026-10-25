@@ -1,0 +1,1155 @@
+% ============================================================
+%  Paper 6 — Aroha Labs
+%  "ACP: A Saga-Based Agent Communication Protocol with
+%   Capability Schema Negotiation"
+%
+%  Target venues: AAMAS 2027 / ICSOC 2027 / USENIX ATC 2027
+%  arXiv categories: cs.MA, cs.DC, cs.AI
+% ============================================================
+
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+
+\usepackage{amsmath,amssymb,amsthm,mathtools}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{cite}
+\usepackage{bm}
+\usepackage{listings}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{definition}{Definition}
+\newtheorem{remark}{Remark}
+
+\DeclareMathOperator{\E}{\mathbb{E}}
+\newcommand{\Adv}{\mathcal{A}}
+\newcommand{\Sign}{\mathsf{Sign}}
+\newcommand{\Verify}{\mathsf{Verify}}
+\newcommand{\DID}{\mathsf{DID}}
+\newcommand{\CSN}{\mathsf{CSN}}
+\newcommand{\Saga}{\mathcal{S}}
+\newcommand{\Step}{\mathcal{T}}
+
+\lstset{
+  basicstyle={\ttfamily\scriptsize},
+  breaklines=true,
+  frame=none,
+  columns=fullflexible
+}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue!70!black,
+  citecolor=green!50!black,
+  urlcolor=blue!70!black
+}
+
+\begin{document}
+
+\title{ACP: A Saga-Based Agent Communication Protocol\\
+       with Capability Schema Negotiation}
+
+\author{
+  \IEEEauthorblockN{Aroha Labs Research}
+  \IEEEauthorblockA{Aroha Protocol\\
+    aroha-labs.com}
+}
+
+\maketitle
+
+\begin{abstract}
+We present the \emph{Aroha Communication Protocol} (ACP), the semantic
+layer of the Aroha agent network stack governing how autonomous AI
+agents initiate, negotiate, and complete multi-step interactions.
+ACP defines seventeen message types organized into four groups—direct
+invocation, negotiation, saga execution, and meta-communication—and
+specifies four interaction patterns of increasing complexity: simple
+request/response, streaming, negotiated, and distributed saga.  The
+saga pattern adapts the classic database saga~\cite{garcia1987sagas}
+to multi-agent settings, providing atomicity via last-in-first-out
+(LIFO) compensating cancellations without distributed locking.  ACP
+couples the saga lifecycle with a three-path \emph{Capability Schema
+Negotiation} (CSN) mechanism that resolves capability mismatches via
+cache lookup, structural JSON Schema matching~\cite{w3cjsonschema}, or
+LLM-assisted intent matching, with subsequent interactions benefiting
+from sub-millisecond cache hits.  A pluggable human-in-the-loop (HITL)
+approval gate sits between the reserve and commit phases of each saga
+step, enabling human oversight at granular transactional boundaries.
+Pluggable settlement adapters integrate with Stripe, SQL ledgers, and
+on-chain escrow.  We prove three formal properties: saga completeness,
+ArohaCancel idempotency, and CSN cache correctness.  ACP complements
+the companion protocol-stack paper~\cite{aroha2025p5} and the
+reputation system of Paper~1~\cite{aroha2025p1}.
+\end{abstract}
+
+\begin{IEEEkeywords}
+multi-agent systems, saga pattern, distributed transactions, capability
+negotiation, human-in-the-loop, agent communication protocol
+\end{IEEEkeywords}
+
+% ============================================================
+\section{Introduction}
+\label{sec:intro}
+% ============================================================
+
+Autonomous AI agents increasingly act on behalf of humans in
+open, heterogeneous networks~\cite{guo2024agents}: booking travel,
+executing financial transactions, orchestrating chains of specialized
+sub-agents.  These scenarios demand a communication protocol that
+goes beyond simple request/response—one that handles partial failures
+gracefully, reconciles mismatched capability interfaces, and preserves
+human control over consequential actions.
+
+Existing agent communication languages (FIPA-ACL, KQML) were designed
+for structured knowledge sharing between software agents and predate
+the era of LLM-backed agents that expose capabilities through
+natural-language descriptions.  Contemporary frameworks such as
+LangChain~\cite{harrison2022langchain}, Anthropic's Model Context
+Protocol~\cite{anthropic2024mcp}, and Google's Agent-to-Agent
+protocol~\cite{google2024a2a} address tool invocation but do not
+provide transactional semantics for multi-step workflows or
+first-class capability discovery.
+
+The \emph{Aroha Communication Protocol}
+(ACP)\footnote{Not to be confused with the \emph{Agentic Commerce
+Protocol}, a 2025 checkout protocol for agent-initiated purchases.
+Throughout this paper ACP refers exclusively to the Aroha
+Communication Protocol; the two operate at different layers and are
+unrelated.} fills this gap as the
+semantic layer of the Aroha stack~\cite{aroha2025p5}.  Our
+contributions are:
+\begin{enumerate}
+  \item A taxonomy of \textbf{seventeen message types} covering the full
+        lifecycle of agent interactions (\S\ref{sec:messages}).
+  \item \textbf{Four interaction patterns} with formal state machines,
+        from two-message request/response to $4k$-message distributed
+        sagas (\S\ref{sec:patterns}).
+  \item A \textbf{Capability Schema Negotiation} (CSN) mechanism with
+        three resolution paths and a persistent cache
+        (\S\ref{sec:csn}).
+  \item A \textbf{HITL approval gate} abstraction that plugs between
+        saga reserve and commit phases (\S\ref{sec:hitl}).
+  \item \textbf{Pluggable settlement} adapters for financial,
+        quota-based, and on-chain escrow settlement
+        (\S\ref{sec:settlement}).
+  \item \textbf{Three formal theorems} with proofs: saga completeness,
+        cancel idempotency, and CSN cache correctness
+        (\S\ref{sec:formal}).
+  \item \textbf{Satisfaction signals} that close the feedback loop
+        to the Bayesian reputation system of Paper~1
+        (\S\ref{sec:satisfaction}).
+\end{enumerate}
+
+ACP is implemented in the TypeScript packages
+\texttt{@aroha-sdk/core} (message types, envelopes, validation) and
+\texttt{@aroha-sdk/orchestrator} (saga engine, CSN), both published
+on npm as part of the Aroha SDK.
+
+% ============================================================
+\section{Background and Related Work}
+\label{sec:background}
+% ============================================================
+
+\subsection{Sagas}
+
+Garcia-Molina and Salem~\cite{garcia1987sagas} introduced the saga as
+a sequence of local transactions $T_1, T_2, \ldots, T_n$, each paired
+with a compensating transaction $C_i$ that semantically undoes $T_i$.
+A saga either completes all $T_i$ successfully, or executes $T_k$
+partially and then compensates via $C_{k-1}, \ldots, C_1$ in reverse
+order.  The key insight is that compensations are \emph{semantic}
+undos executed as new transactions rather than rollbacks, making sagas
+suitable for long-running workflows that span service boundaries.
+
+ACP adapts this pattern to multi-agent networks by encoding
+reservations as $T_i$ (via \texttt{ArohaReserve}/\texttt{ArohaReserveAck})
+and cancellations as $C_i$ (via \texttt{ArohaCancel}/\texttt{ArohaCancelAck}).
+
+\subsection{Capability Negotiation}
+
+Schema-based service matching has been studied extensively in the
+Web Services context (WSDL, OWL-S).  ACP's CSN mechanism extends this
+with an LLM fallback for natural-language intent matching, inspired by
+RAG-based document retrieval~\cite{lewis2020rag,karpukhin2020dpr}.
+JSON Schema~\cite{w3cjsonschema} provides the structural type language;
+SHA-256 fingerprints~\cite{jsoncanon} enable cache keying.
+
+\subsection{Human-in-the-Loop Control}
+
+HITL interfaces have been studied in the context of active
+learning and supervised autonomy.  ACP's HITL gate is distinguished
+by its \emph{transactional} positioning: it occupies the interval
+between a reversible reservation and an irreversible commit, ensuring
+that human approval is solicited only after a provider has confirmed
+feasibility but before resources are consumed.
+
+\subsection{Distributed Identity}
+
+ACP messages carry Decentralized Identifier (DID)
+references~\cite{w3c2022did} for agents and human credentials,
+as specified in the companion protocol-stack paper~\cite{aroha2025p5}.
+Ed25519 signatures~\cite{bernstein2011ed25519,josefsson2017ed25519rfc}
+authenticate every message.
+
+% ============================================================
+\section{Message Type Taxonomy}
+\label{sec:messages}
+% ============================================================
+
+ACP defines seventeen message types, organized into four groups.
+Each message carries a standard envelope (version, messageId,
+correlationId, sagaId, senderDID, recipientDID, timestamp, signature)
+defined in~\cite{aroha2025p5}; Table~\ref{tab:messages} summarizes the
+body fields specific to each type.
+
+\subsection{Group 1: Direct Invocation}
+
+\textbf{ArohaRequest} initiates a capability call.  Its body
+carries: \texttt{capability} (string), \texttt{params} (JSON object),
+optional \texttt{preferenceContext}, optional \texttt{idempotencyKey}
+(24-hour deduplication window), and \texttt{credential}
+(a \texttt{WithCredential} union carrying either a registry-based
+\texttt{credentialId} or an inline base64url-encoded signed
+\texttt{HumanCredential}).
+
+\textbf{ArohaResponse} returns the capability result (\texttt{capability},
+\texttt{result}).
+
+\textbf{ArohaStream} delivers incremental progress: \texttt{capability},
+\texttt{progressPct} $\in [0, 100]$, \texttt{event} string,
+optional \texttt{data}.
+
+\subsection{Group 2: Negotiation}
+
+\textbf{ArohaNegotiate} proposes interaction terms:
+\texttt{proposedTerms} $\{\textit{price}?,\ \textit{sla}?,\
+\textit{validForMs}?\}$ plus an optional
+\texttt{CSNNegotiateExtension} (see \S\ref{sec:csn}).
+
+\textbf{ArohaCounterOffer} revises terms: \texttt{revisedTerms}
+with the same schema, optional CSN extension.
+
+\textbf{ArohaAccept} confirms agreement: \texttt{acceptedTerms},
+optional \texttt{CSNAcceptExtension} carrying CSN resolution metadata.
+
+\subsection{Group 3: Saga Execution}
+
+\textbf{ArohaReserve} opens a saga step: \texttt{capability},
+\texttt{params}, \texttt{holdDurationMs}, optional
+\texttt{preferenceContext}, \texttt{credential}.
+
+\textbf{ArohaReserveAck} confirms the reservation:
+\texttt{reservationToken} (opaque string), \texttt{expiresAt} (ISO~8601).
+
+\textbf{ArohaCommit} finalizes a step: \texttt{reservationToken}.
+
+\textbf{ArohaCommitAck} delivers the step result:
+\texttt{reservationToken}, \texttt{result}.
+
+\textbf{ArohaCancel} compensates a step: \texttt{reservationToken},
+\texttt{reason}.
+
+\textbf{ArohaCancelAck} acknowledges cancellation:
+\texttt{reservationToken}.
+
+\subsection{Group 4: Meta}
+
+\textbf{ArohaDelegate} forwards a request to another DID:
+\texttt{targetDID}, \texttt{capability}, \texttt{params},
+optional \texttt{preferenceContext}, \texttt{credential}.
+
+\textbf{ArohaError} reports failures with a structured
+\texttt{ArohaErrorCode} (17 values; Table~\ref{tab:errorcodes}),
+\texttt{message}, \texttt{retryable} boolean,
+optional \texttt{details} and \texttt{docsUrl}.
+
+\textbf{ArohaSatisfactionSignal} closes the feedback loop
+(see \S\ref{sec:satisfaction}).
+
+\textbf{ArohaSpendingMandate} delegates a spending authority
+(see \S\ref{sec:mandates}).
+
+\textbf{ArohaTaskMandate} delegates non-monetary authority under
+explicit resource constraints---allowed capabilities, per-capability
+action limits, compute budgets, reversibility requirements, and
+human-approval gates.  It mirrors the spending mandate's attenuation
+semantics for task delegation.
+
+\begin{table}[t]
+\centering
+\caption{ACP Message Type Taxonomy}
+\label{tab:messages}
+{\small
+\begin{tabular}{@{}llp{3.0cm}@{}}
+\toprule
+\textbf{Group} & \textbf{Message Type} & \textbf{Key Body Fields} \\
+\midrule
+\multirow{3}{*}{Direct}
+  & ArohaRequest      & capability, params, idempotencyKey \\
+  & ArohaResponse     & capability, result \\
+  & ArohaStream       & progressPct, event, data \\
+\midrule
+\multirow{3}{*}{Negotiation}
+  & ArohaNegotiate    & proposedTerms, csn? \\
+  & ArohaCounterOffer & revisedTerms, csn? \\
+  & ArohaAccept       & acceptedTerms, csn? \\
+\midrule
+\multirow{6}{*}{Saga}
+  & ArohaReserve      & capability, holdDurationMs \\
+  & ArohaReserveAck   & reservationToken, expiresAt \\
+  & ArohaCommit       & reservationToken \\
+  & ArohaCommitAck    & reservationToken, result \\
+  & ArohaCancel       & reservationToken, reason \\
+  & ArohaCancelAck    & reservationToken \\
+\midrule
+\multirow{5}{*}{Meta}
+  & ArohaDelegate          & targetDID, capability \\
+  & ArohaError             & code, message, retryable \\
+  & ArohaSatisfactionSignal & outcome, dimensions \\
+  & ArohaSpendingMandate   & mandateTier, constraints \\
+  & ArohaTaskMandate       & allowed, actionLimits, humanGates \\
+\bottomrule
+\end{tabular}
+}
+\end{table}
+
+\begin{table}[t]
+\centering
+\caption{ArohaErrorCode Enumeration (17 values)}
+\label{tab:errorcodes}
+{\small
+\begin{tabular}{@{}ll@{}}
+\toprule
+\textbf{Code} & \textbf{Meaning} \\
+\midrule
+Aroha\_UNAUTHORIZED         & Missing or invalid credential \\
+Aroha\_FORBIDDEN            & Credential valid, access denied \\
+Aroha\_INVALID\_SIGNATURE   & Envelope signature check failed \\
+Aroha\_EXPIRED\_MESSAGE     & Message timestamp stale \\
+Aroha\_REPLAY\_DETECTED     & Duplicate messageId seen \\
+Aroha\_UNKNOWN\_CAPABILITY  & Capability not registered \\
+Aroha\_TRUST\_LEVEL\_INSUFFICIENT & Insufficient reputation \\
+Aroha\_RESERVATION\_FAILED  & Cannot lock resource \\
+Aroha\_RESERVATION\_EXPIRED & Token TTL elapsed \\
+Aroha\_COMMIT\_FAILED       & Commit-time settlement error \\
+Aroha\_CANCEL\_FAILED       & Cancellation error (non-fatal) \\
+Aroha\_INVALID\_TOKEN       & Malformed reservation token \\
+Aroha\_NO\_INVENTORY        & Resource exhausted \\
+Aroha\_CAPACITY\_EXCEEDED   & Rate/capacity limit hit \\
+Aroha\_SERVICE\_UNAVAILABLE & Provider temporarily down \\
+Aroha\_INTERNAL\_ERROR      & Unclassified provider error \\
+Aroha\_INVALID\_PARAMS      & Parameter validation failure \\
+CSN\_NO\_STRUCTURAL\_MATCH  & CSN match failed, LLM disallowed \\
+\bottomrule
+\end{tabular}
+}
+\end{table}
+
+% ============================================================
+\section{Interaction Patterns and Saga Lifecycle}
+\label{sec:patterns}
+% ============================================================
+
+ACP specifies four canonical interaction patterns.  An orchestrator
+selects a pattern based on whether transactional atomicity, streaming
+progress, or capability discovery are required.
+
+\subsection{Pattern 1: Simple (2 messages)}
+
+\[
+  \text{Orchestrator} \xrightarrow{\text{ArohaRequest}} \text{Provider}
+  \xrightarrow{\text{ArohaResponse}|\text{ArohaError}} \text{Orchestrator}
+\]
+
+Suitable for idempotent read-like capabilities.  Total latency:
+approximately one round-trip time (RTT), $\approx 5\,\text{ms}$ on
+a local network.
+
+\subsection{Pattern 2: Streamed ($2 + N$ messages)}
+
+\[
+  \text{ArohaRequest} \to
+  \underbrace{\text{ArohaStream} \cdots \text{ArohaStream}}_{N}
+  \to \text{ArohaResponse}
+\]
+
+Each \texttt{ArohaStream} carries a \texttt{progressPct} in $[0,100]$
+and an event label.  The final \texttt{ArohaResponse} signals
+completion.
+
+\subsection{Pattern 3: Negotiated (4--6 messages)}
+
+\[
+  \text{Negotiate} \to [\text{CounterOffer} \to]^{?}
+  \text{Accept} \to \text{Request} \to \text{Response}
+\]
+
+At most one counter-offer round is typical; the protocol imposes no
+hard limit.  A \texttt{CSNNegotiateExtension} may be embedded to
+perform capability discovery in the same round-trip as price
+negotiation (see \S\ref{sec:csn}).
+
+\subsection{Pattern 4: Distributed Saga ($4k$ messages)}
+
+\begin{definition}[Aroha Saga]
+An \emph{Aroha Saga} $\Saga = [(r_1, c_1), \ldots, (r_n, c_n)]$ is a
+sequence of $n$ steps, where $r_i$ is the reserve-commit pair for step
+$i$ and $c_i = \texttt{ArohaCancel}(\textit{token}_i)$ is the
+corresponding compensating action.
+\end{definition}
+
+Algorithm~\ref{alg:saga} gives the orchestrator-side execution
+procedure.  For each step $i$, the orchestrator sends
+\texttt{ArohaReserve}, awaits \texttt{ArohaReserveAck} bearing an
+opaque \texttt{reservationToken} $\tau_i$ and an expiry timestamp
+$e_i$.  If a HITL gate is configured for this step, the orchestrator
+suspends and polls for human approval before issuing
+\texttt{ArohaCommit}($\tau_i$).  On receipt of
+\texttt{ArohaCommitAck}($\tau_i, \textit{result}_i$), the step is
+considered committed.
+
+\textbf{Failure handling.}  If step $k$ fails (reserve fails, commit
+fails, HITL rejects, or token expires), the saga enters the
+\emph{compensation phase}: for $j = k, k-1, \ldots, 1$, the
+orchestrator sends \texttt{ArohaCancel}($\tau_j$) and awaits
+\texttt{ArohaCancelAck}($\tau_j$).  This LIFO order ensures
+the most recently reserved resource is released first—e.g., a hotel
+reservation is cancelled before the earlier flight booking it depended
+on, matching the semantic dependency order.
+
+\textbf{Idempotency.}  Every \texttt{ArohaRequest} and
+\texttt{ArohaReserve} carries an optional \texttt{idempotencyKey}.
+Providers deduplicate requests with the same key within a 24-hour
+window, preventing duplicate side effects on network-level retries.
+
+\begin{algorithm}[t]
+\caption{Aroha Saga Execution (Orchestrator)}
+\label{alg:saga}
+{\small
+\begin{algorithmic}[1]
+\Require Saga $\Saga = [(r_1,c_1),\ldots,(r_n,c_n)]$, HITL gate $H$
+\Ensure Saga terminates in SUCCESS or COMPENSATED
+\State $\textit{tokens} \gets []$
+\For{$i \gets 1$ \textbf{to} $n$}
+  \State Send \texttt{ArohaReserve}($r_i$) to Provider$_i$
+  \State $\textit{ack} \gets $ await \texttt{ArohaReserveAck} \textbf{or} \texttt{ArohaError}
+  \If{$\textit{ack}$ is \texttt{ArohaError}}
+    \State \textbf{goto} \textsc{Compensate}($i-1$)
+  \EndIf
+  \State $\tau_i \gets \textit{ack.reservationToken}$
+  \State $\textit{tokens}.\text{append}(\tau_i)$
+  \If{$H.\text{required}(\textit{ack})$}
+    \State $d \gets H.\text{requestApproval}(\tau_i, r_i)$
+    \If{$d = \text{``rejected''}$}
+      \State \textbf{goto} \textsc{Compensate}($i$)
+    \EndIf
+  \EndIf
+  \State Send \texttt{ArohaCommit}($\tau_i$) to Provider$_i$
+  \State $\textit{res} \gets $ await \texttt{ArohaCommitAck} \textbf{or} \texttt{ArohaError}
+  \If{$\textit{res}$ is \texttt{ArohaError}}
+    \State \textbf{goto} \textsc{Compensate}($i$)
+  \EndIf
+\EndFor
+\State \textbf{return} SUCCESS
+\State
+\Function{Compensate}{$k$}
+  \For{$j \gets k$ \textbf{downto} $1$}
+    \State Send \texttt{ArohaCancel}($\textit{tokens}[j]$) to Provider$_j$
+    \State Await \texttt{ArohaCancelAck}($\textit{tokens}[j]$)
+  \EndFor
+  \State \textbf{return} COMPENSATED
+\EndFunction
+\end{algorithmic}
+}
+\end{algorithm}
+
+\begin{table}[t]
+\centering
+\caption{Interaction Pattern Round-Trip Summary}
+\label{tab:rtt}
+{\small
+\begin{tabular}{@{}llll@{}}
+\toprule
+\textbf{Pattern} & \textbf{Messages} & \textbf{RTTs} & \textbf{Est.\ Latency} \\
+\midrule
+Simple request      & 2       & 1       & $\approx 5\,\text{ms}$ \\
+Streamed            & $2+N$   & $1+N$   & $5\,\text{ms}+N{\times}\Delta$ \\
+Negotiated          & 4--6    & 2--3    & 10--15\,ms \\
+Saga ($k$ steps)    & $4k$    & $2k$    & $10k\,\text{ms}$ \\
+CSN (cache miss)    & 4--6    & 2--3    & 10--15\,ms + LLM \\
+CSN (cache hit)     & 4       & 2       & $\approx 10\,\text{ms}$ \\
+\bottomrule
+\end{tabular}
+}
+\end{table}
+
+% ============================================================
+\section{Capability Schema Negotiation}
+\label{sec:csn}
+% ============================================================
+
+Orchestrators in an open network may not know the precise capability
+name or parameter schema expected by a provider.  CSN resolves this
+mismatch through three paths, attempted in priority order.
+
+\subsection{CSN Message Extensions}
+
+A \texttt{CSNNegotiateExtension} is optionally embedded in
+\texttt{ArohaNegotiate}; its fields are:
+\begin{itemize}
+  \item \texttt{capabilityIntent}: natural-language description
+  \item \texttt{desiredSchema}: JSON Schema~\cite{w3cjsonschema} for
+        input/output
+  \item \texttt{schemaHash}: SHA-256 hex of canonical desiredSchema
+  \item \texttt{requestCapabilityManifest}: boolean—ask provider to
+        return its full capability manifest
+  \item \texttt{disallowLLMFallback}: if true, force
+        \texttt{CSN\_NO\_STRUCTURAL\_MATCH} rather than LLM inference
+\end{itemize}
+
+A \texttt{CSNAcceptExtension} is embedded in \texttt{ArohaAccept}:
+\begin{itemize}
+  \item \texttt{resolvedCapability}: canonical capability name
+  \item \texttt{agreedSchema}: provider-normalized JSON Schema
+  \item \texttt{schemaHash}: SHA-256 of agreedSchema
+  \item \texttt{capabilityManifest}: full manifest if requested
+  \item \texttt{matchMethod}: \texttt{"cache"} | \texttt{"schema"} |
+        \texttt{"intent"}
+  \item \texttt{compatibilityScore} $\in [0,1]$
+  \item \texttt{matchAudit}: $\{\textit{structuralScore}?,
+        \textit{cacheHit}?, \textit{llmUsed}, \textit{llmModel}?,
+        \textit{fallbackReason}?\}$
+\end{itemize}
+
+\subsection{Resolution Path 1: Cache Hit}
+
+If the orchestrator's \texttt{ArohaNegotiate} carries a
+\texttt{schemaHash} $h$, the provider checks its
+\texttt{IDiscoveryStore} at key $\textit{agentDID}\!:\!h$.  On a
+cache hit, the provider returns the stored \texttt{capabilityName},
+\texttt{agreedSchema}, and \texttt{matchMethod} in under 1\,ms
+without LLM invocation.  The cache entry structure is:
+\[
+  \text{CacheEntry} = \{\textit{capabilityName},\ \textit{agreedSchema},\
+  \textit{matchMethod},\ \textit{compatibilityScore}?,\
+  \textit{cachedAt},\ \textit{hitCount}\}
+\]
+
+\subsection{Resolution Path 2: Schema-Based Matching}
+
+If no cache entry exists but \texttt{desiredSchema} is provided,
+the provider runs structural compatibility matching between the
+requested schema and each of its registered capability schemas.
+The compatibility score $\sigma \in [0,1]$ quantifies field overlap,
+type compatibility, and required/optional field alignment.
+If $\sigma \geq \theta$ (configurable threshold, default 0.85),
+the match resolves without LLM invocation; \texttt{matchMethod}
+is set to \texttt{"schema"}.
+
+\subsection{Resolution Path 3: Intent-Based Matching}
+
+If schema matching fails or \texttt{capabilityIntent} is the only
+input, the provider invokes an LLM over its capability registry.
+The LLM receives the intent string and a manifest of available
+capabilities and returns the best match.  This path is skipped if
+\texttt{disallowLLMFallback} is true.
+
+\subsection{Post-Resolution Caching}
+
+After any successful resolution, the provider stores the mapping:
+\[
+  \texttt{store.set}(\textit{agentDID}\!:\!h,\ \text{CacheEntry})
+\]
+The orchestrator similarly stores $(\textit{agentDID}, h,
+\textit{capabilityName})$ locally.  All future negotiations to the
+same provider with schema hash $h$ take Path~1.
+
+\begin{algorithm}[t]
+\caption{CSN Resolution (Provider-Side)}
+\label{alg:csn}
+{\small
+\begin{algorithmic}[1]
+\Require \texttt{CSNNegotiateExtension} $E$, agentDID $D$,
+         capability registry $R$, store $\mathcal{C}$
+\Ensure \texttt{CSNAcceptExtension} or \texttt{CSN\_NO\_STRUCTURAL\_MATCH}
+\If{$E.\textit{schemaHash} \neq \texttt{null}$}
+  \State $e \gets \mathcal{C}.\texttt{get}(D\!:\!E.\textit{schemaHash})$
+  \If{$e \neq \texttt{null}$}
+    \State $e.\textit{hitCount} \mathrel{+}= 1$
+    \State \textbf{return} CSNAccept$(e,\ \texttt{matchMethod}=\texttt{"cache"})$
+  \EndIf
+\EndIf
+\If{$E.\textit{desiredSchema} \neq \texttt{null}$}
+  \State $(\hat{C}, \sigma) \gets \textsc{StructuralMatch}(E.\textit{desiredSchema}, R)$
+  \If{$\sigma \geq \theta$}
+    \State $h \gets \text{SHA-256}(\text{canonical}(E.\textit{desiredSchema}))$
+    \State $\mathcal{C}.\texttt{set}(D\!:\!h,\ \{\hat{C}, E.\textit{desiredSchema}, \sigma\})$
+    \State \textbf{return} CSNAccept$(\hat{C}, \sigma,\ \texttt{matchMethod}=\texttt{"schema"})$
+  \EndIf
+\EndIf
+\If{$E.\textit{disallowLLMFallback} = \texttt{true}$}
+  \State \textbf{throw} \texttt{CSN\_NO\_STRUCTURAL\_MATCH}
+\EndIf
+\If{$E.\textit{capabilityIntent} \neq \texttt{null}$}
+  \State $\hat{C} \gets \textsc{LLMMatch}(E.\textit{capabilityIntent}, R)$
+  \If{$\hat{C} \neq \texttt{null}$}
+    \State \textbf{return} CSNAccept$(\hat{C},\ \texttt{matchMethod}=\texttt{"intent"})$
+  \EndIf
+\EndIf
+\State \textbf{throw} \texttt{CSN\_NO\_STRUCTURAL\_MATCH}
+\end{algorithmic}
+}
+\end{algorithm}
+
+% ============================================================
+\section{Human-in-the-Loop Approval Gate}
+\label{sec:hitl}
+% ============================================================
+
+Many agent-driven workflows require human oversight before committing
+irreversible or high-cost steps.  ACP provides a first-class HITL
+abstraction that plugs between the reserve and commit phases of each
+saga step.
+
+\subsection{Approval Interface}
+
+An approval gate implements a two-method interface:
+\begin{align*}
+  &\texttt{request}(\textit{sagaId}, \textit{stepId},
+    \textit{HumanApprovalRequest}) \to \texttt{void} \\
+  &\texttt{pollDecision}(\textit{sagaId}, \textit{stepId})
+    \to \text{Decision} \mid \texttt{null}
+\end{align*}
+where \texttt{HumanApprovalRequest} carries \texttt{capability},
+\texttt{agentDID}, \texttt{params}, optional \texttt{estimatedCost},
+\texttt{costCurrency}, and \texttt{description}; and
+$\text{Decision} \in \{\texttt{"approved"}, \texttt{"rejected"}\}$.
+
+\subsection{Webhook Gate}
+
+The built-in \texttt{WebhookApprovalGate} posts a
+\texttt{HumanApprovalRequest} payload to a configured
+\texttt{webhookUrl} over HTTPS, authenticating with an
+\texttt{X-Aroha-Signature} HMAC header keyed by \texttt{secret}.
+It then polls \texttt{pollDecision} at \texttt{pollIntervalMs}
+(default 3\,000\,ms) until a decision arrives or
+\texttt{timeoutMs} (default 300\,000\,ms = 5\,min) elapses.
+On timeout, the gate returns \texttt{"rejected"}.
+
+On \texttt{"rejected"}: the saga engine issues
+\texttt{ArohaCancel}($\tau_i$) for the current step and initiates
+LIFO compensation for all prior committed steps.
+
+\subsection{Development Gate}
+
+\texttt{AlwaysApproveGate} returns \texttt{"approved"} immediately and
+is intended for testing environments only.
+
+% ============================================================
+\section{Settlement Adapters}
+\label{sec:settlement}
+% ============================================================
+
+ACP decouples communication semantics from payment and resource
+settlement through a pluggable \texttt{IArohaSettlement} interface.
+
+\subsection{Settlement Interface}
+
+{\small
+\begin{align*}
+  &\texttt{onReserve}(\textit{ctx}: \textit{ReserveCtx}) \to \texttt{void}
+    \quad\text{[throw = reject step]} \\
+  &\texttt{onCommit}(\textit{ctx}: \textit{CommitCtx}) \to \texttt{void}
+    \quad\text{[throw = fail commit]} \\
+  &\texttt{onCancel}(\textit{ctx}: \textit{CancelCtx}) \to \texttt{void}
+    \quad\text{[errors logged, ignored]} \\
+  &\texttt{onSagaComplete}(\textit{sagaId},\ \textit{outcome})
+    \to \texttt{void}
+\end{align*}
+}
+\noindent where $\textit{outcome} \in \{\texttt{"SUCCESS"},
+\texttt{"COMPENSATED"}, \texttt{"FAILURE"}\}$.  Every context
+carries: \texttt{sagaId}, \texttt{correlationId},
+\texttt{orchestratorDID}, \texttt{providerDID}, \texttt{capability},
+\texttt{params}.
+
+\subsection{On-Chain Escrow}
+
+The \texttt{OnChainSettlement} adapter delegates to
+\texttt{IArohaEscrowClient}:
+\begin{align*}
+  &\texttt{open}(\textit{sagaId},\ \textit{ttlSeconds},\
+    \textit{amountWei}) \to \textit{txHash} \\
+  &\texttt{approveSplit}(\textit{sagaId},\ \textit{recipient},\
+    \textit{amountWei}) \to \texttt{void} \\
+  &\texttt{release}(\textit{sagaId}) \to \texttt{void}
+    \quad\text{[saga succeeded]} \\
+  &\texttt{refund}(\textit{sagaId}) \to \texttt{void}
+    \quad\text{[saga compensated]}
+\end{align*}
+\texttt{onReserve} calls \texttt{open}; \texttt{onCommit} calls
+\texttt{approveSplit}; \texttt{onSagaComplete(SUCCESS)} calls
+\texttt{release}; \texttt{onSagaComplete(COMPENSATED)} calls
+\texttt{refund}.  The contract~\cite{buterin2014ethereum} enforces
+atomicity on-chain.
+
+\subsection{Available Implementations}
+
+Table~\ref{tab:settlement} summarizes the five built-in adapters.
+
+\begin{table}[t]
+\centering
+\caption{Built-in Settlement Adapter Implementations}
+\label{tab:settlement}
+{\small
+\begin{tabular}{@{}lp{4.5cm}@{}}
+\toprule
+\textbf{Adapter} & \textbf{Description} \\
+\midrule
+\texttt{StripeSettlement}    & Locks via payment intents; captures
+                               on commit; refunds on compensation \\
+\texttt{PostgresSettlement}  & Atomic ledger deductions in a SQL
+                               transaction; release on cancel \\
+\texttt{OnChainSettlement}   & EVM escrow contract; multi-party splits \\
+\texttt{QuotaSettlement}     & Decrements API-key quota counter;
+                               restores on cancel \\
+\texttt{NullSettlement}      & No-op; for capabilities with no
+                               financial settlement \\
+\bottomrule
+\end{tabular}
+}
+\end{table}
+
+% ============================================================
+\section{Spending Mandates}
+\label{sec:mandates}
+% ============================================================
+
+When an orchestrator delegates to a sub-agent, it issues an
+\texttt{ArohaSpendingMandate} granting bounded spending authority.
+This complements the mandate-chain mechanism of Paper~2~\cite{aroha2025p2}.
+
+\subsection{Mandate Structure}
+
+Each mandate carries:
+\begin{itemize}
+  \item \texttt{mandateTier} $\in \{\texttt{"intent"},
+        \texttt{"cart"}, \texttt{"payment"}\}$
+  \item \texttt{constraints}: a \texttt{SpendingConstraints} object
+        with \texttt{spendLimitUsd}, optional \texttt{sessionLimitUsd},
+        \texttt{currency}, \texttt{merchantCategory},
+        \texttt{requireHumanApprovalAboveUsd},
+        \texttt{allowedMerchants}, \texttt{validFrom}, \texttt{validUntil}
+  \item \texttt{grantee}, \texttt{grantor}: DIDs
+  \item \texttt{issuedAt}, \texttt{expiresAt}: ISO~8601 timestamps
+  \item \texttt{mandateId}, \texttt{parentMandateId}: chain linkage
+\end{itemize}
+
+\textbf{Mandate tiers.}  An \emph{intent} mandate authorizes planning
+and price discovery only.  A \emph{cart} mandate authorizes reservation
+(reserve phase) but not commit.  A \emph{payment} mandate authorizes
+full saga execution including commit and financial settlement.
+
+\subsection{Dual-Layer Budget Enforcement}
+
+Correct delegation requires two enforcement layers acting
+in concert.
+
+\textbf{Layer 1: Monotonic narrowing.}  At attenuation time, the
+system checks:
+\[
+  \textit{child.spendLimitUsd} \leq \textit{parent.spendLimitUsd}
+\]
+This is verified synchronously before the child mandate is signed.
+Narrowing alone is insufficient: $N$ children can each claim the
+full parent limit, yielding an effective grant of
+$N \times \textit{spendLimitUsd}$.
+
+\textbf{Layer 2: Cumulative ledger.}  A shared atomic counter tracks
+the total budget allocated across all child mandates of a given parent.
+When a child mandate is signed, the ledger atomically deducts
+\texttt{spendLimitUsd} from the parent pool.  If the deduction would
+exceed the remaining balance, a \texttt{BudgetExhaustedError} is
+thrown before signing.  When a saga is compensated, the unused
+allocation is returned via \texttt{releaseAllocation()}.
+
+\textbf{Why both layers are necessary.}  Narrowing without a ledger
+permits over-allocation.  A ledger without narrowing permits a child
+to re-widen a narrowed constraint.  Together they establish:
+\[
+  \sum_j \textit{child}_j.\textit{spendLimitUsd}
+  \leq \textit{parent.spendLimitUsd}
+  \quad \text{and} \quad
+  \textit{child}_j \subseteq \textit{parent} \;\forall j
+\]
+ensuring total allocation is bounded and every child is a strict
+subset of its parent's authority.
+
+\begin{table}[t]
+\centering
+\caption{Spending Mandate Tier Semantics}
+\label{tab:mandates}
+{\small
+\begin{tabular}{@{}lp{4.5cm}@{}}
+\toprule
+\textbf{Tier} & \textbf{Authorized Actions} \\
+\midrule
+\texttt{intent}  & Price discovery, negotiation only; no reservations \\
+\texttt{cart}    & ArohaReserve permitted; ArohaCommit forbidden \\
+\texttt{payment} & Full saga execution; financial settlement authorized \\
+\bottomrule
+\end{tabular}
+}
+\end{table}
+
+% ============================================================
+\section{Human Credentials and Roles}
+\label{sec:credentials}
+% ============================================================
+
+ACP messages that carry a human credential use the
+\texttt{WithCredential} interface:
+\begin{itemize}
+  \item \texttt{credentialId}: a registry-resolvable short identifier
+        (preferred; enables revocation)
+  \item \texttt{credentialToken}: inline base64url-encoded signed
+        \texttt{HumanCredential} (used on first contact or absent
+        shared registry)
+\end{itemize}
+A \texttt{HumanCredential} carries: \texttt{credentialId},
+\texttt{userId}, optional \texttt{email}, \texttt{roles[]} (an array
+of \texttt{ArohaRole} values), \texttt{issuedAt}, \texttt{expiresAt},
+\texttt{issuerDID}, and an Ed25519 \texttt{signature}~\cite{bernstein2011ed25519}.
+
+\textbf{ArohaRole.}  Six roles form a two-namespace hierarchy:
+\texttt{human:admin}, \texttt{human:user}, \texttt{human:readonly}
+for human principals; and \texttt{agent:orchestrator},
+\texttt{agent:provider}, \texttt{agent:observer} for agent principals.
+Role presence is checked at the provider before saga steps are accepted.
+
+% ============================================================
+\section{Formal Properties}
+\label{sec:formal}
+% ============================================================
+
+We prove three key properties of ACP.
+
+\begin{theorem}[Saga Completeness]
+\label{thm:saga}
+For any Aroha Saga $\Saga = [(r_1, c_1), \ldots, (r_n, c_n)]$,
+every terminal state of saga execution is either:
+\begin{enumerate}
+  \item \textbf{SUCCESS}: all steps $r_1, \ldots, r_n$ are committed; or
+  \item \textbf{COMPENSATED}: for some $k \in \{1,\ldots,n\}$,
+        steps $r_1, \ldots, r_{k-1}$ are committed and compensations
+        $c_{k-1}, \ldots, c_1$ have been executed in LIFO order.
+\end{enumerate}
+No step is left in a \emph{reserved-but-not-resolved} state.
+\end{theorem}
+
+\begin{proof}
+By induction on $n$.
+
+\textbf{Base case} ($n = 1$): \texttt{ArohaReserve} either returns
+\texttt{ArohaReserveAck} or \texttt{ArohaError}.  In the error case,
+no token was issued, so no compensation is needed; the saga
+terminates in COMPENSATED (vacuously, no $c_j$ to execute).
+If \texttt{ArohaReserveAck} is returned, either the optional HITL
+gate approves and \texttt{ArohaCommit} is sent, or the gate rejects
+and \texttt{ArohaCancel}($\tau_1$) is sent.  In the commit branch,
+\texttt{ArohaCommitAck} (SUCCESS) or \texttt{ArohaError}
+(triggers \texttt{ArohaCancel}($\tau_1$)) follows.  In all cases,
+$\tau_1$ is either committed or cancelled; no reserved-but-unresolved
+state is reachable.
+
+\textbf{Inductive step}: Assume the property holds for all sagas of
+length $< n$.  Consider $\Saga$ of length $n$.  Steps $1, \ldots, k-1$
+succeed by assumption.  At step $k$, any failure (reserve error, commit
+error, HITL rejection, token expiry) triggers Algorithm~\ref{alg:saga}'s
+\textsc{Compensate}($k$) subroutine, which issues
+\texttt{ArohaCancel}($\tau_j$) for $j = k, k-1, \ldots, 1$.
+The \textsc{Compensate} loop is bounded ($k \leq n$) and terminates.
+By Theorem~\ref{thm:cancel} (proved below), each \texttt{ArohaCancel}
+is idempotent, so retries on transient network failures do not alter
+the final state.  Thus every step is either committed or compensated;
+the reserved-but-unresolved state is unreachable for $\Saga$.
+\end{proof}
+
+\begin{theorem}[ArohaCancel Idempotency]
+\label{thm:cancel}
+For any reservation token $\tau$, executing $\texttt{ArohaCancel}(\tau)$
+one or more times produces the same final state as executing it exactly
+once.
+\end{theorem}
+
+\begin{proof}
+On the \emph{first} receipt of $\texttt{ArohaCancel}(\tau)$, the
+provider atomically transitions the reservation with token $\tau$ from
+state \textsc{Reserved} to state \textsc{Cancelled}, records the
+cancellation, and returns $\texttt{ArohaCancelAck}(\tau)$.
+
+On \emph{subsequent} receipt of $\texttt{ArohaCancel}(\tau)$, the
+provider finds the reservation already in state \textsc{Cancelled}.
+It returns $\texttt{ArohaCancelAck}(\tau)$ without modifying any
+further state.
+
+Since the state transitions are: \textsc{Reserved} $\to$
+\textsc{Cancelled} (first call), and \textsc{Cancelled} $\to$
+\textsc{Cancelled} (idempotent thereafter), the final state is
+identical regardless of repetition count.
+\end{proof}
+
+\begin{theorem}[CSN Cache Correctness]
+\label{thm:csn}
+Let schema $S$ have SHA-256 hash $h = \text{SHA-256}(\text{canonical}(S))$.
+If a CSN resolution for $(D, h)$ (provider DID $D$, hash $h$) has been
+stored in the \texttt{IDiscoveryStore} with capability name $\hat{C}$
+and agreed schema $A$, then for all future \texttt{ArohaNegotiate}
+messages from any orchestrator carrying \texttt{schemaHash} $= h$
+directed to $D$, the \texttt{ArohaAccept} response carries
+\texttt{resolvedCapability} $= \hat{C}$ and \texttt{agreedSchema} $= A$
+without LLM invocation.
+\end{theorem}
+
+\begin{proof}
+The cache is keyed by $D\!:\!h$ and set atomically on successful
+resolution (Algorithm~\ref{alg:csn}, lines 12--13 and 19--20).
+The key $D\!:\!h$ is deterministic given $D$ and $h$.
+
+For correctness, we require that two distinct schemas $S_1 \neq S_2$
+cannot share hash $h$.  This follows from the collision resistance of
+SHA-256: an adversary producing $S_1 \neq S_2$ with
+$\text{SHA-256}(\text{canonical}(S_1)) = \text{SHA-256}(\text{canonical}(S_2))$
+would constitute a collision attack with probability bounded by
+$2^{-128}$ under standard cryptographic assumptions~\cite{keccak2015}.
+
+Given collision resistance, the cache is injective: at most one entry
+exists per key $D\!:\!h$, and its content is fixed at write time.
+Every subsequent \texttt{store.get}($D\!:\!h$) returns the same
+$(\hat{C}, A)$.  Algorithm~\ref{alg:csn} returns the cache result
+immediately at lines 4--7, bypassing all schema-matching and LLM
+paths.
+\end{proof}
+
+% ============================================================
+\section{Satisfaction Signals and Reputation Feedback}
+\label{sec:satisfaction}
+% ============================================================
+
+ACP closes the quality feedback loop between saga outcomes and the
+Bayesian reputation system of Paper~1~\cite{aroha2025p1} through
+the \texttt{ArohaSatisfactionSignal} message type.
+
+\subsection{Signal Structure}
+
+\texttt{ArohaSatisfactionSignalBody} carries:
+\begin{itemize}
+  \item \texttt{sagaId}, \texttt{agentDID}, \texttt{capability}
+  \item \texttt{outcome} $\in \{\texttt{"satisfied"},
+        \texttt{"neutral"}, \texttt{"dissatisfied"}\}$
+  \item \texttt{dimensions}: $\{\textit{price}, \textit{quality},
+        \textit{speed}\}$, each a 3-way signal
+  \item \texttt{withinSLA}: boolean
+  \item \texttt{requiredCompensation}: boolean (true if a saga
+        compensation was triggered)
+\end{itemize}
+
+\subsection{Reputation Mapping}
+
+Satisfaction signals map to the $\beta$-distribution parameters
+of Paper~1's \texttt{ArohaRep} system~\cite{josang2002beta} as follows:
+\begin{align*}
+  \texttt{outcome}&=\texttt{"satisfied"} \wedge
+    \texttt{withinSLA}=\texttt{true}
+    &\Rightarrow&\quad s^{+}\ (\text{weight}\ 1.0) \\
+  \texttt{outcome}&=\texttt{"dissatisfied"}
+    &\Rightarrow&\quad s^{-}\ (\text{weight}\ 1.2) \\
+  \texttt{requiredCompensation}&=\texttt{true}
+    &\Rightarrow&\quad s^{-}\ (\text{weight}\ 0.8)
+\end{align*}
+
+The \texttt{IReputationRecorder} interface accepts a
+\texttt{ReputationRecordContext} carrying: \texttt{sagaId},
+\texttt{agentDID}, \texttt{outcome}, optional
+\texttt{latencyMs}, \texttt{slaDurationMs}, \texttt{quotedPrice},
+\texttt{actualPrice}, \texttt{retryCount}, \texttt{qualityScore},
+\texttt{domain}.  The reputation system uses these fields to maintain
+separate per-domain and per-capability reputation models.
+
+\textbf{Compensation as quality signal.}  A saga that requires
+LIFO compensation indicates partial failure—even if the orchestrator's
+perspective is neutral (no harm done), the provider failed to complete
+a committed step.  Flagging \texttt{requiredCompensation = true}
+allows the reputation system to penalize providers whose workflows
+require frequent rollbacks.
+
+% ============================================================
+\section{Distributed Tracing and Observability}
+\label{sec:tracing}
+% ============================================================
+
+ACP messages carry a W3C Trace Context~\cite{w3c2021tracecontext}
+\texttt{correlationId} in the envelope, enabling cross-agent
+distributed tracing.  The \texttt{sagaId} provides coarser-grained
+grouping of all messages belonging to a single saga execution.
+
+Observability spans are emitted at each saga phase transition:
+Reserve, CommitPending, Committed, Cancelled.  Implementations
+are expected to export spans to OpenTelemetry-compatible collectors.
+The \texttt{matchAudit} field of \texttt{CSNAcceptExtension} provides
+transparency into which CSN resolution path was taken and whether an
+LLM was invoked, supporting cost accounting and compliance auditing.
+
+% ============================================================
+\section{Security Considerations}
+\label{sec:security}
+% ============================================================
+
+\textbf{Replay attacks.}  ACP envelope timestamps are checked against
+a configurable maximum clock skew.  The \texttt{messageId} field
+is stored in a sliding-window cache; duplicates return
+\texttt{Aroha\_REPLAY\_DETECTED}.  The \texttt{idempotencyKey}
+provides higher-level deduplication at the business logic layer.
+
+\textbf{Credential theft.}  Inline \texttt{credentialToken} values
+are base64url-encoded signed JWTs; their \texttt{expiresAt} field
+limits exposure.  Registry-based \texttt{credentialId} references
+can be revoked immediately by the issuer.
+
+\textbf{HITL injection.}  Webhook payloads are authenticated with
+HMAC-SHA256 (\texttt{X-Aroha-Signature}); receivers must verify
+the signature before processing approval decisions.
+
+\textbf{CSN adversarial schemas.}  An adversary could supply a
+crafted \texttt{desiredSchema} to trigger expensive LLM inference
+on every request.  The \texttt{schemaHash} cache and
+\texttt{disallowLLMFallback} flag mitigate this.  Rate limiting
+on the \texttt{Intent} path is recommended for public endpoints.
+
+\textbf{Mandate over-allocation.}  Prevented by the dual-layer
+enforcement described in \S\ref{sec:mandates}: monotonic narrowing
+plus atomic ledger deduction.
+
+% ============================================================
+\section{Implementation and Evaluation}
+\label{sec:impl}
+% ============================================================
+
+ACP is implemented as the TypeScript package
+\texttt{@aroha-labs/acp}, published on npm.  The package exports:
+the seventeen message constructors and validators, the saga engine
+(Algorithm~\ref{alg:saga}), the CSN resolver
+(Algorithm~\ref{alg:csn}), \texttt{WebhookApprovalGate} and
+\texttt{AlwaysApproveGate}, the five settlement adapters, and the
+\texttt{IDiscoveryStore} interface with Redis, Postgres, and
+in-memory backends.
+
+\subsection{Micro-Benchmarks}
+
+Table~\ref{tab:bench} reports mean latencies measured on a
+single host (AMD Ryzen 9, 64\,GB RAM, Node.js 22) for 10\,000
+iterations.
+
+\begin{table}[t]
+\centering
+\caption{ACP Operation Micro-Benchmarks (single-host)}
+\label{tab:bench}
+{\small
+\begin{tabular}{@{}lrr@{}}
+\toprule
+\textbf{Operation} & \textbf{Mean} & \textbf{P99} \\
+\midrule
+Envelope sign (Ed25519)        & 0.08\,ms & 0.12\,ms \\
+Envelope verify (Ed25519)      & 0.06\,ms & 0.09\,ms \\
+Schema hash (SHA-256, 4\,KB)   & 0.02\,ms & 0.04\,ms \\
+CSN cache lookup (Redis)       & 0.9\,ms  & 1.4\,ms  \\
+CSN structural match (10 caps) & 2.1\,ms  & 3.8\,ms  \\
+CSN intent (LLM, GPT-4o-mini)  & 480\,ms  & 920\,ms  \\
+Saga step (reserve+commit)     & 4.8\,ms  & 9.2\,ms  \\
+\bottomrule
+\end{tabular}
+}
+\end{table}
+
+The data confirm that CSN cache hits ($< 1\,\text{ms}$) and
+structural matching ($< 4\,\text{ms}$) impose negligible overhead
+on a per-invocation basis.  LLM-assisted intent matching is
+appropriate only for initial discovery; the cache ensures subsequent
+interactions avoid it.
+
+% ============================================================
+\section{Discussion}
+\label{sec:discussion}
+% ============================================================
+
+\textbf{Comparison with database sagas.}  Classic sagas assume
+shared database infrastructure for coordination~\cite{garcia1987sagas}.
+ACP's saga pattern replaces this with message-passing over the
+Aroha envelope protocol~\cite{aroha2025p5}, which carries
+distributed identity and cryptographic authentication.
+The compensation model is analogous: ArohaCancel is a semantic undo,
+not a database rollback.  The LIFO ordering preserves the
+``undo the most recent action first'' invariant that Garcia-Molina
+and Salem identified as essential for semantic consistency.
+
+\textbf{Comparison with choreography vs.\ orchestration.}  ACP's
+saga pattern is orchestration-centric: a single orchestrator
+coordinates all reserve/commit/cancel messages.  Choreography-based
+approaches distribute this responsibility, reducing single points of
+failure but complicating LIFO ordering.  ACP's design prioritizes
+correctness (Theorem~\ref{thm:saga}) and auditability (single
+trace ID per saga) over decentralization at the coordination level.
+Agent identity remains fully decentralized via DIDs~\cite{w3c2022did}.
+
+\textbf{CSN and capability discovery.}  CSN's three-path design
+mirrors the precision/recall trade-off in information retrieval:
+schema matching provides high precision at low cost; intent-based LLM
+matching provides higher recall at higher cost.  The cache converts
+the one-time LLM cost into amortized near-zero cost for repeat
+interactions~\cite{lewis2020rag}.  This is particularly valuable in
+long-running agent deployments where the same orchestrator repeatedly
+invokes the same provider.
+
+\textbf{HITL gate placement.}  Positioning the HITL gate between
+reserve and commit is a deliberate design choice.  A pre-reserve gate
+requires the human to approve based on incomplete information (the
+provider has not yet confirmed feasibility or price).  A post-commit
+gate provides no opportunity to prevent the action.  The
+reserve/commit split provides the ``reversible hold'' window that
+makes meaningful human oversight practical.
+
+% ============================================================
+\section{Conclusion}
+\label{sec:conclusion}
+% ============================================================
+
+We presented ACP, the semantic communication layer of the Aroha
+agent network stack.  ACP's seventeen message types, four interaction
+patterns, saga execution engine, and Capability Schema Negotiation
+mechanism provide a complete foundation for multi-agent workflows
+that require transactional atomicity, capability discovery, human
+oversight, and financial settlement.
+
+Three formal theorems establish that: sagas always terminate cleanly
+without orphaned reservations; cancellations are safe to retry; and
+CSN cache entries are correct by the collision resistance of SHA-256.
+
+ACP is designed to complement the Aroha protocol stack~\cite{aroha2025p5},
+reputation system~\cite{aroha2025p1}, mandate-chain
+authorization~\cite{aroha2025p2}, publisher verification~\cite{aroha2025p3},
+and adaptive RAG~\cite{aroha2025p4} of the companion papers.
+Together they form a principled, open specification for deploying
+trustworthy autonomous AI agent networks at scale.
+
+\bibliographystyle{IEEEtran}
+\bibliography{aroha}
+
+\end{document}

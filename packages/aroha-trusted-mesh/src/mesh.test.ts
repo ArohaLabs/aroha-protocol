@@ -1,8 +1,9 @@
 // Copyright (c) 2026 Aroha Labs
 // SPDX-License-Identifier: Apache-2.0
 
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import type { IncomingMessage } from "node:http";
+import { InsecureEndpointError } from "@aroha-sdk/core";
 import { ipInCidr, ipInAnyRange } from "./cidr.js";
 import { createTrustedMeshOptions, createTrustedZone, TrustedMeshClient } from "./mesh.js";
 
@@ -148,6 +149,49 @@ describe("createTrustedMeshOptions", () => {
   it("returns false for all DIDs when both lists are empty", () => {
     const opts = createTrustedMeshOptions({ trustedDIDs: [] });
     expect(opts.bypassSignatureForRequest(LOCAL, "did:aroha:anyone")).toBe(false);
+  });
+});
+
+// ─── TrustedMeshClient endpoint security ─────────────────────────────────────
+
+describe("TrustedMeshClient allowInsecureHttp", () => {
+  const MESH_HTTP = "http://hotel-agent.internal:3001/aroha/v1";
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("refuses plain http:// to a non-loopback host by default", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const client = new TrustedMeshClient("did:aroha:agent-a", "did:aroha:agent-b");
+    const err = await client
+      .sendUnsigned(MESH_HTTP, "ArohaRequest", { capability: "ping", params: {} })
+      .catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(InsecureEndpointError);
+    expect((err as Error).message).toMatch(/non-loopback host/);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("sends over plain http:// to a non-loopback host when allowInsecureHttp is set", async () => {
+    const fetchMock = vi.fn(async () => new Response(null, { status: 202 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const client = new TrustedMeshClient("did:aroha:agent-a", "did:aroha:agent-b", {
+      allowInsecureHttp: true,
+    });
+    const reply = await client.sendUnsigned(MESH_HTTP, "ArohaRequest", { capability: "ping", params: {} });
+    expect(reply).toBeNull();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0][0]).toBe(MESH_HTTP);
+  });
+
+  it("createTrustedZone passes client options through", async () => {
+    const fetchMock = vi.fn(async () => new Response(null, { status: 202 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const zone = createTrustedZone(["did:aroha:agent-a", "did:aroha:agent-b"]);
+    const client = zone.createClient("did:aroha:agent-a", "did:aroha:agent-b", { allowInsecureHttp: true });
+    await client.sendUnsigned(MESH_HTTP, "ArohaRequest", { capability: "ping", params: {} });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });
 

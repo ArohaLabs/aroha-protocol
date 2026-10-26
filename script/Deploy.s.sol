@@ -11,16 +11,27 @@ import "../contracts/ArohaReputation.sol";
  * Usage (from project root, WSL/bash):
  *   anvil &
  *   forge build
- *   forge script script/Deploy.s.sol --rpc-url http://127.0.0.1:8545 --broadcast
+ *   forge script script/Deploy.s.sol --rpc-url http://127.0.0.1:8545 \
+ *     --private-key <Anvil account #0 key> --broadcast
+ *
+ * Without --broadcast, forge only simulates the deployment.
  *
  * Or use the Node.js helper which handles this automatically:
  *   node scripts/setup-chain.mjs
  */
 contract Deploy {
+    // Foundry cheatcode and console addresses (no forge-std dependency)
+    address constant VM = address(uint160(uint256(keccak256("hevm cheat code"))));
+    address constant CONSOLE = 0x000000000000000000636F6e736F6c652e6c6f67;
+
     // Foundry Script interface
     function run() external {
-        // vm.startBroadcast uses the --private-key flag or the first Anvil account
+        // With a single --private-key, forge uses that account as msg.sender here
         address deployer = msg.sender;
+
+        // Every call between start/stopBroadcast is sent as a transaction from the deployer
+        (bool ok, ) = VM.call(abi.encodeWithSignature("startBroadcast()"));
+        require(ok, "startBroadcast failed");
 
         // 1. Registry (no oracle yet — set after Reputation is deployed)
         ArohaRegistry registry = new ArohaRegistry(address(0), address(0));
@@ -34,17 +45,20 @@ contract Deploy {
         // 4. Wire oracle into registry
         registry.setReputationOracle(address(reputation));
 
-        // Log addresses for setup-chain.mjs to parse
-        // (forge script --broadcast logs them in the broadcast JSON)
-        // Direct logging via revert trick:
-        require(
-            false,
-            string(abi.encodePacked(
-                "Aroha_REGISTRY=", toHexString(address(registry)),
-                " Aroha_ESCROW=", toHexString(address(escrow)),
-                " Aroha_REPUTATION=", toHexString(address(reputation))
-            ))
-        );
+        (ok, ) = VM.call(abi.encodeWithSignature("stopBroadcast()"));
+        require(ok, "stopBroadcast failed");
+
+        // Log addresses (forge script --broadcast also records them in the broadcast JSON)
+        _log(string(abi.encodePacked(
+            "Aroha_REGISTRY=", toHexString(address(registry)),
+            " Aroha_ESCROW=", toHexString(address(escrow)),
+            " Aroha_REPUTATION=", toHexString(address(reputation))
+        )));
+    }
+
+    function _log(string memory message) internal view {
+        (bool ok, ) = CONSOLE.staticcall(abi.encodeWithSignature("log(string)", message));
+        ok;
     }
 
     function toHexString(address a) internal pure returns (string memory) {

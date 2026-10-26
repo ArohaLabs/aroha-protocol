@@ -74,6 +74,8 @@ docs/**/*.synctex.gz
 # Foundry build output (forge build). Nothing reads the ABIs from out/;
 # regenerate with `forge build`.
 out/
+# Transaction records written by `forge script ... --broadcast`.
+broadcast/
 
 # Local Anvil deployment addresses written by scripts/setup-chain.mjs.
 # (The committed copy is kept: scripts/chat-demo.mjs reads it.)

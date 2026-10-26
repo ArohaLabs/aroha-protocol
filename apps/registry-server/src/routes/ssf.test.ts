@@ -165,16 +165,18 @@ describe("mandate revocation → SETs", () => {
       expect(r.headers.get("authorization")).toBe("Bearer receiver-secret");
       expect(await verifySet(r.body)).toBe(true);
     }
+    // The two pushes run concurrently, so arrival order is not fixed: match by event type.
     const sets = received.map((r) => decodeSet(r.body));
-    expect(sets[0]!.header).toMatchObject({ alg: "EdDSA", typ: "secevent+jwt" });
     const subject = { format: "opaque", id: `${human.did}#${intent.mandate.mandateId}` };
     const types = sets.map((s) => Object.keys(s.claims.events)[0]);
-    expect(types).toEqual([CAEP_SESSION_REVOKED, AROHA_MANDATE_REVOKED]);
+    expect([...types].sort()).toEqual([CAEP_SESSION_REVOKED, AROHA_MANDATE_REVOKED].sort());
     for (const s of sets) {
+      expect(s.header).toMatchObject({ alg: "EdDSA", typ: "secevent+jwt" });
       expect(s.claims).toMatchObject({ iss: "http://localhost", aud: stream.aud, sub_id: subject });
       expect(typeof s.claims.jti).toBe("string");
     }
-    expect(sets[1]!.claims.events[AROHA_MANDATE_REVOKED]).toMatchObject({
+    const mandateSet = sets.find((s) => AROHA_MANDATE_REVOKED in s.claims.events)!;
+    expect(mandateSet.claims.events[AROHA_MANDATE_REVOKED]).toMatchObject({
       mandate_id: intent.mandate.mandateId, grantor: human.did, revoked_by: human.did,
     });
     // Same action → same txn.

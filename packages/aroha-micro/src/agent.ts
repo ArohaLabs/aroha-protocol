@@ -32,6 +32,7 @@ import {
   type ArohaReserveBody,
   type ArohaResponseBody,
   type ArohaCommitAckBody,
+  type PublicKeyResolver,
 } from "@aroha-sdk/core";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -70,6 +71,14 @@ export interface MicroAgentOptions {
    * to accept connections from other machines.
    */
   host?: string;
+  /**
+   * How peers' public keys are resolved when verifying inbound envelopes
+   * (same signature as ArohaServer's `resolvePublicKey`). Return null for an
+   * unknown sender; it is rejected with 401. The agent's own DID always
+   * resolves. Default: only the agent's own DID resolves, so every peer is
+   * rejected. Not consulted in devMode.
+   */
+  resolvePublicKey?: PublicKeyResolver;
 }
 
 // ─── MicroAgent ───────────────────────────────────────────────────────────────
@@ -79,7 +88,8 @@ export class MicroAgent {
   private server: ArohaServer | null = null;
   private _did = "";
   private _privateKey: Uint8Array = new Uint8Array(32);
-  private readonly opts: Required<Omit<MicroAgentOptions, "host">> & { host?: string };
+  private readonly opts: Required<Omit<MicroAgentOptions, "host" | "resolvePublicKey">> &
+    Pick<MicroAgentOptions, "host" | "resolvePublicKey">;
 
   constructor(opts: MicroAgentOptions) {
     const devMode = opts.devMode ?? false;
@@ -124,10 +134,12 @@ export class MicroAgent {
       port: this.opts.port,
       ...(this.opts.host ? { host: this.opts.host } : {}),
       devMode: this.opts.devMode,
-      resolvePublicKey: async (senderDID) => {
+      resolvePublicKey: async (senderDID, verificationMethodId) => {
         // In dev mode the ArohaServer short-circuits before verifying the key,
         // so this is only reached in production mode.
-        return knownPublicKeys.get(senderDID) ?? null;
+        const own = knownPublicKeys.get(senderDID);
+        if (own) return own;
+        return this.opts.resolvePublicKey ? this.opts.resolvePublicKey(senderDID, verificationMethodId) : null;
       },
       onMessage: async (envelope, respond) => this.dispatch(envelope, respond),
     });

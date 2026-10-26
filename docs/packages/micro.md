@@ -57,12 +57,28 @@ interface MicroAgentOptions {
   endpoint?: string;
   /** Interface to bind. Default "127.0.0.1"; pass "0.0.0.0" to accept other machines. */
   host?: string;
+  /**
+   * How peers' public keys are resolved outside dev mode (same signature as
+   * ArohaServer's resolvePublicKey). Return null to reject the sender.
+   * The agent's own DID always resolves. Default: only the agent's own DID.
+   */
+  resolvePublicKey?: PublicKeyResolver;
 }
 ```
 
 Outside dev mode, an `ArohaReserve` is answered with an `ArohaError` — implement sagas with `ArohaServer` directly.
 
-Outside dev mode, the agent's public-key resolver also knows only the agent's own (ephemeral) DID, so envelopes from any other sender are rejected (`401`, `Unknown sender DID`). There is no option to supply a peer key resolver or a persistent key; to accept signed requests from other agents, use `ArohaServer` with your own `resolvePublicKey`.
+Outside dev mode, the agent by default resolves only its own (ephemeral) DID's public key, so envelopes from any other sender are rejected (`401`, `Unknown sender DID`). To accept signed requests from other agents, pass `resolvePublicKey` (a `PublicKeyResolver` from `@aroha-sdk/core`, the same option `ArohaServer` takes, e.g. `kelKeyResolver(...)` or your own lookup):
+
+```typescript
+createAgent({
+  name: "weather-agent",
+  port: 3001,
+  resolvePublicKey: async (senderDid) => trustedPeers.get(senderDid) ?? null,
+});
+```
+
+Dev mode does not consult the resolver. There is still no option for a persistent agent key.
 
 ---
 

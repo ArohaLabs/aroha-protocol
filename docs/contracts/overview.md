@@ -211,7 +211,8 @@ Exponential Moving Average: `score = 0.85 × score + 0.15 × signal` (scores 0�
 ```solidity
 enum SagaOutcome { SUCCESS, FAILURE, COMPENSATED, DISPUTE_LOST }
 
-// Record the outcome of a saga step for one agent (one record per sagaId per agent)
+// Record the outcome of a saga step for one agent (one record per sagaId per agent).
+// Only the contract owner (the deploying address); other callers revert with Unauthorized()
 function recordOutcome(
     bytes32 sagaId,
     bytes32 agentDID,          // DID hash

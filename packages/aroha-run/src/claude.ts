@@ -5,7 +5,7 @@
  * aroha-run/claude — First-party Anthropic handler
  *
  * Bridges the Aroha serve() handler contract to the Anthropic Messages API so
- * you can build a Hub-registered Claude-backed agent in three lines:
+ * you can build a registry-listed Claude-backed agent in three lines:
  *
  *   import { serve } from "@aroha-sdk/run";
  *   import { createClaudeHandler } from "@aroha-sdk/run/claude";

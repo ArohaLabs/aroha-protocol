@@ -63,6 +63,34 @@ These are the canonical wire values. Every SDK uses the same strings — a `Aroh
 |------|----------------|-------------|-------------|
 | `Aroha_INTERNAL_ERROR` | 500 | true | Unexpected internal error |
 
+### CSN extension
+
+| Code | HTTP equivalent | `retryable` | Description |
+|------|----------------|-------------|-------------|
+| `CSN_NO_STRUCTURAL_MATCH` | 404 | — | No structural capability schema match found (note: no `Aroha_` prefix) |
+
+### Task mandates
+
+| Code | HTTP equivalent | `retryable` | Description |
+|------|----------------|-------------|-------------|
+| `Aroha_ACTION_LIMIT_EXCEEDED` | 403 | — | Action invocation count exceeds the mandate's `actionLimits` |
+| `Aroha_COMPUTE_LIMIT_EXCEEDED` | 403 | — | Compute resource (tokens/requests/time) budget exhausted |
+| `Aroha_REVERSIBILITY_VIOLATION` | 403 | — | Capability is irreversible but the mandate requires `reversibleOnly` |
+| `Aroha_HUMAN_GATE_REQUIRED` | 403 | — | Capability requires human approval (`humanGates`) before execution |
+| `Aroha_DATA_ACCESS_VIOLATION` | 403 | — | Agent attempted to access a data resource beyond its scope |
+| `Aroha_SANDBOX_REQUIRED` | 403 | — | Code execution attempted outside a declared sandbox |
+| `Aroha_DELEGATION_DEPTH_EXCEEDED` | 403 | — | Delegation chain depth exceeds `maxDelegationDepth` |
+| `Aroha_CAPABILITY_NOT_PERMITTED` | 403 | — | Capability not in the mandate's allowed list |
+
+### Settlement
+
+| Code | HTTP equivalent | `retryable` | Description |
+|------|----------------|-------------|-------------|
+| `Aroha_SETTLEMENT_RAIL_MISMATCH` | 409 | — | Requestor's and provider's settlement rails share no common value |
+| `Aroha_COMMIT_DISPUTED` | 409 | — | Buyer disputed the commit result during the challenge window, or the arbiter resolved against the provider |
+
+For the codes marked —, the code does not fix a `retryable` value; read it from the `ArohaError` body. The HTTP statuses for these codes are the ones recommended in the specification's error-code appendix ([Appendix A](../spec/aroha-1.0.md#appendix-a--error-codes)).
+
 ---
 
 ## Sending errors in TypeScript

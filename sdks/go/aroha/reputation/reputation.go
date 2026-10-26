@@ -3,7 +3,7 @@
 
 // Package reputation implements the Aroha Bayesian Beta reputation model (v1.1).
 //
-// 11-signal model with Thompson Sampling for Multi-Armed Bandit agent selection.
+// 12-signal model with Thompson Sampling for Multi-Armed Bandit agent selection.
 //
 // References:
 //
@@ -88,7 +88,7 @@ var DefaultWeights = CompositeWeights{
 	PPS:      0.02,
 }
 
-// ReputationState holds the full 11-signal model for one (agent, domain) pair.
+// ReputationState holds the full 12-signal model for one (agent, domain) pair.
 type ReputationState struct {
 	AgentDID          string       `json:"agentDID"`
 	Domain            string       `json:"domain"`

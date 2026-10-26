@@ -22,8 +22,8 @@
 /**
  * The Aroha-managed registry. This is the workers.dev host the registry
  * Worker (apps/registry-server, no custom route configured) is deployed to.
- * The `registry.aroha-labs.com` alias listed in docs/infrastructure.md does
- * not resolve at the time of writing; switch this constant only once it does.
+ * The `registry.aroha-labs.com` alias does not resolve at the time of
+ * writing; switch this constant only once it does.
  *
  * Override per process with the AROHA_REGISTRY_URL environment variable, or
  * per call site with each client's own `registryUrl` option.

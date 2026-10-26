@@ -107,8 +107,6 @@ Aroha is positioned as an **inter-cloud authority and trust layer** that runs al
 | **No blockchain required** | `InMemoryRegistry` + `PostgresSettlement` — zero cloud dependencies |
 | **Works on every cloud** | Node.js 22+, runs on Vercel, Cloudflare Workers, AWS Lambda, Azure Functions, GCP Cloud Run |
 
-The pitch to enterprise architects: "You already have Copilot Studio and Bedrock. Aroha is what makes them talk to each other — and to your own agents — without vendor lock-in."
-
 ---
 
 ## 1-Click deployment targets
@@ -149,7 +147,7 @@ Same pattern — import `@aroha-sdk/core`, call `validateEnvelope()`, respond wi
 
 ---
 
-## Why this beats vendor-native solutions
+## Comparison with vendor-native solutions
 
 | Concern | Vendor-native | Aroha |
 |---------|--------------|------|

@@ -4,7 +4,7 @@
 """
 Aroha Python SDK — Bayesian Reputation Engine (v1.1)
 
-Implements the 11-signal Beta-distribution reputation model described in
+Implements the 12-signal Beta-distribution reputation model described in
 docs/reputation-model.md. Mirrors the TypeScript @aroha-sdk/reputation package.
 
 Signals:
@@ -76,7 +76,7 @@ class WelfordStats:
 class ReputationState:
     agent_did: str    = ""
     domain: str       = "general"
-    # 11 signals
+    # 12 signals
     baseline: SignalPair = field(default_factory=SignalPair)
     rhr:      SignalPair = field(default_factory=SignalPair)
     pcr:      SignalPair = field(default_factory=SignalPair)

@@ -25,7 +25,7 @@ These packages follow [Semantic Versioning](https://semver.org). Breaking change
 - Public TypeScript APIs (exported interfaces, function signatures) will not change in an incompatible way within a major version
 - The `did:aroha:` DID format is stable
 - The Aroha envelope schema (`ArohaEnvelope`, `ArohaMessage`) is stable
-- Mandate token format (`ArohaSpendingMandateBody`) is stable — issued tokens remain verifiable across SDK versions
+- Mandate token format (`ArohaSpendingMandateBody`) is versioned — `@aroha-sdk/credentials` 2.0.0 verifies legacy v1 tokens, but the v2 tokens it issues cannot be verified by 1.x releases (see [Mandate Token Stability](#mandate-token-stability))
 - `arohaProtocolVersion: "1.0"` will be accepted by all future 1.x servers
 
 ### Beta (usable; API may still change in a minor release)
@@ -104,7 +104,7 @@ For stable packages, breaking changes follow this process:
 
 The Aroha protocol itself is versioned separately from the SDK packages.
 
-- Protocol version is declared in every envelope: `"arohaProtocolVersion": "1.0"`
+- Protocol version is declared in the agent manifest: `"arohaProtocolVersion": "1.0"` (the message envelope carries no version field)
 - The SDK will accept envelopes from any 1.x protocol version
 - Protocol 2.0 would require a new major SDK version with a migration guide
 - The `did:aroha:` DID method identifier and key derivation scheme are protocol-level and considered **permanently stable**
@@ -117,13 +117,19 @@ The Aroha protocol itself is versioned separately from the SDK packages.
 
 ## Mandate Token Stability
 
-Signed mandate tokens (`ArohaSpendingMandateBody` + Ed25519 signature) issued by any SDK ≥ 1.0.0 will:
+Signed mandate tokens (`ArohaSpendingMandateBody` + Ed25519 signature) exist in two versions:
 
-- Verify correctly with any future SDK 1.x release
-- Produce the same signature for the same inputs (deterministic)
-- Be rejected by `verifyMandate()` if tampered with, regardless of SDK version
+- **v1 (legacy)** — issued by `@aroha-sdk/credentials` 1.x; signed over key-sorted JSON of the body.
+- **v2** — issued by `@aroha-sdk/credentials` 2.0.0 and later; signed over the RFC 8785 (JCS) canonicalisation of `{ mandate, v: 2 }`, and the token carries its signed ancestry (`chain`).
 
-The token encoding (JSON body → UTF-8 bytes → Ed25519 sign) is stable and documented in the protocol specification.
+Compatibility across SDK versions:
+
+- v2 tokens **cannot** be verified by verifiers built on 1.x releases.
+- v1 tokens still verify in 2.x. A v1 token that is not a root carries no ancestry: it verifies with `chainVerified: false`, cannot be attenuated, and is rejected wherever a verified chain is required (`verifyMandateChain`, `requireChain: true`, the governed profile).
+- Within one token version, the same inputs produce the same signature (Ed25519 is deterministic).
+- A tampered token is rejected by `verifyMandate()` in every SDK version.
+
+The v2 format is specified in [Aroha 1.0 §6.5](docs/spec/aroha-1.0.md#65-spending-mandate-token-format-v2) (spending mandates) and §6.6 (task mandates).
 
 ---
 

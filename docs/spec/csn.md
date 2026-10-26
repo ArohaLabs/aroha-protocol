@@ -5,13 +5,13 @@
 
 CSN is Aroha's mechanism for two agents to agree on a capability mapping
 when the requestor does not know the provider's exact capability name.
-It is Aroha's answer to ANP's meta-protocol — and it is strictly better.
+It addresses the same problem as ANP's meta-protocol, using a different approach.
 
-## Why CSN Beats ANP's Meta-Protocol
+## CSN compared with ANP's meta-protocol
 
-ANP meta-protocol: the LLM generates a **brand-new ad-hoc protocol** for
-the two agents, which they must both code-generate and interpret. This is
-fragile, unverifiable, and bypasses all of ANP's own type safety.
+ANP meta-protocol: the LLM generates a **new ad-hoc protocol** for the two
+agents, which they must both code-generate and interpret. The generated
+protocol is not covered by ANP's own type definitions.
 
 Aroha CSN maps the requestor's intent to an **existing, typed Aroha
 capability**. The provider's saga semantics, error codes, signing, and SLA
@@ -20,13 +20,13 @@ registered and typed.
 
 | Dimension | ANP meta-protocol | **Aroha CSN** |
 |-----------|-------------------|--------------|
-| Matching  | LLM generates new protocol (fragile) | Deterministic structural schema match first |
+| Matching  | LLM generates new protocol | Deterministic structural schema match first |
 | LLM role  | Always required | Only for ambiguous cases (score 0.5–0.85) |
-| Result    | Ad-hoc protocol — no guarantees | Maps to existing typed capability |
-| Type safety | Lost (generated protocol) | **Preserved** |
+| Result    | Ad-hoc protocol | Maps to existing typed capability |
+| Type safety | Not covered (generated protocol) | **Preserved** |
 | Saga / error codes | Not applicable | **Preserved** |
 | Terms negotiation | Separate round | **Same round** |
-| Caching | None | **SHA-256 cached → zero-latency repeats** |
+| Caching | None | **SHA-256 cached → repeats skip matching** |
 
 ---
 

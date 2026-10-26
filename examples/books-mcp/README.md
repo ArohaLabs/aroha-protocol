@@ -3,7 +3,7 @@
 
 # books-mcp — read-only SQL over MCP stdio (demo)
 
-A small demonstration MCP server used in the document-intelligence demos: it exposes a
+A small demonstration MCP server: it exposes a
 practice's "books" (a SQLite file) to an agent as two read-only tools, so budget questions are
 answered by querying figures rather than by a model adding up numbers from prose.
 

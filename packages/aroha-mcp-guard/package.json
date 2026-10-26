@@ -1,7 +1,7 @@
 {
   "name": "@aroha-sdk/mcp-guard",
   "version": "0.2.1",
-  "description": "A firewall for your AI agent's tools — wrap any MCP server with spending limits, action limits, human approval gates, and a full audit log. Zero code, one config change.",
+  "description": "A firewall for your AI agent's tools — wrap any MCP server with action limits, human approval gates, and a full audit log. Zero code, one config change.",
   "files": [
     "dist",
     "src",

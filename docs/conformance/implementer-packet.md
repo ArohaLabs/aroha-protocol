@@ -3,7 +3,7 @@
 
 # Aroha Independent Implementer Onboarding Packet
 
-**Owner:** Conformance Agent  
+**Owner:** @projectmed99  
 **Version:** 1.0 — 2026-05-28  
 **For:** External teams building independent Aroha 1.0 implementations
 
@@ -23,13 +23,13 @@ The minimum viable Aroha 1.0 implementation covers Layers 0–3:
 
 | Layer | What to build |
 |-------|---------------|
-| L0 | DID generation, resolution, key rotation |
-| L1 | Signed envelope creation and verification |
-| L2 | Capability manifest publication and registry query |
-| L3 | Saga coordinator or participant (you can choose one role) |
-| L4 | Optional — commerce/payment layer |
+| L0 — Transport | Well-known DID document and message endpoints over TLS; `aroha-sig` caller authentication if you restrict callers |
+| L1 — Identity | DID generation and resolution; key rotation for E-form DIDs (z-form DIDs cannot rotate) |
+| L2 — Registry | Capability manifest publication and registry query |
+| L3 — Messaging | Signed envelope creation and verification |
+| Extensions | Optional — orchestration (saga coordinator or participant; you can choose one role), commerce/payment |
 
-See [test-matrix.md](test-matrix.md) for the exact requirements at each layer, and [tiers.md](tiers.md) for how layers group into conformance tiers. (Tier claims are self-declared; the per-tier test filter and `X-Aroha-Conformance` header described there are planned, not implemented.)
+See [test-matrix.md](test-matrix.md) for the exact requirements at each layer (its row ID prefixes are historical and do not match the layer numbers above), and [tiers.md](tiers.md) for how layers group into conformance tiers. (Tier claims are self-declared; the per-tier test filter and `X-Aroha-Conformance` header described there are planned, not implemented.)
 
 ---
 
@@ -79,7 +79,7 @@ npx wrangler dev --port 8787
 # Point your implementation at http://localhost:8787. It should:
 #   1. Register a capability (L2)
 #   2. Discover the reference agent (L2)
-#   3. Exchange signed envelopes (L1)
+#   3. Exchange signed envelopes (L3)
 #   4. Optional: execute a saga as coordinator or participant (saga extension, spec/extensions.md)
 ```
 
@@ -88,7 +88,7 @@ npx wrangler dev --port 8787
 Open an issue in this repository using the **Conformance Report** issue template. Include:
 
 - Implementation name and language
-- Which layers you tested (L0–L4)
+- Which layers (L0–L3) and extensions you tested
 - Your self-test results table (pass/fail per test ID)
 - Interoperability test result (success / failure + log)
 - Any deviations from SHOULD requirements and rationale

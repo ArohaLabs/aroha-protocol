@@ -102,7 +102,7 @@ const HELP = `
     ✓ Node.js version (must be ≥22)
     ✓ .env file has AROHA_AGENT_DID
     ✓ Endpoint returns a valid DID document (if given)
-    ✓ Signed round-trip completes
+    ✓ Unsigned test request to /aroha/v1 gets a 200, 400 or 401 reply (if given)
 
   Examples:
     aroha doctor

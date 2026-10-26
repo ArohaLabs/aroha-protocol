@@ -4,11 +4,12 @@
 /**
  * Aroha Quickstart — Claude-backed agent
  *
- * The fastest path from zero to a Hub-registered AI agent.
+ * The fastest path from zero to a registry-listed AI agent.
  *
  * Prerequisites:
  *   export ANTHROPIC_API_KEY="sk-ant-..."
- *   export AROHA_API_KEY="ak-..."      # from aroha-labs.com/keys
+ *   export AROHA_API_KEY="..."         # only for --register; an org API key
+ *                                      # issued by your own registry (see below)
  *
  * Run (local, loopback only — no request auth, see "Auth" below):
  *   npx tsx agent.ts
@@ -16,7 +17,7 @@
  * Deploy (reachable from other machines — request auth is switched on):
  *   HOST=0.0.0.0 AROHA_BEARER_TOKEN=<long random secret> npx tsx agent.ts
  *
- * Register on the Hub (after deploying to a public URL). The registry only
+ * Register with a registry (after deploying to a reachable URL). The registry only
  * registers a DID whose key the caller proves it holds, so registration needs
  * the agent's DID, its manifest CID and its Ed25519 seed:
  *   export AGENT_DID="did:aroha:..."
@@ -24,8 +25,13 @@
  *   export AGENT_PRIVATE_KEY_HEX="<64 hex chars>"
  *   npx tsx agent.ts --register --endpoint https://my-agent.fly.dev
  *
- * The registry defaults to the Aroha-managed one; set AROHA_REGISTRY_URL to
- * use another.
+ * Set AROHA_REGISTRY_URL to a registry you run yourself — e.g. a self-hosted
+ * apps/registry-server (see apps/registry-server/DEPLOY.md, which also shows
+ * how to provision the org API key used as AROHA_API_KEY). If it is unset,
+ * the SDK falls back to the Aroha-managed registry URL. For purely local
+ * experiments, `aroha dev` runs an in-memory registry and dashboard on
+ * localhost:3000; note that it does not serve the /v1/agents API that
+ * --register uses.
  */
 
 import { serve, createClaudeHandler } from "@aroha-sdk/run";
@@ -65,7 +71,7 @@ const loopback = ["127.0.0.1", "::1", "localhost"].includes(host);
 if (!loopback) console.warn(`HOST=${host} — the agent is reachable from other machines; request auth is on`);
 
 const agent = serve("Quickstart Agent", handler, {
-  description: "A simple Claude-backed agent registered on the Aroha Hub.",
+  description: "A simple Claude-backed Aroha agent.",
   provider:    "anthropic",
   model:       "claude-sonnet-4-6",
   memory:      "session",   // automatically persists conversation history
@@ -91,7 +97,7 @@ if (registerIdx !== -1) {
   }
   const apiKey = process.env.AROHA_API_KEY;
   if (!apiKey) {
-    console.error("Set AROHA_API_KEY env var — get one at aroha-labs.com/keys");
+    console.error("Set AROHA_API_KEY env var — an org API key issued by the registry at AROHA_REGISTRY_URL");
     process.exit(1);
   }
   const did = process.env.AGENT_DID;
@@ -103,10 +109,9 @@ if (registerIdx !== -1) {
   }
   const privateKey = new Uint8Array(Buffer.from(seedHex, "hex"));
   agent.register(endpointUrl, { apiKey, did, manifestCID, privateKey }).then((result) => {
-    console.log("✓ Registered on the Aroha Hub");
+    console.log("✓ Registered with the registry");
     console.log("  DID:     ", result.did);
     console.log("  didHash: ", result.didHash);
-    console.log("  Hub URL: ", `https://aroha-labs.com/hub/${result.didHash}`);
     process.exit(0);
   }).catch((err) => {
     console.error("Registration failed:", err.message);

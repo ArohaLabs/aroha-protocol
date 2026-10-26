@@ -1,7 +1,7 @@
 {
   "name": "@aroha-sdk/run",
   "version": "2.0.0",
-  "description": "Aroha /v1/run server and client — the fastest path to a Hub-registered agent",
+  "description": "Aroha /v1/run server and client — the fastest path to a registry-listed agent",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

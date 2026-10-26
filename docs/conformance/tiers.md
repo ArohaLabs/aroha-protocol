@@ -4,8 +4,11 @@
 # Aroha Protocol Conformance Tiers
 
 Three tiers let implementers declare exactly which parts of the protocol they support.
+Layer numbers below are the specification's Layers 0–3 (Transport, Identity, Registry,
+Messaging; [Aroha 1.0 §2](../spec/aroha-1.0.md#2-protocol-layers)). Orchestration (sagas),
+preference context, commerce and settlement are extensions, not layers.
 
-## Tier 1 — Aroha-Minimal (Layers 0–1)
+## Tier 1 — Aroha-Minimal (Layers 0, 1 and 3)
 
 **What it means:** The implementation can send and receive cryptographically signed
 Aroha messages. No registry, no saga, no settlement required.
@@ -14,10 +17,10 @@ Aroha messages. No registry, no saga, no settlement required.
 - ✅ L0: Serve `/.well-known/aroha-agent.json`
 - ✅ L0: Accept `POST /aroha/v1` with JSON body
 - ✅ L1: Generate `did:aroha:` DID with Ed25519 keypair
-- ✅ L1: Sign outbound envelopes (Ed25519Signature2020)
-- ✅ L1: Verify inbound envelope signatures
-- ✅ L1: Reject replayed nonces
-- ✅ L1: Reject expired envelopes
+- ✅ L3: Sign outbound envelopes (Ed25519Signature2020)
+- ✅ L3: Verify inbound envelope signatures
+- ✅ L3: Reject replayed nonces
+- ✅ L3: Reject expired envelopes
 
 **Claim it with:** state the tier in your README or ecosystem submission. *(Planned — not implemented: an `X-Aroha-Conformance: minimal` response header. No Aroha package emits or checks this header today.)*
 
@@ -27,34 +30,34 @@ Aroha messages. No registry, no saga, no settlement required.
 
 ## Tier 2 — Aroha-Standard (Layers 0–3)
 
-**What it means:** The implementation participates fully in capability discovery and
-atomic multi-agent sagas.
+**What it means:** The implementation implements the whole core protocol, including
+capability discovery through a registry.
 
 **Required:** Everything in Tier 1, plus:
 - ✅ L2: Publish signed capability manifest
 - ✅ L2: Register on an Aroha registry (HTTP or EVM)
-- ✅ L3: Handle `ArohaReserve` → `ArohaReserveAck`
-- ✅ L3: Handle `ArohaCommit` → `ArohaCommitAck`
-- ✅ L3: Handle `ArohaCancel` → `ArohaCancelAck`
-- ✅ L3: Commit and Cancel are idempotent
 
 **Claim it with:** state the tier in your README or ecosystem submission. *(Planned — not implemented: an `X-Aroha-Conformance: standard` response header. No Aroha package emits or checks this header today.)*
 
-**Use case:** Production provider agents (e.g. FlightAgent, StripeAgent) that
-participate in multi-agent orchestration.
+**Use case:** Production provider agents (e.g. FlightAgent, StripeAgent) that are
+discoverable through a registry.
 
 ---
 
 ## Tier 3 — Aroha-Full (Layers 0–3 plus the extensions)
 
-**What it means:** The implementation supports the complete protocol stack including
-commerce agreements, preference signals, and settlement.
+**What it means:** The implementation supports the core protocol plus the orchestration,
+preference context, commerce and settlement extensions.
 
 **Required:** Everything in Tier 2, plus:
-- ✅ L4: `B2BAgreement` / `B2CServiceTerms` or `NullSettlement` declared in manifest
-- ✅ L4: Return `SettlementOutcome` in commit acknowledgements
-- ✅ L5: Accept `ArohaSatisfactionSignal` and update reputation
-- ✅ L5: Honour `ArohaSpendingMandate` budget constraints
+- ✅ Orchestration extension: Handle `ArohaReserve` → `ArohaReserveAck`
+- ✅ Orchestration extension: Handle `ArohaCommit` → `ArohaCommitAck`
+- ✅ Orchestration extension: Handle `ArohaCancel` → `ArohaCancelAck`
+- ✅ Orchestration extension: Commit and Cancel are idempotent
+- ✅ Commerce / settlement extensions: `B2BAgreement` / `B2CServiceTerms` or `NullSettlement` declared in manifest
+- ✅ Commerce / settlement extensions: Return `SettlementOutcome` in commit acknowledgements
+- ✅ Preference context extension: Keep `ArohaSatisfactionSignal` in the orchestrator's own preference store, never sent to providers ([extensions document](../spec/extensions.md) §2.3)
+- ✅ L3: Honour `ArohaSpendingMandate` budget constraints (§6.5)
 
 **Claim it with:** state the tier in your README or ecosystem submission. *(Planned — not implemented: an `X-Aroha-Conformance: full` response header. No Aroha package emits or checks this header today.)*
 

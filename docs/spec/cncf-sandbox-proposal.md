@@ -20,7 +20,7 @@ Aroha is an open protocol for **authenticated, accountable, and economically sov
 
 As AI systems increasingly act autonomously — calling APIs, delegating tasks, and orchestrating multi-step workflows — the industry needs a shared protocol analogous to HTTP or OAuth 2.0: one that any conformant implementation can adopt independently.
 
-Aroha is that protocol.
+Aroha is proposed as such a protocol.
 
 ---
 
@@ -183,7 +183,7 @@ If accepted into CNCF Sandbox, the project requests:
 
 ## Why CNCF now
 
-The Aroha Protocol is at the inflection point where community governance matters:
+The Aroha Protocol is at a stage where community governance matters:
 
 - Specification 1.0 is drafted (not yet submitted to a standards body) — the right time to transfer stewardship before ecosystem lock-in
 - Reference implementation is complete and published — CNCF does not need to incubate nascent code

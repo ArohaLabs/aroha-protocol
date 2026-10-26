@@ -433,6 +433,9 @@ identifier. From then on it is stable across rotation and recovery.
 
 ## Post-quantum migration
 
+> Post-quantum key support is future work: no reference implementation
+> supports post-quantum keys today (see [Aroha 1.0 Appendix C](aroha-1.0.md#appendix-c--post-quantum-cryptography-migration)).
+
 The DID Document is designed for a no-flag-day migration to NIST PQ standards
 (FIPS 204 ML-DSA / FIPS 205 SLH-DSA).
 
@@ -449,7 +452,7 @@ Add a second `verificationMethod` alongside the existing Ed25519 key:
     {
       "id": "did:aroha:my-agent#key-2-pq",
       "type": "Mldsa44VerificationKey2025",
-      "publicKeyMultibase": "z..."
+      "publicKeyMultibase": "u..."
     }
   ]
 }

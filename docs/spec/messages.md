@@ -37,7 +37,7 @@ Every message uses the same outer envelope:
 }
 ```
 
-`expires` defaults to `created + 300s`. Nonces are checked in a rolling 5-minute window.
+`expires` defaults to `created + 300s`, and receivers reject an envelope whose lifetime (`expires - created`) exceeds the maximum (default 5 minutes). Nonces are tracked per sender and retained at least until `expires` ([Aroha 1.0 §6.3](aroha-1.0.md#63-validation-rules)).
 
 ---
 
@@ -86,7 +86,6 @@ Provider → Orchestrator (WebSocket). Streaming progress update.
   progressPct: number;          // 0–100
   event: string;                // e.g. "searching", "found", "complete"
   data?: Record<string, unknown>;
-  final?: boolean;              // true on last event
 }
 ```
 
@@ -102,39 +101,38 @@ Orchestrator → Provider. Open price negotiation.
 // body
 {
   capability: string;
-  params: Record<string, unknown>;
-  offerPrice: number;
-  currency: string;
-  maxRounds?: number;
-  credentialId?: string;
-  credentialToken?: string;
+  proposedTerms: {
+    price?: { amount: number; currency: string };
+    sla?: { maxResponseMs: number; uptime: number };
+    validForMs?: number;
+    [key: string]: unknown;
+  };
+  csn?: CSNNegotiateExtension;      // see "CSN Extensions" below
 }
 ```
 
 ### ArohaCounterOffer
 
-Provider → Orchestrator. Counter-propose a price.
+Provider → Orchestrator. Counter-propose terms.
 
 ```typescript
 // body
 {
   capability: string;
-  counterPrice: number;
-  currency: string;
-  terms?: Record<string, unknown>;
+  revisedTerms: ArohaNegotiate["proposedTerms"];   // same shape as proposedTerms
 }
 ```
 
 ### ArohaAccept
 
-Orchestrator → Provider. Accept the current offer.
+Orchestrator → Provider. Accept the current terms.
 
 ```typescript
 // body
 {
   capability: string;
-  agreedPrice: number;
-  currency: string;
+  acceptedTerms: ArohaNegotiate["proposedTerms"];  // same shape as proposedTerms
+  csn?: CSNAcceptExtension;         // see "CSN Extensions" below
 }
 ```
 
@@ -227,8 +225,11 @@ Orchestrator A → Orchestrator B. Forward a request to a sub-orchestrator.
 ```typescript
 // body
 {
-  delegatedEnvelope: ArohaEnvelope;   // the original request
-  delegationProof: string;            // base64url — proof of delegation authority
+  targetDID: string;                  // DID of the agent the request is delegated to
+  capability: string;
+  params: Record<string, unknown>;
+  credentialId?: string;
+  credentialToken?: string;
 }
 ```
 
@@ -264,13 +265,13 @@ Orchestrator → its own preference store. Post-saga satisfaction feedback for p
 // body
 {
   sagaId: string;
+  agentDID: string;                 // DID of the provider agent being rated
   outcome: "satisfied" | "neutral" | "dissatisfied";
-  dimensions?: {
-    price?: "satisfied" | "neutral" | "dissatisfied";
-    quality?: "satisfied" | "neutral" | "dissatisfied";
-    speed?: "satisfied" | "neutral" | "dissatisfied";
+  dimensions: {
+    price: "satisfied" | "neutral" | "dissatisfied";
+    quality: "satisfied" | "neutral" | "dissatisfied";
+    speed: "satisfied" | "neutral" | "dissatisfied";
   };
-  comment?: string;
 }
 ```
 

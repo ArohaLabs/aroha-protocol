@@ -512,24 +512,32 @@ result, err := negotiator.Discover(ctx,
 
 ## `aroha/reputation`
 
-Bayesian Beta reputation engine with 11 signals and Thompson Sampling.
+Bayesian Beta reputation engine with 12 signals and Thompson Sampling.
 See [Reputation Model →](../reputation-model.md)
 
 ```go
 import "github.com/ArohaLabs/aroha-protocol/sdks/go/aroha/reputation"
 
-engine := reputation.NewEngine(nil) // nil = default weights
+engine := reputation.New(nil) // nil = default weights
 
-engine.RecordEvent(reputation.Event{
-    AgentDID:   "did:aroha:fx-agent",
-    Domain:     "fx",
-    Signal:     "saga_complete",
-    Success:    true,
-    ResponseMs: 120,
+ok := true
+latency := 120.0
+sla := 5000.0
+engine.RecordEvent(reputation.ReputationEvent{
+    Type:          reputation.EventSagaComplete,
+    SagaID:        "saga-123",
+    AgentDID:      "did:aroha:fx-agent",
+    Domain:        "fx",
+    Success:       &ok,
+    LatencyMs:     &latency,
+    SLADurationMs: &sla,
 })
 
 score  := engine.CompositeScore("did:aroha:fx-agent", "fx")
-ranked := engine.ThompsonSelect([]string{"did:aroha:fx-a", "did:aroha:fx-b"}, "fx", true)
+ranked := engine.ThompsonSelect([]map[string]any{
+    {"agentDID": "did:aroha:fx-a"},
+    {"agentDID": "did:aroha:fx-b"},
+}, "fx", true) // true = risk-gated (Wilson lower-bound floor)
 ```
 
 ---
@@ -557,10 +565,19 @@ cart, err := mandate.AttenuateToCart(
     nil, // nil = the parent's expiry
 )
 
-m, err := mandate.Verify(cart.Token, personalAgentPublicKey, "did:aroha:shopping-orchestrator")
-if err == nil {
-    fmt.Println(m.Constraints.SpendLimitUSD) // 79.99
+// The caller's key verifies the leaf (signed by the personal agent). Ancestor
+// keys come from ResolveKey; without it only content-addressed DIDs resolve.
+resolveKey := func(did string) (ed25519.PublicKey, error) {
+    if did == "did:aroha:personal-agent-alice" {
+        return userPubKey, nil
+    }
+    return nil, fmt.Errorf("unknown DID %s", did)
 }
-// Verify checks one key; before moving money use mandate.VerifyMandateChain.
+r := mandate.VerifyMandate(cart.Token, personalAgentPublicKey, "did:aroha:shopping-orchestrator",
+    mandate.VerifyOptions{ResolveKey: resolveKey})
+if r.Valid {
+    fmt.Println(r.Mandate.Constraints.SpendLimitUSD) // 79.99
+}
+// VerifyMandate checks one leaf key; before moving money use mandate.VerifyMandateChain.
 ```
 

@@ -10,9 +10,8 @@
 -- WHY THE REGISTRY STORES LOGS IT CANNOT FORGE
 --
 -- An E-DID commits to its inception event, and every later key change is a
--- hash-chained, self-authenticating event (see @aroha-sdk/core kel.ts and the
--- design doc docs/superpowers/specs/2026-10-07-rotatable-identity-and-person-
--- principal-design.md). A registry serving such a log cannot substitute a
+-- hash-chained, self-authenticating event (see @aroha-sdk/core kel.ts). A
+-- registry serving such a log cannot substitute a
 -- key — but it CAN serve an old prefix, which hides a rotation or a
 -- revocation. What it can usefully do is be a durable "longest log seen"
 -- memory: kel_logs keeps the longest VERIFIED log per DID, and kel_duplicity

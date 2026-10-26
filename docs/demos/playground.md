@@ -182,7 +182,7 @@ This triggers a `ArohaError` envelope — the handler's throw is caught and sign
 
 | | **Agent Playground** | **vc-demo** |
 |---|---|---|
-| Purpose | Learn the protocol / experiment | Demonstrate to investors |
+| Purpose | Learn the protocol / experiment | End-to-end multi-agent walkthrough |
 | Agents | In-browser, ephemeral keys | In-process Node.js agents |
 | Crypto | Real (noble/ed25519 CDN) | Real (aroha-core) |
 | Saga | ArohaRequest only | Full saga (Reserve → Commit → Cancel) |

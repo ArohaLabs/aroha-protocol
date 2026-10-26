@@ -33,7 +33,7 @@ open examples/playground/index.html
 
 ---
 
-## vc-demo — Investor / VC demo
+## vc-demo — Multi-agent saga demo
 
 The cleanest, most self-contained demo. Four in-process agents with real Ed25519 identities,
 human-in-the-loop bookings, and live SSE protocol trace.
@@ -106,4 +106,4 @@ Try: `Book me a business trip to Tokyo May 1–7`
 | Enterprise IT scenario | No | No | Yes (Scenario 2) | No |
 | GitHub + Jira agents | No | No | Yes (Scenario 2) | No |
 | Code editable | Yes | No | No | No |
-| Best for | Learning / experimenting | CI / quick demo | Investor meetings | Technical deep-dives |
+| Best for | Learning / experimenting | CI / quick demo | End-to-end walkthroughs | Technical deep-dives |

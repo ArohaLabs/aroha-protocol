@@ -62,6 +62,8 @@ interface MicroAgentOptions {
 
 Outside dev mode, an `ArohaReserve` is answered with an `ArohaError` — implement sagas with `ArohaServer` directly.
 
+Outside dev mode, the agent's public-key resolver also knows only the agent's own (ephemeral) DID, so envelopes from any other sender are rejected (`401`, `Unknown sender DID`). There is no option to supply a peer key resolver or a persistent key; to accept signed requests from other agents, use `ArohaServer` with your own `resolvePublicKey`.
+
 ---
 
 ## Capability handlers

@@ -106,11 +106,11 @@ const arohaClient = new ArohaClient();
 // managed-registry default (AROHA_MANAGED_REGISTRY_URL).
 const registry = new ArohaHttpRegistry({
   baseUrl: process.env.AROHA_REGISTRY_URL || undefined,
-  apiKey: process.env.Aroha_API_KEY ?? "",
+  apiKey: process.env.AROHA_API_KEY ?? "",
 });
 
-// TODO: set IPFS_ENDPOINT to your IPFS gateway (no default host is baked in).
-const ipfs = new ArohaIpfsClient({ endpoint: process.env.IPFS_ENDPOINT ?? "" });
+// TODO: set AROHA_IPFS_GATEWAY to your IPFS gateway (no default host is baked in).
+const ipfs = new ArohaIpfsClient({ endpoint: process.env.AROHA_IPFS_GATEWAY ?? "" });
 const discovery = new ArohaDiscovery(registry, ipfs);
 const selector = new AgentSelector(arohaClient, identity.did, identity.privateKey);
 const saga = new SagaEngine(arohaClient, identity.did, identity.privateKey);
@@ -342,7 +342,7 @@ curl -X POST http://localhost:${apiPort}/task \\
 ## Next steps
 
 1. **Implement intent decomposition** — wire up an LLM in \`src/intent.ts\`
-2. **Configure the registry** — set \`Aroha_REGISTRY_URL\` and \`Aroha_API_KEY\` env vars
+2. **Configure the registry** — set \`AROHA_REGISTRY_URL\` and \`AROHA_API_KEY\` env vars
 3. **Persist the DID** — save \`identity.privateKey\` to a secrets manager
 4. **Add preference learning** — integrate \`@aroha-sdk/preferences\` for user-aware agent selection
 

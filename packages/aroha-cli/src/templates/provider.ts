@@ -600,7 +600,7 @@ DID Document: **http://localhost:${port}/.well-known/aroha-agent.json**
 
 ## Aroha Protocol docs
 
-- [Protocol spec](https://github.com/ArohaLabs/aroha-spec/blob/main/spec/aroha-1.0.md)
+- [Protocol spec](https://github.com/ArohaLabs/aroha-protocol/blob/main/docs/spec/aroha-1.0.md)
 - [Documentation](https://github.com/ArohaLabs/aroha-protocol/tree/main/docs)
 `;
 }

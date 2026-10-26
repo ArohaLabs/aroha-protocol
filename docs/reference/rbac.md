@@ -11,12 +11,14 @@ Aroha has a built-in role system enforced at the transport layer **before your a
 
 | Role | Type | Permitted actions |
 |------|------|------------------|
-| `human:admin` | Human | All — query, reserve, commit, cancel, delegate, negotiate, admin |
-| `human:user` | Human | query, reserve, commit, cancel, negotiate |
+| `human:admin` | Human | All — query, reserve, commit, cancel, delegate, negotiate, mandate, admin |
+| `human:user` | Human | query, reserve, commit, cancel, negotiate, mandate |
 | `human:readonly` | Human | query only |
-| `agent:orchestrator` | Agent DID | query, reserve, commit, cancel, delegate, negotiate |
-| `agent:provider` | Agent DID | receive only (no RBAC restriction — accepts any inbound) |
+| `agent:orchestrator` | Agent DID | query, reserve, commit, cancel, delegate, negotiate, mandate |
+| `agent:provider` | Agent DID | none (an empty permission list: every RBAC-checked message type is refused) |
 | `agent:observer` | Agent DID | query only |
+
+A role whose list includes `admin` is permitted every action. Message types with no action (responses, acks and the other types not listed below) skip RBAC.
 
 ---
 
@@ -30,6 +32,7 @@ Aroha has a built-in role system enforced at the transport layer **before your a
 | `cancel` | `ArohaCancel` |
 | `negotiate` | `ArohaNegotiate`, `ArohaCounterOffer`, `ArohaAccept` |
 | `delegate` | `ArohaDelegate` |
+| `mandate` | `ArohaSpendingMandate` |
 
 ---
 
@@ -55,12 +58,15 @@ const server = new ArohaServer({
 
       // Resolve issuer public key for credential verification
       resolveIssuerPublicKey: async (issuerDID) => knownPublicKeys.get(issuerDID) ?? null,
+
+      // Needed only to accept credentialId references (see below)
+      credentialRegistry,
     })
   ],
 });
 ```
 
-If `permissions` is omitted, the default matrix is used (table above).
+If `permissions` is omitted, the default matrix is used (table above). Without `resolveIssuerPublicKey`, inline `credentialToken`s are refused with `401`, and `credentialId` references are refused unless the test-only `allowUnverifiedCredentials` flag is set.
 
 ---
 
@@ -79,10 +85,8 @@ const credential = await issueHumanCredential(
   [ArohaRole.HumanUser],                 // roles
   "did:aroha:personal-agent-alice",      // issuerDID (this agent's DID)
   personalAgentPrivateKey,              // Uint8Array
-  {
-    email: "alice@example.com",
-    ttlMs: 3_600_000,                   // 1 hour
-  }
+  3_600_000,                            // ttlMs: 1 hour (the default)
+  "alice@example.com"                   // email (optional)
 );
 ```
 
@@ -148,32 +152,34 @@ Agents that host a `CredentialRegistry` expose these endpoints at the same host 
 
 | Method | Path | Purpose | Auth |
 |--------|------|---------|------|
-| `POST` | `/aroha/credentials` | Register credential | Verifies Ed25519 signature |
+| `POST` | `/aroha/credentials` | Register credential | Verifies the issuer's Ed25519 signature (needs `resolveIssuerPublicKey`, otherwise `401`) |
 | `GET` | `/aroha/credentials/:id` | Resolve by ID | Public |
 | `GET` | `/aroha/credentials?userId=<id>` | List by user | Public |
-| `DELETE` | `/aroha/credentials/:id` | Revoke | `X-Revoke-Proof` header (issuer signature) |
+| `DELETE` | `/aroha/credentials/:id` | Revoke | `X-Revoke-Proof` header (issuer signature; needs `resolveIssuerPublicKey`, otherwise `401`) |
 
-Enable by passing `credentialRegistry` to `ArohaServer`:
+Enable by mounting `credentialRegistryRoutes()` on `ArohaServer`, and pass the same registry to `createRbacMiddleware` so `credentialId` references resolve:
 
 ```typescript
-import { CredentialRegistry } from "@aroha-sdk/core";
+import { CredentialRegistry, credentialRegistryRoutes, createRbacMiddleware } from "@aroha-sdk/credentials";
+
+const credentialRegistry = new CredentialRegistry();
+const resolveIssuerPublicKey = async (issuerDID: string) => knownPublicKeys.get(issuerDID) ?? null;
 
 const server = new ArohaServer({
   // ...
-  credentialRegistry: new CredentialRegistry(),
+  httpRoutes: credentialRegistryRoutes(credentialRegistry, { resolveIssuerPublicKey }),
+  middleware: [createRbacMiddleware({ resolveAgentRoles, resolveIssuerPublicKey, credentialRegistry })],
 });
 ```
 
 ### Revocation
 
 ```typescript
+import { CredentialRegistryClient, buildRevokeProof } from "@aroha-sdk/credentials";
+
 // Revoke via HTTP (from the issuer agent)
-await fetch(`https://agent.example.com/aroha/credentials/${credentialId}`, {
-  method: "DELETE",
-  headers: {
-    "X-Revoke-Proof": revokeProofBase64url,  // Ed25519 sig over { action:"revoke", credentialId }
-  },
-});
+const proof = await buildRevokeProof(credentialId, issuerPrivateKey); // Ed25519 sig over {"action":"revoke","credentialId":…}
+await new CredentialRegistryClient("https://agent.example.com").revoke(credentialId, proof);
 ```
 
 After revocation, any message bearing that `credentialId` is rejected with `401 Aroha_UNAUTHORIZED`.

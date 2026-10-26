@@ -62,6 +62,8 @@ createAgent({
 
 Dev mode skips inbound signature verification, answers `ArohaReserve` with an immediate `ArohaCommitAck`, registers the agent with a local `aroha dev` sandbox if one is running, and prints a banner. The server refuses to start in dev mode unless `NODE_ENV=development`. Your handler code is the same in both modes.
 
+Outside dev mode, the agent's public-key resolver knows only the agent's own (ephemeral) DID, so envelopes from any other sender are rejected as `Unknown sender DID`, and there is no option to supply a peer key resolver or a persistent key. To accept signed requests from other agents, use `ArohaServer` from `@aroha-sdk/core` with your own `resolvePublicKey`.
+
 ## API
 
 - `createAgent(opts)` — create a `MicroAgent` instance.

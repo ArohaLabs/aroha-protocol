@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /**
- * Aroha Protocol — VC Demo Server
+ * Aroha Protocol — multi-agent demo server (vc-demo)
  *
- * Two investor-grade demo scenarios:
+ * Two end-to-end demo scenarios:
  *
  * Scenario 1 — Travel Booking (4 agents)
  *   Personal, Flight, Hotel, Payment agents book a Tokyo business trip

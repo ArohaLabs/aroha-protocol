@@ -37,8 +37,11 @@ carries no ancestry, so ``verify_mandate`` reports it with
 snake_case tokens cannot be attenuated further — re-issue them.
 
 The Python API keeps snake_case names (``spend_limit_usd`` …); only the wire
-changed. Not ported: SpendingLedger / RedemptionStore (cumulative budget
-enforcement) — use the TypeScript SDK or the runtime for that. Task mandates
+changed. Cumulative budget enforcement lives in ``aroha.spending_ledger``
+(``SpendingLedger``, ``InMemorySpendingLedger``; durable ledgers in
+``aroha.stores.postgres`` and ``aroha.stores.redis``), used by
+``aroha.http_mandate.verify_http_spend_request``. Not ported: RedemptionStore
+/ ``redeemPaymentMandate`` — use the TypeScript SDK for that. Task mandates
 live in ``aroha.task_mandate``.
 """
 

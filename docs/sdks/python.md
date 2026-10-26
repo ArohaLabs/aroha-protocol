@@ -559,7 +559,7 @@ result = await negotiator.discover(
 
 ## `aroha.reputation`
 
-Bayesian Beta reputation engine with 11 signals and Thompson Sampling.
+Bayesian Beta reputation engine with 12 signals and Thompson Sampling.
 See [Reputation Model →](../reputation-model.md)
 
 ```python
@@ -567,15 +567,21 @@ from aroha.reputation import BayesianReputationEngine
 
 engine = BayesianReputationEngine()
 engine.record_event({
-    "agent_did": "did:aroha:fx-agent",
-    "domain":    "fx",
-    "signal":    "saga_complete",
-    "success":   True,
-    "response_ms": 120,
+    "type":            "saga_complete",
+    "saga_id":         "saga-123",
+    "agent_did":       "did:aroha:fx-agent",
+    "domain":          "fx",
+    "success":         True,
+    "latency_ms":      120,
+    "sla_duration_ms": 5000,
 })
 
 score  = engine.composite_score("did:aroha:fx-agent", "fx")
-ranked = engine.thompson_select(["did:aroha:fx-a", "did:aroha:fx-b"], "fx")
+ranked = engine.thompson_select(
+    [{"agent_did": "did:aroha:fx-a"}, {"agent_did": "did:aroha:fx-b"}],
+    "fx",
+    risk_gated=True,   # Wilson lower-bound floor
+)
 ```
 
 ---
@@ -592,7 +598,8 @@ from aroha.mandate import (
 )
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-user_key = Ed25519PrivateKey.generate()
+user_key  = Ed25519PrivateKey.generate()   # the human's key: signs the root intent mandate
+agent_key = Ed25519PrivateKey.generate()   # did:aroha:personal-agent's key: signs what it delegates
 
 intent = issue_intent_mandate(
     grantor_did="did:aroha:personal-agent-alice",
@@ -602,7 +609,9 @@ intent = issue_intent_mandate(
     ttl_seconds=3600,   # 1 hour; default is 3600
 )
 
-# Attenuate to a cart-level mandate (constraints can only narrow, never widen)
+# Attenuate to a cart-level mandate (constraints can only narrow, never widen).
+# The cart's grantor is the intent's grantee (the personal agent), so the
+# personal agent signs it with its own key, not the user's.
 cart = attenuate_to_cart(
     parent=intent,
     grantee_did="did:aroha:shopping-orchestrator",
@@ -610,11 +619,16 @@ cart = attenuate_to_cart(
         spend_limit_usd=79.99,
         allowed_merchants=["merchant-a"],
     ),
-    grantor_private_key=user_key,
+    grantor_private_key=agent_key,
 )
 
-# verify_mandate returns a 3-tuple: (valid: bool, mandate | None, reason: str | None)
-valid, mandate, reason = verify_mandate(cart.token, user_key.public_key())
+# verify_mandate takes the LEAF grantor's key (the personal agent's). Ancestor
+# keys come from resolve_key (default: content-addressed DIDs only).
+# The result unpacks as (valid: bool, mandate | None, reason: str | None).
+root_keys = {"did:aroha:personal-agent-alice": user_key.public_key()}
+valid, mandate, reason = verify_mandate(
+    cart.token, agent_key.public_key(), resolve_key=root_keys.get
+)
 if valid:
     print(mandate.constraints.spend_limit_usd)   # 79.99
 else:

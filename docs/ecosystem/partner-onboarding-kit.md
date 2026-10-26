@@ -34,20 +34,22 @@ The fastest path: see [docs/wrap-any-rest-api.md](../wrap-any-rest-api.md).
 
 This guide shows how to take any existing REST API and make it Aroha-callable in approximately 50 lines of TypeScript. The scaffolding handles envelope signing, DID management, and registry registration automatically.
 
+A minimal sketch with `@aroha-sdk/micro` (each `.on()` handler receives the request `params`):
+
 ```typescript
-import { createProxyAgent } from '@aroha-sdk/micro';
+import { createAgent } from '@aroha-sdk/micro';
 
-const agent = createProxyAgent({
-  capabilities: ['process-payment', 'refund'],
-  handler: async (request) => {
+createAgent({ name: 'payments', port: 3000 })
+  .on('process-payment', async (params) => {
     // Your existing REST API call here
-    const result = await myApi.processPayment(request.payload);
+    const result = await myApi.processPayment(params);
     return { status: 'success', data: result };
-  },
-});
-
-agent.listen(3000);
+  })
+  .on('refund', async (params) => myApi.refund(params))
+  .start();
 ```
+
+Outside `devMode`, a `@aroha-sdk/micro` agent accepts signed envelopes only from DIDs its key resolver knows, which is its own DID alone; to serve other agents, use `ArohaServer` from `@aroha-sdk/core` with your own `resolvePublicKey` (see the guide above).
 
 ---
 
@@ -59,17 +61,7 @@ For bridging another agent protocol to Aroha, see the reference bridge implement
 - [A2A bridge](../packages/a2a-bridge.md) — translate A2A messages into Aroha envelopes
 - [LangChain bridge](../packages/langchain-bridge.md) — make LangChain agents Aroha-compatible
 
-Pattern:
-
-```typescript
-import { createBridge } from '@aroha-sdk/core';
-
-const bridge = createBridge({
-  inboundProtocol: 'mcp',
-  outboundProtocol: 'aroha',
-  translate: async (inbound) => toArohaEnvelope(inbound),
-});
-```
+There is no generic bridge factory in `@aroha-sdk/core`; each bridge package exposes its own API. `aroha create-bridge` (below) scaffolds a new bridge package.
 
 ---
 

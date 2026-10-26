@@ -8,18 +8,16 @@ name: DCO
 # See CONTRIBUTING.md "Developer Certificate of Origin".
 #
 # Cut-off: no commit made before the DCO was introduced carries a sign-off,
-# and history is not rewritten to add one. A commit is exempt when EITHER
-#   - it is an ancestor of DCO_EXEMPT_BASE (the tip of the audit-remediation
-#     branch when this check was introduced), OR
-#   - its committer date is before DCO_CUTOFF_DATE.
-# Both values are recorded in CONTRIBUTING.md; change them only together.
+# and history is not rewritten to add one. A commit is exempt when its
+# committer date is before DCO_CUTOFF_DATE. The value is recorded in
+# CONTRIBUTING.md; change both together.
 #
 # This replaces tisonkun/actions-dco, which cannot apply a cut-off and runs on
 # the retired node12 Actions runtime.
 #
-# Not a required check: required status checks are unavailable on this
-# repository's plan, so a failing DCO run is advisory (manual process: the
-# reviewer must not merge a PR with a red DCO check).
+# Not a required check: DCO is not in the "main" ruleset's required status
+# checks, so a failing DCO run is advisory (manual process: the reviewer must
+# not merge a PR with a red DCO check).
 
 on:
   pull_request:
@@ -29,7 +27,6 @@ permissions:
   contents: read
 
 env:
-  DCO_EXEMPT_BASE: 7473e091839c8686c1f804f7d58de4504f391c38
   DCO_CUTOFF_DATE: "2026-11-01T00:00:00Z"
 
 jobs:
@@ -49,14 +46,9 @@ jobs:
         run: |
           set -euo pipefail
           CUTOFF_EPOCH=$(date -u -d "$DCO_CUTOFF_DATE" +%s)
-          HAVE_BASE=0
-          git cat-file -e "${DCO_EXEMPT_BASE}^{commit}" 2>/dev/null && HAVE_BASE=1
           FAILED=0
           CHECKED=0
           for sha in $(git rev-list --no-merges "$BASE_SHA..$HEAD_SHA"); do
-            if [ "$HAVE_BASE" = 1 ] && git merge-base --is-ancestor "$sha" "$DCO_EXEMPT_BASE"; then
-              continue
-            fi
             if [ "$(git show -s --format=%ct "$sha")" -lt "$CUTOFF_EPOCH" ]; then
               continue
             fi

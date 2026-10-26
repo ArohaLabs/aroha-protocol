@@ -272,11 +272,16 @@ curl http://localhost:3002/api/v1/reputation/did:aroha:my-provider
 node scripts/setup-chain.mjs
 
 # Foundry deploy script (alternative, local Anvil)
-forge script script/Deploy.s.sol --rpc-url http://127.0.0.1:8545 --broadcast
+forge build
+forge script script/Deploy.s.sol --rpc-url http://127.0.0.1:8545 \
+  --private-key <Anvil account #0 private key> --broadcast
 ```
 
-`script/Deploy.s.sol` is written for local Anvil deployment. It reads no environment
-variables, and it ends by reverting with the deployed addresses in the revert message
-for `setup-chain.mjs` to parse.
+`script/Deploy.s.sol` is written for local Anvil deployment and reads no environment
+variables. It deploys the registry, escrow (with the deploying account as the authorized
+orchestrator) and reputation contracts from the `--private-key` account, wires the
+reputation oracle into the registry, and logs the three addresses; forge also records
+them under `broadcast/Deploy.s.sol/`. Without `--broadcast` it only simulates. It does
+not write `chain-addresses.json`.
 
-Contract addresses are written to `chain-addresses.json` after deployment.
+`setup-chain.mjs` writes the contract addresses to `chain-addresses.json` after deployment.

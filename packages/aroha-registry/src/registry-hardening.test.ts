@@ -12,10 +12,10 @@ import { generateDid } from "@aroha-sdk/core/identity";
 
 describe("registration proof of possession, client <-> server end to end", () => {
   it("registers through the challenge exchange; refuses replays, wrong keys and missing proofs", async () => {
-    const server = createArohaRegistryServer({ port: 47293, apiKey: "k" });
+    const server = createArohaRegistryServer({ port: 0, apiKey: "k" });
     await server.listen();
     try {
-      const base = "http://127.0.0.1:47293";
+      const base = `http://127.0.0.1:${server.port}`;
       const priv = ed.utils.randomPrivateKey();
       const pub = await ed.getPublicKeyAsync(priv);
       const did = generateDid(pub);
@@ -54,13 +54,25 @@ describe("registration proof of possession, client <-> server end to end", () =>
 
 describe("createArohaRegistryServer", () => {
   it("binds loopback by default and needs no apiKey there", () => {
-    const s = createArohaRegistryServer({ port: 47290 });
+    const s = createArohaRegistryServer({ port: 0 });
     expect(s.hostname).toBe("127.0.0.1");
   });
 
+  it("reports the OS-assigned port after listen() with port 0", async () => {
+    const s = createArohaRegistryServer({ port: 0 });
+    expect(s.port).toBe(0);
+    await s.listen();
+    try {
+      expect(s.port).toBeGreaterThan(0);
+      expect((await fetch(`http://127.0.0.1:${s.port}/v1/agents/does-not-exist`)).status).toBe(404);
+    } finally {
+      await s.close();
+    }
+  });
+
   it("refuses a non-loopback bind without an apiKey", () => {
-    expect(() => createArohaRegistryServer({ port: 47291, hostname: "0.0.0.0" })).toThrow(/apiKey is required/);
-    expect(() => createArohaRegistryServer({ port: 47292, hostname: "0.0.0.0", apiKey: "k" })).not.toThrow();
+    expect(() => createArohaRegistryServer({ port: 0, hostname: "0.0.0.0" })).toThrow(/apiKey is required/);
+    expect(() => createArohaRegistryServer({ port: 0, hostname: "0.0.0.0", apiKey: "k" })).not.toThrow();
   });
 });
 

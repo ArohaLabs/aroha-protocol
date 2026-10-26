@@ -58,7 +58,7 @@ export interface ArohaRegistryServerOptions {
    * register a DID under any public key, or deactivate someone else's agent.
    */
   apiKey?: string;
-  /** TCP port to listen on. Defaults to 3001. */
+  /** TCP port to listen on. Defaults to 3001. Pass 0 for an OS-assigned port; read it from the handle's `port` after `listen()`. */
   port?: number;
   /**
    * Hostname / interface to bind. Defaults to "127.0.0.1" (loopback only;
@@ -70,6 +70,7 @@ export interface ArohaRegistryServerOptions {
 export interface ArohaRegistryServerHandle {
   listen(): Promise<void>;
   close(): Promise<void>;
+  /** The configured port; after `listen()`, the port actually bound. */
   readonly port: number;
   readonly hostname: string;
 }
@@ -104,7 +105,11 @@ export function createArohaRegistryServer(
   });
 
   return {
-    port,
+    // The bound port once listening (so `port: 0` reports the OS-assigned one).
+    get port() {
+      const addr = server.address();
+      return addr && typeof addr === "object" ? addr.port : port;
+    },
     hostname,
     listen: () =>
       new Promise<void>((resolve, reject) => {

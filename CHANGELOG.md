@@ -29,6 +29,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/). Version
 ### Fixed
 
 - **`@aroha-sdk/telemetry`:** `TracingArohaClient.send()` added `traceparent` to envelopes after they were signed. `traceparent` is part of the signed envelope, so receivers rejected those envelopes. `send()` now passes signed envelopes through unchanged and adds `traceparent` only to unsigned trusted-mesh envelopes. The new `TracingArohaClient.buildEnvelope(...)` (same arguments as core's `buildEnvelope`) puts the active span's `traceparent` into the envelope before signing. Code that sent signed envelopes through `send()` and relied on tracing should build them with `buildEnvelope()` instead.
+- **`@aroha-sdk/registry`:** the `createArohaRegistryServer()` handle's `port` now reports the port actually bound once `listen()` has resolved, so `port: 0` (OS-assigned port) is usable. Before, it echoed the configured value. The package's own tests now bind port 0 instead of fixed ports, which failed with `EADDRINUSE` where that range is reserved (e.g. Windows). Not wire-visible.
 
 ## [2.0.0] — 2026-10-19
 

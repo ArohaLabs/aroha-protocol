@@ -3,7 +3,7 @@
 
 # Aroha Benchmark Methodology & Runbook
 
-**Owner:** Conformance Agent  
+**Owner:** @projectmed99  
 **Version:** 1.0 — 2026-05-28  
 **Status:** Initial draft — baseline not yet established  
 **Verification:** Benchmark is complete when: public artifact exists, reproduction steps verified by a third party, baseline numbers recorded.

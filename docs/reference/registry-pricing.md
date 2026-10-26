@@ -15,13 +15,11 @@ ETH price volatility makes this unsuitable for enterprise procurement budgets.
 For development and internal networks. No staking, no fees.
 
 ```typescript
-import { HttpRegistryClient } from "@aroha-sdk/registry";
+import { InMemoryRegistry } from "@aroha-sdk/registry";
 
-const registry = new HttpRegistryClient({
-  mode: "local",
-  agents: new Map([
-    ["did:aroha:flight-agent", { endpoint: "http://localhost:3040", manifest }],
-  ]),
+const registry = new InMemoryRegistry();
+await registry.register("did:aroha:flight-agent", manifestCID, publicKey, {
+  capabilityIds: ["search-flights"],
 });
 ```
 
@@ -36,9 +34,11 @@ const registry = new HttpRegistryClient({
 The HTTP registry has no ETH exposure.
 
 ```typescript
-const registry = new HttpRegistryClient({
-  apiKey: process.env.AROHA_REGISTRY_API_KEY,
-  endpoint: "https://aroha-registry.aroha-labs.workers.dev",
+import { ArohaHttpRegistry } from "@aroha-sdk/registry";
+
+const registry = new ArohaHttpRegistry({
+  baseUrl: "https://registry.example.com", // your registry; default: AROHA_REGISTRY_URL, else the reference deployment
+  apiKey: process.env.AROHA_API_KEY!,
 });
 ```
 
@@ -49,18 +49,17 @@ The managed-service price previously listed here (USD $49/month per registered a
 For maximum decentralization and censorship resistance. Requires ETH staking.
 
 ```typescript
-import { EvmRegistryClient } from "@aroha-sdk/registry";
+import { ArohaRegistryContract } from "@aroha-sdk/registry/contract";
 
-const registry = new EvmRegistryClient({
-  contractAddress: "0x...",
-  signer: wallet,
-  stakeAmount: ethers.parseEther("0.1"),
+const registry = new ArohaRegistryContract(rpcUrl, "0x...", wallet); // wallet: ethers.Wallet
+await registry.register("did:aroha:flight-agent", manifestCID, publicKey, {
+  stakeWei: ethers.parseEther("0.01"), // omit to use the on-chain minimum
 });
 ```
 
-**Staking rationale:** Stake is slashed when an agent repeatedly fails to honour Commits
-or deliver valid Cancel acknowledgements. Slashing is governed by the `ArohaRegistry.sol`
-slashing rules (see `contracts/ArohaRegistry.sol`).
+**Staking rationale:** `ArohaRegistry.sol` lets the configured dispute contract slash
+an agent's stake (`slashStake`). The registry contract itself defines no rule for when
+slashing happens; that is up to the dispute contract (see `contracts/ArohaRegistry.sol`).
 
 ## Choosing a Tier
 
@@ -73,8 +72,8 @@ slashing rules (see `contracts/ArohaRegistry.sol`).
 
 ## ETH Staking Volatility Mitigation
 
-If you choose Tier 3, the minimum stake is denominated in ETH but sized to approximate
-a USD floor. The governance process updates the minimum stake quarterly to maintain a
-roughly USD-equivalent cost, reducing the procurement budget risk.
+If you choose Tier 3, the minimum stake is denominated in ETH (`minStakeWei`, default
+0.01 ETH). The contract owner can change it with `setMinStake`; the contract does not
+adjust it automatically.
 
 For zero ETH exposure, use Tier 2 exclusively.

@@ -6,8 +6,7 @@
  * and Key Event Logs. Normative source: spec did-method.md, "Rotatable
  * identifiers (E-form) and Key Event Logs".
  *
- * Row ids L0-KEL-01..06 are provisional — they still need rows in
- * docs/conformance/test-matrix.md.
+ * Row ids L0-KEL-01..06 are listed in docs/conformance/test-matrix.md.
  *
  * L0-KEL-01 pins exact bytes: Ed25519 signatures are deterministic, so a
  * fixed-seed inception yields a fixed canonical body, signature and DID. Any

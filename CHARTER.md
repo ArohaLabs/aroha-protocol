@@ -1,7 +1,9 @@
 <!-- Copyright (c) 2026 Aroha Labs
      SPDX-License-Identifier: Apache-2.0 -->
 
-# Aroha Protocol Community Group — W3C Charter
+# Aroha Protocol Community Group — W3C Charter (Draft)
+
+> **Draft.** This charter is a proposal only. Nothing in it describes an existing group, process or schedule.
 
 **Status:** Draft — **not yet submitted.** No W3C Community Group has been proposed or formed; this document is a proposal draft. The current plan is instead to join the existing W3C *Agent Identity Registry Protocol Community Group* and offer `did:aroha` as input (see [docs/trust.md](docs/trust.md)).  
 **Proposed Group Name:** Aroha Protocol Community Group  
@@ -33,13 +35,16 @@ The Aroha Protocol is not a framework, SDK, or cloud service. It is a protocol s
 
 The Community Group will develop and maintain:
 
-1. **The Aroha Core Specification** — Layers 0–5 of the Aroha Protocol:
-   - Layer 0: Transport (HTTPS + WebSocket)
-   - Layer 1: Identity (`did:aroha:` and `did:aroha-web:` DID methods)
-   - Layer 2: Cryptography (Ed25519 signing, X25519 ECDH encryption, post-quantum migration path)
-   - Layer 3: Messaging (16 signed message types, nonce replay protection, envelope schema)
-   - Layer 4: Capability Schema Negotiation (CSN)
-   - Layer 5: Saga Coordination (reserve-commit-compensate pattern, LIFO compensation, DLQ)
+1. **The Aroha Core Specification** — Layers 0–3 of the Aroha Protocol:
+   - Layer 0: Transport (HTTPS + WebSocket, TLS 1.3+, `aroha-sig` caller authentication)
+   - Layer 1: Identity (`did:aroha:` and `did:aroha-web:` DID methods, Ed25519 keys; a non-normative post-quantum migration appendix)
+   - Layer 2: Registry (pluggable registry, capability manifests, visibility and access grants)
+   - Layer 3: Messaging (19 signed message types, nonce replay protection, envelope schema, mandate token formats)
+
+   Defined as extensions outside the core layers:
+   - Capability Schema Negotiation (CSN)
+   - Orchestration: saga coordination (reserve-commit-compensate pattern, LIFO compensation, DLQ)
+   - Preference context
 
 2. **The `did:aroha:` DID Method Specification** — a conformant W3C DID method for agent identities rooted in the Aroha Registry
 
@@ -65,13 +70,15 @@ The following are explicitly out of scope for this CG:
 
 ## Deliverables
 
-| Deliverable | Type | Target Date |
+| Deliverable | Type | Current state |
 |---|---|---|
-| Aroha Core Specification 1.0 | CG Final Report | Q3 2026 |
-| `did:aroha:` Method Specification 1.0 | CG Final Report | Q3 2026 |
-| `did:aroha-web:` Method Specification 1.0 | CG Final Report | Q3 2026 |
-| Aroha Conformance Test Suite 1.0 | CG Note | Q4 2026 |
-| Aroha Protocol 1.1 (incremental) | CG Draft | Q1 2027 |
+| Aroha Core Specification 1.0 | CG Final Report | Draft |
+| `did:aroha:` Method Specification 1.0 | CG Final Report | Draft |
+| `did:aroha-web:` Method Specification 1.0 | CG Final Report | Draft |
+| Aroha Conformance Test Suite 1.0 | CG Note | Partial (conformance tests in this repository) |
+| Aroha Protocol 1.1 (incremental) | CG Draft | Not started |
+
+No target dates are set.
 
 The Aroha Core Specification is already in draft form at [`docs/spec/aroha-1.0.html`](docs/spec/aroha-1.0.html) formatted as a W3C ReSpec CG-DRAFT document (published at https://www.aroha-labs.com/spec/aroha-1.0.html).
 
@@ -87,8 +94,8 @@ The Aroha Protocol builds directly on W3C standards and IETF RFCs. The Community
 | W3C Verifiable Credentials Data Model 2.0 | Aroha credential issuance uses the VC Data Model for credential structure |
 | W3C JSON-LD 1.1 | Envelope context and credential context use JSON-LD |
 | W3C Trace Context (traceparent) | `@aroha-sdk/telemetry` implements W3C Trace Context |
-| IETF RFC 8032 (EdDSA) | Ed25519 signing is normative in Layer 2 |
-| IETF RFC 8037 (CFRG Curves) | X25519 key agreement is normative in Layer 2 |
+| IETF RFC 8032 (EdDSA) | Ed25519 signing is normative (Layer 1 identity keys, Layer 3 message signatures) |
+| IETF RFC 8037 (CFRG Curves) | X25519 key agreement underlies the DIDComm v2 JWE encryption of sensitive body fields |
 | IETF RFC 8615 (Well-Known URIs) | `/.well-known/aroha-agent.json` follows this convention |
 | DIDComm v2 (DIF) | Aroha envelopes are structurally informed by DIDComm; interoperability is a design goal |
 

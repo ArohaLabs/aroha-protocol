@@ -30,9 +30,10 @@ const server = new ArohaServer({
   }),
 });
 
-// Client inside the mesh: send unsigned envelopes
+// Client inside the mesh: send unsigned envelopes. Plain http:// is refused for any
+// non-loopback host (and TrustedMeshClient has no allowInsecureHttp option), so use https://.
 const client = new TrustedMeshClient("did:aroha:flight-agent", "did:aroha:hotel-agent");
-const reply = await client.sendUnsigned("http://hotel-agent.internal:3001/aroha/v1", "ArohaRequest", {
+const reply = await client.sendUnsigned("https://hotel-agent.internal:3001/aroha/v1", "ArohaRequest", {
   capability: "check-availability",
   params: { city: "Tokyo", nights: 5 },
 });

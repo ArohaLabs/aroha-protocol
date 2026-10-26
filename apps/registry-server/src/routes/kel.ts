@@ -3,8 +3,7 @@
 
 /**
  * /v1/kel and /v1/linkage — Key Event Logs for rotatable `did:aroha:E…`
- * identities, and linkages from legacy DIDs to them (design:
- * docs/superpowers/specs/2026-10-07-rotatable-identity-and-person-principal-design.md §8).
+ * identities, and linkages from legacy DIDs to them.
  *
  *   POST /v1/kel/:did             submit a log      — no API key, rate limited
  *   GET  /v1/kel/:did             the stored log    — refuses to serve a log its controller's seals prove stale

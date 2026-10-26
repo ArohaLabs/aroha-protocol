@@ -114,15 +114,15 @@ Default dormancy half-life: $\tau_d = 365$ days.
 
 ---
 
-## 2. The Eleven Reputation Signals
+## 2. The Twelve Reputation Signals
 
-Each signal is an independent Beta distribution updated by its own Bernoulli observations. The composite score (§3) combines all eleven via a learned weight vector.
+Each signal is an independent Beta distribution updated by its own Bernoulli observations. The composite score (§3) combines all twelve via a learned weight vector.
 
 ### Signal 1: Baseline Reliability $(\hat{p})$
 
 The core Beta distribution from §1. Updated on every saga terminal event.
 
-*The simplest signal. Jøsang BRS [[J1]](#ref-j1) uses this alone; we use it as one of eleven.*
+*The simplest signal. Jøsang BRS [[J1]](#ref-j1) uses this alone; we use it as one of twelve.*
 
 ---
 
@@ -322,7 +322,7 @@ Scale to $[0,1]$ by dividing by 2. PPS enters the composite as a continuous scor
 
 ### 3.1 Weighted Combination
 
-The composite score for agent $a$ in domain $d$ combines all eleven signals:
+The composite score for agent $a$ in domain $d$ combines all twelve signals:
 
 $$S_{a,d} = \sum_{j=1}^{11} w_j\, X_j(a, d)$$
 

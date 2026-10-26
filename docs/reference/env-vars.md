@@ -21,9 +21,18 @@ All variables are optional unless marked **required**.
 
 | Variable | Default | Used by | Description |
 |----------|---------|---------|-------------|
-| `AROHA_REGISTRY_URL` | `https://aroha-registry.aroha-labs.workers.dev` | `@aroha-sdk/registry` (`ArohaHttpRegistry`) | Base URL of the Aroha HTTP registry. |
-| `Aroha_API_KEY` | — | `ArohaHttpRegistry` | API key for the HTTP registry. Required for `register()` and `updateManifest()`. |
-| `IPFS_ENDPOINT` | `https://aroha-ipfs-gateway.aroha-labs.workers.dev` | `ArohaIpfsClient` | IPFS gateway endpoint for publishing / fetching capability manifests. |
+| `AROHA_REGISTRY_URL` | `https://aroha-registry.aroha-labs.workers.dev` | `@aroha-sdk/core/endpoints` (`resolveRegistryUrl`: `ArohaHttpRegistry`, `@aroha-sdk/micro`, `@aroha-sdk/mcp-server`), Python, Go and Java SDKs | Base URL of the Aroha HTTP registry. An explicit `baseUrl` / `registryUrl` option takes precedence. |
+| `AROHA_API_KEY` | — | `@aroha-sdk/mcp-server`, `@aroha-sdk/run` (`serve` registration), Python SDK | Registry API key. `ArohaHttpRegistry` does not read it; pass `apiKey` to its constructor. |
+| `AROHA_IPFS_GATEWAY` | `https://aroha-ipfs-gateway.aroha-labs.workers.dev/ipfs` | `@aroha-sdk/core/endpoints` (`resolveIpfsGateway`), `@aroha-sdk/registry` agent functions, `@aroha-sdk/run` | IPFS gateway for fetching capability manifests. `ArohaIpfsClient` does not read it; pass `endpoint` to its constructor. |
+
+---
+
+## Agents
+
+| Variable | Default | Used by | Description |
+|----------|---------|---------|-------------|
+| `AGENT_ENDPOINT` | `http://localhost:{port}` | `@aroha-sdk/micro` | Public base URL of the agent, when the `endpoint` option is not set. |
+| `NODE_ENV` | — | `@aroha-sdk/core` (`ArohaServer`) | `devMode: true` is refused at `start()` unless this is `development`. |
 
 ---
 
@@ -31,8 +40,7 @@ All variables are optional unless marked **required**.
 
 | Variable | Default | Used by | Description |
 |----------|---------|---------|-------------|
-| `ANVIL_URL` | `http://127.0.0.1:8545` | `ArohaRegistryContract`, `ArohaEscrow` client | EVM RPC endpoint. Read from `chain-addresses.json` first; this variable overrides. |
-| `OPERATOR_PRIVATE_KEY` | — | `ArohaRegistryContract` | EVM wallet private key (hex with `0x` prefix) used to sign registry transactions. |
+| `ANVIL_URL` | `http://127.0.0.1:8545` | `scripts/setup-chain.mjs` | EVM RPC endpoint the setup script deploys to; written into `chain-addresses.json`. `ArohaRegistryContract` does not read it; pass `rpcUrl` to its constructor. |
 
 ---
 
@@ -40,7 +48,7 @@ All variables are optional unless marked **required**.
 
 | Variable | Default | Used by | Description |
 |----------|---------|---------|-------------|
-| `PORT` | `3030` / `3040` / `3051` | Demo scripts | HTTP port for the demo server. Each script has a different default. |
+| `PORT` | `3050` / `3040` | `scripts/chat-demo.mjs` / `scripts/vc-demo.mjs` | HTTP port for the demo server. Each script has a different default. |
 
 ---
 
@@ -48,6 +56,8 @@ All variables are optional unless marked **required**.
 
 | Variable | Default | Used by | Description |
 |----------|---------|---------|-------------|
+| `GMAIL_USER` | — | `scripts/chat-demo.mjs` | Gmail address for the demo's email step. |
+| `GMAIL_APP_PASSWORD` | — | `scripts/chat-demo.mjs` | Gmail app password for `GMAIL_USER`. |
 
 ---
 

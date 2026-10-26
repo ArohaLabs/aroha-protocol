@@ -561,7 +561,7 @@ var result = negotiator.discover(
 
 ## `com.arohalabs.reputation.ReputationEngine`
 
-Bayesian Beta reputation engine with 11 signals and Thompson Sampling.
+Bayesian Beta reputation engine with 12 signals and Thompson Sampling.
 See [Reputation Model →](../reputation-model.md)
 
 ```java
@@ -569,18 +569,18 @@ import com.arohalabs.reputation.ReputationEngine;
 
 var engine = new ReputationEngine(ReputationEngine.CompositeWeights.defaults());
 
-engine.recordEvent(new ReputationEngine.ReputationEvent.Builder()
-    .agentDid("did:aroha:fx-agent")
+engine.recordEvent(ReputationEngine.ReputationEvent
+    .builder("saga_complete", "saga-123", "did:aroha:fx-agent")
     .domain("fx")
-    .signal("saga_complete")
     .success(true)
-    .responseMs(120)
+    .latencyMs(120)
+    .slaDurationMs(5000)
     .build());
 
 double score = engine.compositeScore("did:aroha:fx-agent", "fx");
 
 var ranked = engine.thompsonSelect(
-    List.of("did:aroha:fx-a", "did:aroha:fx-b"),
+    List.of(Map.of("agentDID", "did:aroha:fx-a"), Map.of("agentDID", "did:aroha:fx-b")),
     "fx",
     true   // risk-gated (Wilson lower-bound)
 );
@@ -617,8 +617,12 @@ var cart = ArohaMandateCredential.attenuateToCart(
     intent, "did:aroha:shopping-orchestrator", cartConstraints, personalAgentKey, null   // null = the parent's expiry
 );
 
+// The caller's key verifies the leaf (signed by the personal agent). Ancestor
+// keys come from resolveKey; by default only content-addressed DIDs resolve.
 var result = ArohaMandateCredential.verify(
-    cart.token(), grantorPublicKey, "did:aroha:shopping-orchestrator"
+    cart.token(), personalAgentPublicKey, "did:aroha:shopping-orchestrator",
+    new VerifyOptions().resolveKey(did ->
+        did.equals("did:aroha:personal-agent-alice") ? userPublicKey.getEncoded() : null)
 );
 if (result.valid()) {
     System.out.println(result.mandate().constraints().spendLimitUsd()); // 79.99

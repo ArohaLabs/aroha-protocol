@@ -30,7 +30,7 @@ aroha doctor http://localhost:3001
 # ✓ Node.js  v22.11.0
 # ✓ .env     AROHA_AGENT_DID=did:aroha:my-agent
 # ✓ Endpoint http://localhost:3001  (did:aroha:my-agent, 2 capabilities)
-# ✓ Signed round-trip  38ms
+# ✓ Round-trip  200 in 38ms
 
 # Start local dev registry + dashboard
 aroha dev

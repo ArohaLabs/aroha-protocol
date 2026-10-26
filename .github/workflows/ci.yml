@@ -359,7 +359,7 @@ jobs:
         run: node .github/scripts/npm-audit-gate.mjs
 
   # ── Link checking ─────────────────────────────────────────────────────────
-  # Shared settings (excluded paths such as docs/reports/ and docs/superpowers/,
+  # Shared settings (excluded paths such as docs/reports/,
   # accepted status codes) live in lychee.toml; URLs that must never be
   # fetched (links into the still-private ArohaLabs repositories) live in
   # .lycheeignore, which lychee reads from the working directory.

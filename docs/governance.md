@@ -87,23 +87,6 @@ Extension packages (`@aroha-sdk/settlement`, `@aroha-sdk/commerce`, etc., now de
 
 ---
 
-## Strategic partnerships
-
-We are actively seeking partnerships with:
-
-| Organisation | Ask | Why |
-|-------------|-----|-----|
-| **Anthropic** | List the Aroha remote MCP connector; consider `_meta["aroha/mandate"]` as a convention for delegated authority over MCP | MCP carries the call; Aroha carries what the caller is allowed to do — natural complement |
-| **Vercel** | Official Aroha template in Vercel Marketplace | Serverless Aroha agents in one click for 4M+ Vercel developers |
-| **Cloudflare** | Official Aroha Worker template in Cloudflare Workers Marketplace | Edge-native Aroha agents at 200+ PoPs |
-| **Hugging Face** | Mandate verification in the smolagents tool-calling path | HF has the open-source agent community; Aroha bounds what those agents may do and records it |
-| **LangChain** | `@aroha-sdk/langchain-bridge` as an officially recommended integration | 90k+ LangChain GitHub stars — this is the fastest path to developer adoption |
-| **Databricks** | Aroha receipts as the audit record for Mosaic AI agent actions | Enterprise data platform + verifiable agent receipts = auditable enterprise agents |
-
-**Partnership contact:** email contact@aroha-labs.com.
-
----
-
 ## How to get involved
 
 ### As a developer

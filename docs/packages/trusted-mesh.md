@@ -64,11 +64,13 @@ const client = new TrustedMeshClient(
 
 // Sends an unsigned ArohaRequest — no Ed25519 signing overhead
 const response = await client.sendUnsigned(
-  "http://hotel-agent.internal/aroha/v1",
+  "https://hotel-agent.internal/aroha/v1",
   "ArohaRequest",
   { capability: "book-hotel", params: { city: "Tokyo" } }
 );
 ```
+
+The client refuses a plain `http://` endpoint unless the host is loopback (`localhost`, `127.0.0.0/8`, `::1`). `TrustedMeshClient` takes no `allowInsecureHttp` option, so use an `https://` endpoint for any other host.
 
 ### Using a trust zone helper
 

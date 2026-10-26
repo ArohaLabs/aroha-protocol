@@ -3,7 +3,7 @@
 
 # Aroha Conformance Test Matrix
 
-**Owner:** Conformance Agent  
+**Owner:** @projectmed99  
 **Version:** 1.0 — 2026-05-28  
 **Protocol:** Aroha 1.0  
 **Status:** Initial draft — pending external implementer review
@@ -19,10 +19,13 @@ This matrix defines what it means to be "Aroha 1.0 conformant." Every row is a t
 - **MAY** = optional extension
 - **Pass criteria** = machine-verifiable condition
 - **CI column** = whether this test runs in the reference CI suite
+- **Row IDs** are stable test identifiers used by the conformance suite. Their `L0`–`L4` prefixes predate the specification's layer numbering and do not match it; each section heading names the specification layer (Layers 0–3) or extension the rows belong to.
+- **Extension rows** apply only to implementations that adopt that extension ([Aroha 1.0 §11](../spec/aroha-1.0.md#11-conformance)).
+- **Status codes** follow [Aroha 1.0 Appendix A](../spec/aroha-1.0.md#appendix-a--error-codes); the `code` string is normative and the HTTP status is a recommendation for HTTP transports.
 
 ---
 
-## Layer 0 — DID & Identity
+## Identity (spec Layer 1)
 
 | ID | Requirement | Level | Pass Criteria | CI |
 |----|-------------|-------|---------------|----|
@@ -47,14 +50,16 @@ Normative source: spec `did-method.md`, "Rotatable identifiers (E-form) and Key 
 
 ---
 
-## Layer 1 — Signed Envelopes
+## Messaging and transport (spec Layers 3 and 0)
+
+Rows L1-01 to L1-05 cover signed envelopes (Layer 3, §6); L1-06 covers TLS (Layer 0, §3.4); L1-07 to L1-11 cover `aroha-sig` caller authentication (Layer 0, §3.5).
 
 | ID | Requirement | Level | Pass Criteria | CI |
 |----|-------------|-------|---------------|----|
 | L1-01 | Every outbound message is signed with sender's Ed25519 key | MUST | Signature verifies against sender DID document | ✅ |
-| L1-02 | Receiver rejects messages with invalid signatures | MUST | Returns 401; does not process payload | ✅ |
-| L1-03 | Receiver rejects replayed messages (timestamp + nonce) | MUST | Second receipt of identical envelope returns 409 or 401 | ✅ |
-| L1-04 | Envelope includes `expires` field set to a future timestamp; receiver rejects envelopes where `expires` is in the past | MUST | Expired envelopes rejected with 400; nonce added to store with TTL = `expires - now` | ✅ |
+| L1-02 | Receiver rejects messages with invalid signatures | MUST | Returns 401 (`Aroha_INVALID_SIGNATURE`); does not process payload | ✅ |
+| L1-03 | Receiver rejects replayed messages (timestamp + nonce) | MUST | Second receipt of identical envelope returns 401 (`Aroha_REPLAY_DETECTED`) | ✅ |
+| L1-04 | Envelope includes `expires` field set to a future timestamp; receiver rejects envelopes where `expires` is in the past | MUST | Expired envelopes rejected with 401 (`Aroha_EXPIRED_MESSAGE`); accepted nonces retained, keyed per sender, at least until `expires` (§6.3) | ✅ |
 | L1-05 | Envelope schema validates against Aroha 1.0 message spec | MUST | JSON Schema validation passes | ✅ |
 | L1-06 | Agent enforces TLS 1.3+ for all connections; plaintext HTTP connections are rejected | MUST | TLS 1.3 handshake succeeds; plaintext HTTP returns connection error or 400 | ✅ |
 | L1-07 | An agent requiring `aroha-sig` rejects unsigned requests | MUST | Missing signature headers return 401; payload not processed; never downgraded to anonymous | ✅ |
@@ -65,7 +70,7 @@ Normative source: spec `did-method.md`, "Rotatable identifiers (E-form) and Key 
 
 ---
 
-## Layer 2 — Capability Registry
+## Registry (spec Layer 2)
 
 | ID | Requirement | Level | Pass Criteria | CI |
 |----|-------------|-------|---------------|----|
@@ -85,7 +90,9 @@ Normative source: spec `did-method.md`, "Rotatable identifiers (E-form) and Key 
 
 ---
 
-## Layer 3 — Saga Pattern
+## Extension: Orchestration (sagas)
+
+Applies only to implementations that adopt the orchestration extension ([extensions document](../spec/extensions.md) §1, §3). Formerly numbered Layer 4 in the specification.
 
 | ID | Requirement | Level | Pass Criteria | CI |
 |----|-------------|-------|---------------|----|
@@ -99,7 +106,9 @@ Normative source: spec `did-method.md`, "Rotatable identifiers (E-form) and Key 
 
 ---
 
-## Layer 4 — Commerce
+## Extension: Commerce and settlement
+
+Applies only to implementations that adopt the commerce or settlement extensions ([Aroha 1.0 §2](../spec/aroha-1.0.md#2-protocol-layers)).
 
 | ID | Requirement | Level | Pass Criteria | CI |
 |----|-------------|-------|---------------|----|
@@ -114,8 +123,8 @@ Normative source: spec `did-method.md`, "Rotatable identifiers (E-form) and Key 
 
 ## Pass/Fail Rubric
 
-**Conformant:** All MUST rows pass. SHOULD failures are documented.  
-**Non-conformant:** Any MUST row fails.  
+**Conformant:** All applicable MUST rows pass (core rows, plus the rows of every extension the implementation adopts). SHOULD failures are documented.  
+**Non-conformant:** Any applicable MUST row fails.  
 **Provisional:** MUST rows pass but SHOULD rows are untested — must resolve within 90 days.
 
 ---

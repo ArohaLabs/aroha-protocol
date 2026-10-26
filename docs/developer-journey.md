@@ -33,12 +33,12 @@ On Day 0 you operate entirely in Layer 2. The lower layers are there — you jus
 
 ### The absolute minimum
 
-Five lines. No config, no DID, no key:
+Five lines. No config, no DID, no key. `devMode: true` is opt-in, for local development only (core refuses it unless `NODE_ENV=development`):
 
 ```typescript
 import { createAgent } from "@aroha-sdk/micro";
 
-createAgent({ name: "greeter", port: 3001 })
+createAgent({ name: "greeter", port: 3001, devMode: true })
   .on("greet", ({ name }) => ({ message: `Hello, ${name}!` }))
   .start();
 ```
@@ -70,9 +70,9 @@ Replace `agents/worker-a/src/index.ts` with:
 ```typescript
 import { createAgent } from "@aroha-sdk/micro";
 
-createAgent({ name: "currency-converter", port: 3001 })
-  .on("convert", async ({ body }) => {
-    const { amount, from, to } = body as {
+createAgent({ name: "currency-converter", port: 3001, devMode: true })
+  .on("convert", async (params) => {
+    const { amount, from, to } = params as {
       amount: number;
       from: string;
       to: string;
@@ -98,15 +98,17 @@ curl -X POST http://localhost:3001/aroha/v1 \
     "type": "ArohaRequest",
     "from": "did:aroha:test",
     "to":   "did:aroha:currency-converter",
-    "body": { "capability": "convert", "amount": 100, "from": "USD", "to": "EUR" }
+    "body": { "capability": "convert", "params": { "amount": 100, "from": "USD", "to": "EUR" } }
   }'
 ```
 
+The reply is an `ArohaResponse` envelope; the handler's return value is in `body.result`:
+
 ```json
-{ "converted": 92, "rate": 0.92 }
+{ "type": "ArohaResponse", "body": { "capability": "convert", "result": { "converted": 92, "rate": 0.92 } }, ... }
 ```
 
-No key generation. No DID resolution. No envelope signing. `devMode: true` (the default) tells `ArohaServer` to skip all cryptographic validation and dispatch straight to your handler. This is intentional — the zero-trust machinery is always one line away.
+No key generation. No DID resolution. No envelope signing. `devMode: true` tells `ArohaServer` to skip all cryptographic validation and dispatch straight to your handler. It is opt-in: `devMode` defaults to `false` in `@aroha-sdk/micro` (since 2.0.0), and core refuses to start with it unless `NODE_ENV=development`.
 
 ### What `@aroha-sdk/micro` is doing for you
 
@@ -123,7 +125,7 @@ createAgent({ name, port, devMode: true })
             → saga flow works without any saga code
 ```
 
-When you flip `devMode` to `false` on Day 2, every handler you wrote on Day 0 continues to work unchanged.
+When you turn `devMode` off on Day 2, the handler functions you wrote on Day 0 keep the same shape (they receive the request `params`).
 
 ---
 
@@ -141,9 +143,9 @@ import Anthropic from "@anthropic-ai/sdk";
 
 const claude = new Anthropic(); // reads ANTHROPIC_API_KEY from env
 
-createAgent({ name: "currency-converter", port: 3001 })
-  .on("convert", async ({ body }) => {
-    const { amount, from, to } = body as Record<string, unknown>;
+createAgent({ name: "currency-converter", port: 3001, devMode: true })
+  .on("convert", async (params) => {
+    const { amount, from, to } = params;
 
     const message = await claude.messages.create({
       model: "claude-opus-4-7",
@@ -180,12 +182,12 @@ import { langChainToolsToCapabilities } from "@aroha-sdk/langchain-bridge";
 const tools = [convertTool, lookupRateTool, formatCurrencyTool];
 
 // Expose the orchestrator as a Aroha agent
-createAgent({ name: "fx-orchestrator", port: 3000 })
-  .on("fx-query", async ({ body }) => {
+createAgent({ name: "fx-orchestrator", port: 3000, devMode: true })
+  .on("fx-query", async ({ query }) => {
     const llm = new ChatAnthropic({ model: "claude-opus-4-7" });
     const agent = await createOpenAIFunctionsAgent({ llm, tools, prompt });
     const executor = new AgentExecutor({ agent, tools });
-    const result = await executor.invoke({ input: body.query });
+    const result = await executor.invoke({ input: query });
     return { answer: result.output };
   })
   .start();
@@ -214,28 +216,16 @@ Your handler can read this hint and switch models accordingly — or ignore it. 
 
 **Goal:** Move from `devMode: true` on localhost to a decentralized, zero-trust network.
 
-### Step 1 — Generate a real identity
+### Step 1 — Turn devMode off
 
-```bash
-aroha init --did did:aroha:currency-converter
-```
-
-This writes `aroha.config.json` with your DID and `keys/key-1.pem` (Ed25519 private key). Back up the key; lose it and your agent's cryptographic identity is gone.
-
-### Step 2 — Flip devMode off
+`devMode` defaults to `false` in `@aroha-sdk/micro` (since 2.0.0), so turning it off means removing the option:
 
 ```typescript
-// Before (Day 0)
-createAgent({ name: "currency-converter", port: 3001 })
+// Day 0 — local development only
+createAgent({ name: "currency-converter", port: 3001, devMode: true })
 
-// After (Day 2) — one line change
-createAgent({
-  name: "currency-converter",
-  port: 3001,
-  devMode: false,           // ← the only change
-  privateKeyPath: "./keys/key-1.pem",
-  did: "did:aroha:currency-converter",
-})
+// Day 2 — devMode omitted (defaults to false)
+createAgent({ name: "currency-converter", port: 3001 })
 ```
 
 The full zero-trust pipeline re-engages:
@@ -245,66 +235,86 @@ The full zero-trust pipeline re-engages:
 3. The `nonce` is checked against a replay registry
 4. The `to` field must match this agent's DID
 
-Your handler code changes nothing.
+`@aroha-sdk/micro` is limited outside devMode. It generates a new ephemeral DID and key on every `start()` (there is no option to load a persistent key), and its public-key resolver knows only the agent's own DID, so it rejects envelopes from other senders (`401 Unknown sender DID`). It also answers `ArohaReserve` with an error instead of auto-committing. For a production agent that accepts signed requests from peers, use `ArohaServer` from `@aroha-sdk/core` directly, as in the steps below.
+
+### Step 2 — Use a real identity with `ArohaServer`
+
+```typescript
+import { ArohaServer, generateDID, buildEnvelope } from "@aroha-sdk/core";
+
+const identity = await generateDID("currency-converter", "https://fx.example.com/aroha/v1");
+// identity.did, identity.privateKey, identity.publicKey, identity.document
+// Persist identity.privateKey in a secret manager or KMS. Lose it and the agent's
+// cryptographic identity is gone.
+
+const server = new ArohaServer({
+  agentDID: identity.did,
+  didDocument: identity.document,
+  port: 3001,
+  resolvePublicKey: async (senderDID) => lookUpPeerKey(senderDID), // your DID resolution
+  onMessage: async (envelope, respond) => {
+    if (envelope.type !== "ArohaRequest") return;
+    const { capability, params = {} } = envelope.body as { capability: string; params?: Record<string, unknown> };
+    const result = await convert(params); // the same handler logic as Day 0
+    respond(await buildEnvelope("ArohaResponse", identity.did, envelope.from,
+      { capability, result }, envelope.correlationId, identity.privateKey));
+  },
+});
+await server.start();
+```
 
 ### Step 3 — Add a policy guard
 
+`@aroha-sdk/policy` registers one `CapabilityPolicy` per capability (`"*"` is the fallback) and mounts it as `ArohaServer` middleware. A denied request is rejected with `Aroha_FORBIDDEN` before `onMessage` runs:
+
 ```typescript
-import { ArohaPolicyEngine } from "@aroha-sdk/policy";
+import { ArohaPolicyEngine, createPolicyMiddleware } from "@aroha-sdk/policy";
 
 const policy = new ArohaPolicyEngine();
 policy.addPolicy({
-  did: "*",
-  capability: "convert",
-  rules: [
-    { type: "requiredParamKeys", keys: ["amount", "from", "to"] },
-    { type: "maxSpendPerCall", maxUsd: 0.10 },
-    { type: "rateLimitPerMinute", limit: 60 },
-  ],
+  capabilityId: "convert",
+  requiredParamKeys: ["amount", "from", "to"],
+  maxSpendPerCall: { amount: 10_000, currency: "USD", paramKey: "amount" },
+  rateLimitPerMinute: 60,
 });
 
-createAgent({ ... })
-  .on("convert", async ({ body, from }) => {
-    const verdict = policy.evaluate(from, "convert", body);
-    if (verdict !== "allow") {
-      throw new Error("Aroha_POLICY_DENIED");
-    }
-    // ... handler logic
-  })
-  .start();
+const server = new ArohaServer({
+  // ...options from Step 2
+  middleware: [createPolicyMiddleware(policy)],
+});
 ```
+
+To check a request yourself, `await policy.evaluate(capability, params, senderDID)` returns `{ outcome: "allow" | "deny", violatedRule?, reason? }`.
 
 ### Step 4 — Use the saga flow for atomic transactions (optional extension)
 
-Sagas are an optional extension, not part of the core protocol ([extensions document](spec/extensions.md)). The three-phase saga prevents double-billing and partial failures:
+Sagas are an optional extension, not part of the core protocol ([extensions document](spec/extensions.md)). The three-phase saga prevents double-billing and partial failures. `@aroha-sdk/micro`'s `.on()` registers capability handlers only, so handle the saga message types in the `ArohaServer` `onMessage` handler from Step 2:
 
 ```typescript
-createAgent({ ... })
-  // Phase 1: reserve capacity / funds
-  .on("ArohaReserve", async ({ body, correlationId }) => {
-    const token = await reserveInventory(body.amount, correlationId);
-    return {
-      type: "ArohaReserveAck",
-      body: { reservationToken: token, expiresIn: 30 },
-    };
-  })
+onMessage: async (envelope, respond) => {
+  const reply = (type, body) => buildEnvelope(type, identity.did, envelope.from,
+    body, envelope.correlationId, identity.privateKey).then(respond);
+  const body = envelope.body as any;
 
-  // Phase 2: commit — deduct and fulfill
-  .on("ArohaCommit", async ({ body }) => {
-    const result = await commitReservation(body.reservationToken);
-    return {
-      type: "ArohaCommitAck",
-      body: { reservationToken: body.reservationToken, result },
-    };
-  })
-
-  // Phase 3: cancel — release the reservation
-  .on("ArohaCancel", async ({ body }) => {
-    await cancelReservation(body.reservationToken);
-    return { type: "ArohaCancelAck", body: {} };
-  })
-
-  .start();
+  switch (envelope.type) {
+    // Phase 1: reserve capacity / funds
+    case "ArohaReserve": {
+      const token = await reserveInventory(body.params?.amount, envelope.correlationId);
+      const expiresAt = new Date(Date.now() + body.holdDurationMs).toISOString();
+      return reply("ArohaReserveAck", { reservationToken: token, expiresAt });
+    }
+    // Phase 2: commit — deduct and fulfill
+    case "ArohaCommit": {
+      const result = await commitReservation(body.reservationToken);
+      return reply("ArohaCommitAck", { reservationToken: body.reservationToken, result });
+    }
+    // Phase 3: cancel — release the reservation
+    case "ArohaCancel": {
+      await cancelReservation(body.reservationToken);
+      return reply("ArohaCancelAck", { reservationToken: body.reservationToken });
+    }
+  }
+},
 ```
 
 The `@aroha-sdk/orchestrator` extension (published on npm; source not in this repository) drives this flow automatically when you declare a capability as `transactional: true` in your DID Document.
@@ -314,24 +324,23 @@ The `@aroha-sdk/orchestrator` extension (published on npm; source not in this re
 Every envelope carries an optional `traceparent` field (W3C Trace Context). Use `@aroha-sdk/telemetry` to propagate spans across agent hops:
 
 ```typescript
-import { ArohaTracer } from "@aroha-sdk/telemetry";
+import { ArohaTracer, OtlpHttpExporter } from "@aroha-sdk/telemetry";
 
-const tracer = new ArohaTracer({ serviceName: "currency-converter" });
+const exporter = new OtlpHttpExporter({ endpoint: "http://localhost:4318/v1/traces" });
+const tracer = new ArohaTracer({ onSpanEnd: exporter.export });
 
-createAgent({ ... })
-  .on("convert", async ({ body, traceparent }) => {
-    const span = traceparent
-      ? tracer.startChildSpan("convert", traceparent)
-      : tracer.startSagaSpan("convert");
+// In the ArohaServer onMessage handler from Step 2:
+onMessage: async (envelope, respond) => {
+  const span = envelope.traceparent
+    ? tracer.startChildSpan("convert", envelope.traceparent)
+    : tracer.startSagaSpan("convert");
 
-    try {
-      const result = await doConversion(body);
-      return result;
-    } finally {
-      span.end();
-    }
-  })
-  .start();
+  try {
+    // ... handle the request and respond(...)
+  } finally {
+    span.end();
+  }
+},
 ```
 
 Spans flow through every agent hop in the request graph, landing in your OpenTelemetry collector (Jaeger, Honeycomb, Datadog — your choice).
@@ -348,13 +357,13 @@ Use this table as a pre-flight check before going live:
 | **Signature validation** | Skipped | Enforced on every inbound message |
 | **Nonce replay protection** | Skipped | In-memory registry (swap for Redis at scale) |
 | **Message expiry** | Skipped | Enforced (`expires` checked against wall clock) |
-| **Policy enforcement** | None | `@aroha-sdk/policy` with per-capability rules |
+| **Policy enforcement** | None | `@aroha-sdk/policy` `CapabilityPolicy` per capability, via `createPolicyMiddleware` |
 | **Saga flow** | Auto-committed by `@aroha-sdk/micro` | Explicit Reserve → Commit → Cancel handlers |
 | **TLS** | Plain HTTP (`localhost`) | TLS-terminating reverse proxy (nginx, Caddy) |
 | **Key storage** | N/A | HSM or KMS — never commit private keys to git |
 | **Distributed tracing** | None | `@aroha-sdk/telemetry` + OTel collector |
 | **Registry** | `aroha dev` in-memory sandbox | Production Aroha Registry (or self-hosted) |
-| **Rate limiting** | None | `rateLimitPerMinute` rule in `@aroha-sdk/policy` |
+| **Rate limiting** | None | `rateLimitPerMinute` field of a `@aroha-sdk/policy` `CapabilityPolicy` |
 | **Secrets** | Hardcoded (fine for demos) | Environment variables / secret manager |
 
-The protocol is designed so that flipping `devMode` from `true` to `false` is the only mandatory production change. Everything else on this list is defence-in-depth.
+Turning `devMode` off (it defaults to `false`) is the mandatory production change. An agent that accepts requests from peers also needs a persistent identity and a `resolvePublicKey` that knows those peers (Steps 1–2). Everything else on this list is defence-in-depth.

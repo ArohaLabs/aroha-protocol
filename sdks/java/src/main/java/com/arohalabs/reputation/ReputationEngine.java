@@ -11,7 +11,7 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * Aroha Bayesian Beta Reputation Engine (v1.1).
  *
- * <p>11-signal model with Thompson Sampling for Multi-Armed Bandit agent selection.
+ * <p>12-signal model with Thompson Sampling for Multi-Armed Bandit agent selection.
  *
  * <p>References:
  * <ul>

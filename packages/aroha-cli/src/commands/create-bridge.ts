@@ -79,6 +79,8 @@ export async function runCreateBridge(opts: CreateBridgeOptions): Promise<void> 
 
 Next steps:
   cd ${outDir}
+  # Rename the @aroha-sdk/ scope in package.json to your own npm scope
+  # (only Aroha maintainers can publish to @aroha-sdk)
   npm install
   # Edit src/bridge.ts — implement handleCapability() with your ${sdk} calls
   npm run build
@@ -86,6 +88,6 @@ Next steps:
 
 Then request a listing in the Aroha ecosystem registry — open an issue with
 your package name and repo link at:
-  https://github.com/ArohaLabs/aroha-spec/issues
+  https://github.com/ArohaLabs/aroha-protocol/issues
 `);
 }

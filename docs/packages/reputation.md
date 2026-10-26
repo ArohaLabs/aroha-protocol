@@ -9,7 +9,7 @@
 
 **Package:** `@aroha-sdk/reputation` · **Version:** 1.4.1 · **License:** Apache-2.0
 
-The Bayesian Beta reputation engine for Aroha agents. Implements the **Aroha Reputation Model v1.1** — 11-signal model with Thompson Sampling for Multi-Armed Bandit agent selection.
+The Bayesian Beta reputation engine for Aroha agents. Implements the **Aroha Reputation Model v1.1** — 12-signal model with Thompson Sampling for Multi-Armed Bandit agent selection.
 
 Implemented in all four SDKs: TypeScript, Python, Go, Java. The TypeScript package and the Python `aroha` package are published; the Go module and the Java SDK are not yet released.
 
@@ -162,7 +162,7 @@ Implemented in all four SDKs: TypeScript, Python, Go, Java. The TypeScript packa
 
 ---
 
-## The 11-Signal Model
+## The 12-Signal Model
 
 | # | Signal | What it measures | Failure μ |
 |---|--------|-----------------|-----------|
@@ -354,7 +354,7 @@ package. Write the score with your own contract client.
 |---|---|---|
 | `recordEvent(event)` | `Promise<void>` | Update model with a new event |
 | `compositeScore(did, domain?)` | `Promise<number>` | Current composite score (0–1) |
-| `getState(did, domain?)` | `Promise<ReputationState \| null>` | Full 11-signal state |
+| `getState(did, domain?)` | `Promise<ReputationState \| null>` | Full 12-signal state |
 | `thompsonSelect(candidates, domain?, riskGated?)` | `Promise<ranked[]>` | Thompson Sampling selection |
 | `listAll(domain?)` | `Promise<ReputationState[]>` | All states for a domain |
 

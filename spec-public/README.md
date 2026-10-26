@@ -54,7 +54,8 @@ not any particular codebase.
 
 ## Changes and governance
 
-The spec follows semantic versioning; `aroha-1.0` is frozen except for errata.
+The spec follows semantic versioning. `aroha-1.0` is a draft and may still change: it has not
+been submitted to any standards body (see the status line in [spec/aroha-1.0.md](spec/aroha-1.0.md)).
 Proposals for 1.x extensions are made by opening an issue in
 [ArohaLabs/aroha-protocol](https://github.com/ArohaLabs/aroha-protocol/issues) with the `rfc` label. Substantive changes require a published rationale and a compatibility
 statement against the [conformance test matrix](conformance/test-matrix.md).

@@ -1,7 +1,7 @@
 {
   "name": "@aroha-sdk/mcp-server",
   "version": "2.0.0",
-  "description": "MCP server for Aroha Hub — stdio and remote (Streamable HTTP + OAuth) connector for Claude, Muse, ChatGPT and any MCP client",
+  "description": "MCP server for the Aroha registry — stdio and remote (Streamable HTTP + OAuth) connector for Claude, Muse, ChatGPT and any MCP client",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

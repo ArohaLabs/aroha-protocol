@@ -36,7 +36,7 @@ Store them in your database. Only register a schema hash on-chain.
 When a user invokes Article 17 (right to erasure):
 1. Delete the credential record from your database.
 2. The on-chain schema hash is not personal data — no on-chain deletion needed.
-3. Issue a revocation notice via `POST /credentials/revoke`.
+3. Revoke what you issued. A human credential held in a `CredentialRegistry` is revoked with `DELETE /aroha/credentials/:id` and an `X-Revoke-Proof` header on the agent that hosts it (see [RBAC & Human Credentials](../reference/rbac.md)). A spending mandate is revoked on the registry (`apps/registry-server`) with `POST /v1/mandates/:mandateId/revoke`.
 
 ## Rule 3: Saga Logs Are Your Responsibility
 
@@ -48,8 +48,8 @@ If you persist them:
 
 ## Rule 4: Data Residency
 
-The Aroha HTTP registry (`https://aroha-registry.aroha-labs.workers.dev`) is hosted in the EU.
-For US data residency, self-host the registry using the HTTP registry backend.
+This guide makes no claim about where the reference HTTP registry deployment (`https://aroha-registry.aroha-labs.workers.dev`) stores or processes data.
+If you have data-residency requirements, self-host the registry (`apps/registry-server`) in a location you choose.
 The EVM registry is globally distributed — do not put PII in transaction data.
 
 ## Lawful Basis

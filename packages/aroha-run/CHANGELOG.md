@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.0.0
+
+Released 2026-10-19 as part of the repository-wide 2.0.0 release. See the
+`[2.0.0]` entry in the root [CHANGELOG.md](../../CHANGELOG.md) for the
+changes and migration notes.
+
 ## 1.4.0
 
 Three additive changes. Nothing removed, nothing renamed — an existing

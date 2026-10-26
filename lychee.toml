@@ -12,14 +12,12 @@
 # Paths whose links are not checked (regexes matched against the file path):
 #   node_modules  — vendored code
 #   apps/         — each app documents itself
-#   docs/superpowers/ — dated working notes, kept as written
 #   docs/reports/ — historical audit reports; they quote links as they were
 #                   at the time, and rewriting them would falsify the record
 #   papers/       — LaTeX sources and their build output
 exclude_path = [
   "node_modules",
   "(^|/)apps/",
-  "(^|/)docs/superpowers/",
   "(^|/)docs/reports/",
   "(^|/)papers/",
 ]

@@ -329,34 +329,22 @@ Reputation updates are triggered by **saga lifecycle events** — not by self-re
 
 #### Reputation-Gated Authorization
 
-The `@aroha-sdk/policy` engine integrates reputation scores as a first-class policy input:
+The `@aroha-sdk/policy` engine does not take reputation as an input. Its `CapabilityPolicy` covers request parameters, spend per call, rate limits and human approval only. Reputation gating happens on the caller's side, at discovery: registry `AgentRecord`s carry a `reputationScore` (0–10000), and `ArohaDiscovery.discover(capabilityIds, { minReputationScore })` in `@aroha-sdk/registry` drops agents below the threshold. The provider enforces its own capability policy:
 
 ```typescript
-import { ArohaPolicyEngine } from "@aroha-sdk/policy";
-import { ArohaReputationClient } from "@aroha-sdk/registry";
+import { ArohaPolicyEngine, createPolicyMiddleware } from "@aroha-sdk/policy";
 
+// Provider side: deterministic per-capability policy, enforced before the handler runs
 const policy = new ArohaPolicyEngine();
-
 policy.addPolicy({
-  did: "*",
-  capability: "book-flight",
-  rules: [
-    // Standard rules
-    { type: "requiredParamKeys", keys: ["origin", "dest", "date"] },
-    { type: "maxSpendPerCall", maxUsd: 500 },
-    // Reputation-gated rule: require minimum domain score
-    {
-      type: "minReputationScore",
-      domain: "travel",
-      minScore: 7500,           // out of 10000
-      minInteractions: 10,      // require at least 10 past interactions
-      fallback: "escalate",     // "deny" | "escalate" | "require-stake"
-    },
-  ],
+  capabilityId: "book-flight",
+  requiredParamKeys: ["origin", "dest", "date"],
+  maxSpendPerCall: { amount: 500, currency: "USD" },
 });
+// new ArohaServer({ ..., middleware: [createPolicyMiddleware(policy)] })
 ```
 
-When `fallback: "escalate"` is set and the agent doesn't meet the threshold, the policy engine emits a `ArohaNegotiate` back to the orchestrator with the reputation requirements, allowing the orchestrator to choose a different provider or request human approval.
+A request the policy denies is rejected with `Aroha_FORBIDDEN` before any application code runs.
 
 #### Cold-Start Bootstrapping
 
@@ -388,7 +376,7 @@ import { issueIntentMandate, attenuateToCart } from "@aroha-sdk/credentials";
 import { BayesianReputationEngine } from "@aroha-sdk/reputation";
 
 const engine = new BayesianReputationEngine();
-const agentScore = engine.compositeScore("did:aroha:travel-agent", "travel");
+const agentScore = await engine.compositeScore("did:aroha:travel-agent", "travel");
 
 // Unlock higher limits as reputation grows
 function spendLimitForScore(score: number): number {

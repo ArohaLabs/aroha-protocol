@@ -49,5 +49,14 @@
     "human-in-the-loop",
     "audit"
   ],
-  "license": "Apache-2.0"
+  "license": "Apache-2.0",
+  "homepage": "https://github.com/ArohaLabs/aroha-protocol/tree/main/packages/aroha-mcp-guard#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ArohaLabs/aroha-protocol.git",
+    "directory": "packages/aroha-mcp-guard"
+  },
+  "bugs": {
+    "url": "https://github.com/ArohaLabs/aroha-protocol/issues"
+  }
 }

@@ -94,8 +94,11 @@ tracer.startSagaSpan(sagaId: string): Span
 // Continue a trace from an inbound envelope's traceparent
 tracer.startChildSpan(name: string, parentTraceparent: string): Span
 
-// Parse a raw traceparent string
-tracer.parseTraceparent(tp: string): TraceContext | null
+// Span for one /v1/run invocation (GenAI attributes)
+tracer.startRunSpan(agentName, model, sessionId, parentTraceparent?, trust?): Span
+
+// Check a raw traceparent string (exported function)
+isValidTraceparent(tp: unknown): boolean
 ```
 
 ### `Span`

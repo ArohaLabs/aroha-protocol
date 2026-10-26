@@ -28,10 +28,6 @@ cd flight && npm install && npm run dev
 ## Test an agent
 
 ```bash
-# Via CLI
-npx @aroha-sdk/cli call http://localhost:3010 search-flights \
-  '{"origin":"JFK","destination":"NRT","date":"2026-08-01"}'
-
 # Via curl (no auth — sandbox skips signature verification)
 curl -X POST http://localhost:3010/aroha/v1 \
   -H "Content-Type: application/json" \

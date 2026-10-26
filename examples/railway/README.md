@@ -33,4 +33,4 @@ curl https://<your-app>.up.railway.app/health
 curl https://<your-app>.up.railway.app/.well-known/aroha-agent.json
 ```
 
-To register the agent on the Aroha Hub, follow the `--register` instructions in [`examples/quickstart/agent.ts`](../quickstart/agent.ts).
+To register the agent with a registry, follow the `--register` instructions in [`examples/quickstart/agent.ts`](../quickstart/agent.ts). Registration needs an org API key issued by that registry's operator; the hosted Hub and its API-key sign-up are not currently offered. To run your own registry, see [`apps/registry-server/DEPLOY.md`](../../apps/registry-server/DEPLOY.md).

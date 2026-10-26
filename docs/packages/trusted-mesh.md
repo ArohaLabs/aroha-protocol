@@ -14,8 +14,8 @@ Aroha's cryptographic identity exists to answer: *"can I trust a message I recei
 `@aroha-sdk/trusted-mesh` implements a **perimeter trust model**:
 
 - **Outside the perimeter**: every agent verifies every signature. No change.
-- **Inside the perimeter**: agents on the allowlist skip Ed25519 verification. Nonce replay prevention and message expiry are still enforced on every message.
-- **The allowlist is on the receiving side**: even if an attacker reaches the internal endpoint, only DIDs explicitly allowlisted bypass verification.
+- **Inside the perimeter**: a request skips Ed25519 verification only when it arrives from a trusted network (`trustedNetworks`, default loopback only, plus your optional `isTrustedTransport` check such as an mTLS peer certificate) **and** claims an allowlisted DID. Nonce replay prevention and message expiry are still enforced on every message.
+- **The DID allowlist alone is not a control**: with signatures skipped, `envelope.from` is unauthenticated, so anything that reaches the listener could claim an allowlisted DID. The network/transport check is what makes the DID meaningful — only use this where only mesh peers can reach the listener.
 
 ---
 
@@ -44,6 +44,10 @@ const server = new ArohaServer({
     ],
     // Or by prefix (trust all agents with a common namespace):
     trustedPrefixes: ["did:aroha:internal:"],
+    // Networks requests must arrive from (default: loopback only)
+    trustedNetworks: ["10.0.0.0/8"],
+    // Optional extra transport check, e.g. an mTLS peer certificate
+    isTrustedTransport: (req) => hasMeshPeerCertificate(req),
   }),
 });
 ```
@@ -75,7 +79,7 @@ const zone = createTrustedZone([
   "did:aroha:personal-agent",
   "did:aroha:flight-agent",
   "did:aroha:hotel-agent",
-]);
+], undefined, { trustedNetworks: ["10.0.0.0/8"] });
 
 // On each server:
 const server = new ArohaServer({
@@ -93,12 +97,14 @@ const client = zone.createClient("did:aroha:personal-agent", "did:aroha:flight-a
 
 ### `createTrustedMeshOptions(opts): Partial<ArohaServerOptions>`
 
-Returns `{ bypassSignatureFor }` to spread into `ArohaServerOptions`.
+Returns `{ bypassSignatureForRequest }` to spread into `ArohaServerOptions`.
 
 ```typescript
 createTrustedMeshOptions({
-  trustedDIDs: string[];       // exact DID allowlist
-  trustedPrefixes?: string[];  // prefix-match allowlist
+  trustedDIDs: string[];          // exact DID allowlist
+  trustedPrefixes?: string[];     // prefix-match allowlist
+  trustedNetworks?: string[];     // CIDR ranges or addresses; default loopback only
+  isTrustedTransport?: (req: IncomingMessage) => boolean;  // extra transport check
 })
 ```
 
@@ -116,7 +122,7 @@ sendUnsigned<T extends ArohaMessageType>(
 ): Promise<ArohaEnvelope | null>
 ```
 
-### `createTrustedZone(trustedDIDs, prefixes?)`
+### `createTrustedZone(trustedDIDs, prefixes?, network?)`
 
 Convenience helper that creates shared server options and a client factory for a group of mutually-trusting agents.
 
@@ -141,7 +147,7 @@ ipInAnyRange("192.168.1.10", ["10.0.0.0/8", "192.168.0.0/16"])  // true
 
 | Check | Mesh mode |
 |-------|-----------|
-| Ed25519 signature | **Skipped** for allowlisted DIDs |
+| Ed25519 signature | **Skipped** for allowlisted DIDs arriving over a trusted network/transport |
 | Message expiry (`expires` field) | Always checked |
 | Nonce replay prevention | Always checked |
 | Recipient DID match (`to` field) | Always checked |
@@ -151,8 +157,8 @@ ipInAnyRange("192.168.1.10", ["10.0.0.0/8", "192.168.0.0/16"])  // true
 
 ## Deployment patterns
 
-**Kubernetes**: Use `trustedPrefixes: ["did:aroha:internal:"]` and ensure your internal agents register with that prefix. Combine with a NetworkPolicy that blocks external traffic to agent ports.
+**Kubernetes**: Use `trustedPrefixes: ["did:aroha:internal:"]` with `trustedNetworks` set to the pod CIDR, and ensure your internal agents register with that prefix. Combine with a NetworkPolicy that blocks external traffic to agent ports.
 
-**Istio / Linkerd**: The mTLS peer certificate already verifies the caller's identity at the network layer. Use `trustedDIDs` to allowlist the service account DIDs, or `trustedPrefixes` for the entire mesh namespace.
+**Istio / Linkerd**: The mTLS peer certificate already verifies the caller's identity at the network layer. Check it in `isTrustedTransport`, and use `trustedDIDs` to allowlist the service account DIDs, or `trustedPrefixes` for the entire mesh namespace.
 
-**Docker Compose / single host**: Use `trustedDIDs` with explicit DID lists. All agents share the same Docker network — external traffic can't reach the agent ports.
+**Docker Compose / single host**: Use `trustedDIDs` with explicit DID lists and `trustedNetworks` set to the Docker network's range. All agents share the same Docker network — external traffic can't reach the agent ports.

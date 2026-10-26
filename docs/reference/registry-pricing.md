@@ -27,8 +27,13 @@ const registry = new HttpRegistryClient({
 
 ### Tier 2 — HTTP Registry (Fiat, Stable Pricing)
 
-The managed Aroha HTTP registry charges a flat monthly fee in fiat currency.
-No ETH exposure. Prices are set annually and communicated 90 days in advance.
+> **Not currently offered.** Aroha Labs does not currently offer a managed, paid
+> registry service: there is no sign-up, API key or price list. A reference
+> registry deployment answers at `https://aroha-registry.aroha-labs.workers.dev`
+> without a service commitment. For production, self-host the HTTP registry
+> (`apps/registry-server`).
+
+The HTTP registry has no ETH exposure.
 
 ```typescript
 const registry = new HttpRegistryClient({
@@ -37,7 +42,7 @@ const registry = new HttpRegistryClient({
 });
 ```
 
-Pricing (as of 2026): USD $49/month per registered agent DID.
+The managed-service price previously listed here (USD $49/month per registered agent DID) is not in effect, because no managed service is offered.
 
 ### Tier 3 — On-Chain EVM Registry (Staking Required)
 
@@ -62,9 +67,9 @@ slashing rules (see `contracts/ArohaRegistry.sol`).
 | Need | Recommended tier |
 |---|---|
 | Local development, internal networks | Tier 1 (local) |
-| Production SaaS, enterprise | Tier 2 (HTTP, fiat) |
+| Production SaaS, enterprise | Tier 2 (HTTP, self-hosted) |
 | Maximum decentralization, DeFi integration | Tier 3 (EVM) |
-| Regulatory requirement to avoid crypto | Tier 2 (HTTP, fiat) |
+| Regulatory requirement to avoid crypto | Tier 2 (HTTP, self-hosted) |
 
 ## ETH Staking Volatility Mitigation
 

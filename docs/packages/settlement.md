@@ -3,8 +3,8 @@
 
 # `@aroha-sdk/settlement`
 
-> **Developed in `ArohaLabs/aroha-extensions`.** `@aroha-sdk/settlement` stays published on npm; its
-> source moved out of the protocol repository on 2026-10-25.
+> **Source not in this repository.** `@aroha-sdk/settlement` stays published on npm; its
+> source moved out of the protocol repository on 2026-10-25 and is not in a public repository.
 
 
 The `@aroha-sdk/settlement` package provides a pluggable financial and quota settlement interface (`IArohaSettlement`) for the `SagaEngine`. It enables you to seamlessly add API keys, token quotas, or atomic on-chain escrow to any Aroha saga, without changing your core agent logic.

@@ -3,11 +3,13 @@
 
 # aroha — Aroha Protocol Python SDK
 
-Build agents that register on the Aroha Hub and are callable by any client through the standard `/v1/run` protocol.
+Build agents that register on an Aroha registry and are callable by any client through the standard `/v1/run` protocol.
 
 ```
 pip install aroha
 ```
+
+Version 2.0.0 on PyPI, beta. Source: https://github.com/ArohaLabs/aroha-protocol/tree/main/sdks/aroha-py
 
 ## Quick start
 
@@ -65,7 +67,7 @@ This starts a FastAPI server with:
   `acknowledge_unauthenticated=True`, which states that a transport-level
   check (mTLS, a private link, a signed-request layer) authenticates the peer.
 
-## Register on the Aroha Hub
+## Register on a registry
 
 ```python
 import os
@@ -75,8 +77,14 @@ result = my_agent.register(
     private_key=agent_key,          # the agent's 32-byte Ed25519 seed (or Ed25519PrivateKey)
     manifest_cid="bafy...",         # the pinned manifest CID
 )
-print(result["didHash"])  # chat URL: https://aroha-labs.com/chat/<didHash>
+print(result["didHash"])
 ```
+
+`register` sends the manifest to `registry_url` (or `AROHA_REGISTRY_URL`, or
+the reference registry at `https://aroha-registry.aroha-labs.workers.dev`).
+`api_key` is an org key issued by that registry's operator. A hosted sign-up
+for API keys is not currently offered; to run your own registry, see
+`apps/registry-server/DEPLOY.md` in the repository.
 
 The registry requires proof of key possession: `register` asks
 `POST /v1/agents/challenge` for a one-time nonce and signs
@@ -204,7 +212,7 @@ framework is not installed; `tests/test_bridges_fakes.py` runs the same
 mapping logic everywhere). The AutoGen bridge targets the 0.4+ packages,
 not legacy `pyautogen` 0.2.
 
-## Hub client
+## Registry client (`aroha.hub`)
 
 ```python
 from aroha.hub import register_agent, resolve_agent, call_agent, list_agents
@@ -443,7 +451,7 @@ signature).
 | E-DIDs / KELs (`aroha.kel`) | Verification ported (inception/rotate/recover/revoke/anchor, controller seals, stale/duplicity store); reproduces the L0-KEL-01 pinned vector. Issuing helpers included |
 | Message types / error codes | All 19 types, all 28 `ArohaErrorCode` values |
 | Task mandates v2 (`aroha.task_mandate`) | Wire-identical; every vector in `packages/aroha-credentials/test-vectors/task-mandate-v2.json` passes (payloads, signatures, verdicts, reasons, narrowing reasons, violation codes and messages); live round trips both ways |
-| Not ported | Spending ledger / redemption store (cumulative budget enforcement), multi-hop task-chain verifier (`verifyTaskMandateChain` in `@aroha-sdk/delegation`), task receipts, file-backed nonce store |
+| Not ported | Redemption store (`redeemPaymentMandate`) and ledger allocation when issuing or attenuating (the spending ledger used by `verify_http_spend_request` is ported — see Durable stores), multi-hop task-chain verifier (`verifyTaskMandateChain` in `@aroha-sdk/delegation`), task receipts |
 
 Timestamps are parsed as ISO 8601 only; an offset-less timestamp is read as
 UTC (JavaScript's `Date.parse` reads it as local time and accepts some

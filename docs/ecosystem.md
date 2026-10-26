@@ -96,6 +96,6 @@ Add your package to [`community/registry.json`](https://github.com/ArohaLabs/aro
 
 ## Community governance
 
-A W3C Community Group charter is drafted (`CHARTER.md`) but has not yet been proposed. The protocol spec is in `docs/spec/` and governed by the principles in [`docs/governance.md`](governance.md).
+A W3C Community Group charter is drafted (`CHARTER.md`) but has not been submitted, and no W3C Community Group has been proposed. The current plan is to join the existing Agent Identity Registry Protocol Community Group and offer `did:aroha` as input. The protocol spec is in `docs/spec/` and governed by the principles in [`docs/governance.md`](governance.md).
 
 Bridge packages are community-owned — the Aroha project team reviews registry submissions for protocol compliance, not implementation details. Bridge authors own and maintain their packages.

@@ -3,7 +3,9 @@
 
 # Browser Demos
 
-Four browser-based experiences are available, each targeting a different audience.
+Three browser-based experiences are available, each targeting a different audience. All run locally; none needs a hosted service.
+
+> The saga, settlement and on-chain parts of these demos use optional extensions, not the core protocol ([extensions document](../spec/extensions.md), [positioning](../positioning.md)). For the core mandate flow, run `npm run demo:mandate` (no network, no server).
 
 ---
 
@@ -61,7 +63,7 @@ PORT=3040 node scripts/vc-demo.mjs
 
 ---
 
-## chat-demo — Full blockchain demo (flagship)
+## chat-demo — Full blockchain demo (optional on-chain extensions)
 
 The most complete demo. Requires Anvil (local EVM) + vllm (optional).
 

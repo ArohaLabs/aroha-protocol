@@ -286,7 +286,7 @@ Before going to production, confirm:
 
 ## 10. Runtime controls added in this release
 
-*Runtime control.* These apply to the Aroha runtime (`ArohaLabs/aroha-runtime`, the `aroha` binary), not to agents built directly on the SDK. Settings are keys in the workspace's `config.toml` (`~/.aroha/config.toml` by default) unless marked as a command-line flag or environment variable. Each was checked against the runtime source on 2026-10-10; the source file is named so it can be re-checked.
+*Runtime control.* These apply to the Aroha runtime (the `aroha` binary; its source is not in this repository), not to agents built directly on the SDK. Settings are keys in the workspace's `config.toml` (`~/.aroha/config.toml` by default) unless marked as a command-line flag or environment variable. Each was checked against the runtime source on 2026-10-10; the source file is named so it can be re-checked.
 
 | Control | Setting | Default | Source |
 |---|---|---|---|
@@ -330,9 +330,9 @@ Before going to production, confirm:
 
 ## 11. Credential vault rule
 
-**Rule:** the model never has access to credentials. The runtime holds every credential and attaches it to outbound requests outside the model. This is threat [T8](threat-model.md#t8-credential-exposure-to-the-model).
+**Rule:** the model never has access to credentials. The runtime holds every credential and attaches it to outbound requests outside the model. This is threat [T8](threat-model.md#t8--credential-exposure-to-the-model).
 
-**How the Aroha runtime enforces it** (checked against `ArohaLabs/aroha-runtime` on 2026-10-15):
+**How the Aroha runtime enforces it** (checked against the runtime source in the private development repository on 2026-10-15):
 
 | Credential | Held in | Reaches | Never reaches |
 |---|---|---|---|

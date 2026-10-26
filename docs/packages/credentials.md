@@ -20,9 +20,9 @@ By default, an agent running `ArohaServer` accepts validly signed messages from 
 | Role | Type | Can do |
 |------|------|--------|
 | `human:admin` | Human | Everything |
-| `human:user` | Human | query, reserve, commit, cancel, negotiate |
+| `human:user` | Human | query, reserve, commit, cancel, negotiate, mandate |
 | `human:readonly` | Human | query only |
-| `agent:orchestrator` | Agent DID | query, reserve, commit, cancel, delegate, negotiate |
+| `agent:orchestrator` | Agent DID | query, reserve, commit, cancel, delegate, negotiate, mandate |
 | `agent:provider` | Agent DID | receives only |
 | `agent:observer` | Agent DID | query only |
 
@@ -65,7 +65,8 @@ const credential = await issueHumanCredential(
   [ArohaRole.HumanUser],                  // roles
   "did:aroha:personal-agent",             // issuerDID
   issuerPrivateKey,                      // private key used to sign
-  { email: "alice@example.com", ttlMs: 3_600_000 }
+  3_600_000,                             // ttlMs (default 1 hour)
+  "alice@example.com"                    // email (optional)
 );
 
 // Carry as inline token (no registry needed)
@@ -108,7 +109,8 @@ const server = new ArohaServer({
   // ... core config ...
   httpRoutes: [
     ...credentialRegistryRoutes(registry, {
-      resolveUserForRequest: async (req) => "user-alice", // custom auth
+      // Required: without it, register and revoke answer 401
+      resolveIssuerPublicKey: async (did) => issuerKeys.get(did) ?? null,
     })
   ]
 });
@@ -155,7 +157,7 @@ const mandate = await issueIntentMandate(
     currency:                    "USD",
   },
   userPrivateKey,
-  { ttlMs: 3_600_000 }   // 1 hour
+  3_600_000              // ttlMs: 1 hour
 );
 // mandate.token — base64url signed payload, carry in ArohaSpendingMandate messages
 ```
@@ -203,15 +205,19 @@ const paymentMandate = await attenuateToPayment(
 ```typescript
 import { verifyMandate } from "@aroha-sdk/credentials";
 
-const result = await verifyMandate(paymentMandate.token, granterPublicKey, {
-  expectedGrantee: "did:aroha:bookshop-agent",
-});
+const result = await verifyMandate(
+  paymentMandate.token,
+  granterPublicKey,
+  "did:aroha:bookshop-agent",   // expectedGrantee
+);
 
 if (result.valid) {
   const { spendLimitUsd, allowedMerchants } = result.mandate.constraints;
   // Proceed with transaction ≤ spendLimitUsd
 }
 ```
+
+`verifyMandate` checks a single link. To accept a mandate from another party, use `verifyMandateChain`, which walks every link back to a root you trust (see the [package README](https://github.com/ArohaLabs/aroha-protocol/tree/main/packages/aroha-credentials#readme)).
 
 ### Constraint narrowing rules
 
@@ -223,4 +229,4 @@ if (result.valid) {
 | `requireHumanApprovalAboveUsd` | Child ≤ parent (lower threshold = tighter) |
 | `validUntil` | Child ≤ parent |
 
-Passing a wider constraint throws `MandateNarrowingError` before signing.
+Passing a wider constraint throws an `Error` before signing.

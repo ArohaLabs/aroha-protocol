@@ -29,7 +29,7 @@ The minimum viable Aroha 1.0 implementation covers Layers 0–3:
 | L3 | Saga coordinator or participant (you can choose one role) |
 | L4 | Optional — commerce/payment layer |
 
-See [test-matrix.md](test-matrix.md) for the exact requirements at each layer.
+See [test-matrix.md](test-matrix.md) for the exact requirements at each layer, and [tiers.md](tiers.md) for how layers group into conformance tiers. (Tier claims are self-declared; the per-tier test filter and `X-Aroha-Conformance` header described there are planned, not implemented.)
 
 ---
 
@@ -100,8 +100,8 @@ Use the **Conformance Report** issue template at [.github/ISSUE_TEMPLATE/conform
 ## Support
 
 - GitHub Issues with the `conformance` label, in `ArohaLabs/aroha-protocol`
-- Email the maintainer (hello@aroha-labs.com, see MAINTAINERS.md)
-- Maintainer response SLA: 5 business days (see [governance.md](../governance.md))
+- Email contact@aroha-labs.com (see [MAINTAINERS.md](../../MAINTAINERS.md))
+- Maintainer response SLA: 5 business days (see [governance.md](../../docs/governance.md))
 
 ---
 

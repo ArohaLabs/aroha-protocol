@@ -18,5 +18,5 @@ Known engineering items at the time of writing:
 - Task mandates, disputes and the newer error codes outside TypeScript (see the feature matrix).
 - First successful hosted runs of CI, Conformance and Release Gate, recorded on the trust page.
 
-The go-to-market to-do list that used to live here moved out of this repository; it remains in
-git history (`git log -- TODO.md`).
+The go-to-market to-do list that used to live here moved out of this repository; it is not part
+of this repository's public history.

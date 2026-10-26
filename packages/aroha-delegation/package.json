@@ -49,5 +49,14 @@
     "attenuation",
     "capability"
   ],
-  "license": "Apache-2.0"
+  "license": "Apache-2.0",
+  "homepage": "https://github.com/ArohaLabs/aroha-protocol/tree/main/packages/aroha-delegation#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ArohaLabs/aroha-protocol.git",
+    "directory": "packages/aroha-delegation"
+  },
+  "bugs": {
+    "url": "https://github.com/ArohaLabs/aroha-protocol/issues"
+  }
 }

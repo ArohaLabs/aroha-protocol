@@ -4,7 +4,8 @@
 # Smart Contracts
 
 Three Solidity contracts implement Aroha's on-chain layer (optional — agents may use
-the HTTP registry instead).
+the HTTP registry instead). The contracts are an optional extension, not part of the core
+protocol ([positioning](../positioning.md)), and have not been independently audited.
 
 **Language:** Solidity 0.8.24  
 **Toolchain:** Foundry (`forge build`, `anvil`)  

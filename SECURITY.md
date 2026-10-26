@@ -20,19 +20,21 @@ Packages version independently (see [COMPATIBILITY.md](COMPATIBILITY.md)).
 
 ### How to report
 
-**Email (the only reporting channel):** send the report to **security@aroha-labs.com** — the
-maintainer listed in [MAINTAINERS.md](MAINTAINERS.md) — with the subject line
-`[SECURITY] Aroha vulnerability report`.
+Use either channel:
 
-GitHub private vulnerability reporting is **not enabled** for this repository, so there is no
-GitHub advisory form. This section will be updated if that changes.
+- **GitHub private vulnerability reporting:**
+  [open a private report](https://github.com/ArohaLabs/aroha-protocol/security/advisories/new).
+- **Email:** send the report to **contact@aroha-labs.com** with `SECURITY` in the subject line,
+  for example `[SECURITY] Aroha vulnerability report`. Reports are handled by the maintainer
+  listed in [MAINTAINERS.md](MAINTAINERS.md).
 
 ### If the maintainer is unavailable
 
 The project has one maintainer and no second security contact. If you receive no
 acknowledgement within the 48-hour target:
 
-1. Re-send the report to the same address, with `[SECURITY][RESEND]` in the subject line.
+1. Re-send the report to contact@aroha-labs.com with `[SECURITY][RESEND]` in the subject line
+   (or add a comment to your private report on GitHub).
 2. If there is still no acknowledgement after a further 5 business days, you may treat the
    project as unresponsive and apply your own coordinated-disclosure policy. Please do not
    include exploitation details in any public channel.
@@ -70,7 +72,7 @@ We follow coordinated disclosure:
 1. You report privately.
 2. We confirm, assess severity, and develop a fix.
 3. We agree on a disclosure date with you (default: 90 days after report, or sooner if a fix is ready).
-4. We release the patch and publish an advisory at the same time (a CHANGELOG security entry; GitHub security advisories are not in use while private vulnerability reporting is not enabled).
+4. We release the patch and publish an advisory at the same time (a CHANGELOG security entry, and a GitHub security advisory for reports received through private vulnerability reporting).
 5. You receive credit in the advisory and under [Acknowledgements](#acknowledgements) unless you request otherwise.
 
 ---
@@ -122,8 +124,8 @@ How project signing keys and CI/CD secrets are inventoried, held and rotated:
 ## Supply-chain status
 
 See [docs/trust.md](docs/trust.md) for the current release-integrity status (for example: npm
-packages are published without provenance, runtime binaries are unsigned, and branch and tag
-protection are not enforced on the current repository plan).
+packages are published without provenance, and organisation admins can bypass the rulesets that
+protect `main` and the release tags).
 
 ---
 

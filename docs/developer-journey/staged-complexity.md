@@ -15,6 +15,8 @@ Follow each stage independently. Each stage is fully functional and testable on 
 **What you get:** Two agents talking to each other locally with full saga support.
 No blockchain. No Redis. No TLS. No credentials.
 
+> `@aroha-sdk/orchestrator` (sagas) and `@aroha-sdk/settlement` are optional extensions, published on npm; their source is not in this repository. The core protocol (identity, signed envelopes, mandates) does not need them — see the [extensions document](../spec/extensions.md).
+
 ```bash
 npm install @aroha-sdk/core @aroha-sdk/orchestrator
 ```
@@ -87,11 +89,11 @@ const server = new ArohaServer({
 
 ## Stage 3 — Production
 
-**What you add:** On-chain registry staking, EVM escrow settlement, RBAC credentials, telemetry, mTLS.
+**What you add:** RBAC credentials, telemetry, mTLS; optionally on-chain registry staking and EVM escrow settlement (optional extensions; the `contracts/` are not part of the core).
 
 **Stage 3 checklist:**
-- [x] EVM registry (`ArohaRegistry.sol`) + ETH staking
-- [x] `EscrowSettlement` for on-chain atomic payments
+- [x] Optional: EVM registry (`ArohaRegistry.sol`) + ETH staking
+- [x] Optional: `EscrowSettlement` for on-chain atomic payments
 - [x] `@aroha-sdk/credentials` RBAC middleware
 - [x] `@aroha-sdk/telemetry` W3C Trace Context + Grafana dashboard
 - [x] mTLS between internal agents (use `@aroha-sdk/trusted-mesh`)

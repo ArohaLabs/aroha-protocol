@@ -17,9 +17,10 @@ The project has **one maintainer**. There is no second reviewer and no on-call r
 around a single **5 business day** response time for issues, pull requests, ecosystem
 submissions and conformance reports.
 
-**Security contact:** email **security@aroha-labs.com** with the subject line
-`[SECURITY] Aroha vulnerability report` — see [SECURITY.md](SECURITY.md). Acknowledgement target:
-48 hours (best effort, single maintainer).
+**Security contact:** report privately through
+[GitHub private vulnerability reporting](https://github.com/ArohaLabs/aroha-protocol/security/advisories/new),
+or email **contact@aroha-labs.com** with the subject line `[SECURITY] Aroha vulnerability report`
+— see [SECURITY.md](SECURITY.md). Acknowledgement target: 48 hours (best effort, single maintainer).
 
 ---
 
@@ -38,9 +39,10 @@ every repository.
 | @s1oly | write | Reviewer (Aroha Labs team): reviews PRs in their areas; not a code owner, so the Core Maintainer still approves |
 | @zuther77 | write | Reviewer (Aroha Labs team): reviews PRs in their areas; not a code owner, so the Core Maintainer still approves |
 
-Because the repository plan does not support branch protection, required reviews or tag
-protection, every account with write access can push to `main` and push release tags; review is a
-manual process.
+Changes to `main` go through a pull request with one approving review from a code owner (`CODEOWNERS`
+names @projectmed99 for every path), the required CI and conformance checks, and signed commits (a repository ruleset, in force since 2026-10-25). Release
+tags are protected by a second ruleset. **Organisation admins can bypass both rulesets**; there are
+three admin accounts above. Status of each control: [docs/trust.md](docs/trust.md).
 
 ---
 
@@ -60,7 +62,7 @@ Covered by the Core Maintainer until filled, on the same 5 business day response
 
 ### Security Maintainer — **vacant**
 Covered by the Core Maintainer until filled.
-- Handles vulnerability report intake (email only — see [SECURITY.md](SECURITY.md); GitHub private vulnerability reporting is not enabled)
+- Handles vulnerability report intake (GitHub private vulnerability reporting or email — see [SECURITY.md](SECURITY.md))
 - Coordinates with external auditors (none engaged yet — see [docs/security/review-scope.md](docs/security/review-scope.md))
 - Maintains the threat model and incident response playbook
 - Acknowledgement within 48 hours, severity assessment within 5 business days
@@ -103,4 +105,4 @@ response after 5 business days:
 
 ---
 
-*Last updated: 2026-10-08.*
+*Last updated: 2026-10-25.*

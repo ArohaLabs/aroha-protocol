@@ -5,8 +5,8 @@ because a binary that embeds someone else's work has to carry their terms
 with it — a link is not redistribution-safe, and the runtime is meant to
 work with no network at all.
 
-The entries below ship in the Aroha runtime, which is now developed in
-[`ArohaLabs/aroha-runtime`](https://github.com/ArohaLabs/aroha-runtime). No package in this repository embeds them.
+The entries below ship in the Aroha runtime, which is now developed in a separate, private
+repository. No package in this repository embeds them.
 
 | Material | Where it ships | Licence |
 | --- | --- | --- |

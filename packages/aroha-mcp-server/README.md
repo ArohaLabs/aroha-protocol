@@ -1,6 +1,8 @@
 # @aroha-sdk/mcp-server
 
-MCP server that exposes the Aroha Hub to Claude Desktop and any other MCP-compatible personal agent — over stdio locally, or as a **remote connector** (Streamable HTTP, MCP 2026-07-28, OAuth 2.1 protected resource) for platforms such as Meta Muse custom connectors and OpenAI plugins. Once configured, Claude can search the Hub for registered vendor agents, issue task and spending mandates, call those agents directly, and retrieve the full audit receipt — all through natural conversation, without any corporate agreement or bespoke integration.
+MCP server that exposes an Aroha agent registry to Claude Desktop and any other MCP-compatible personal agent — over stdio locally, or as a **remote connector** (Streamable HTTP, MCP 2026-07-28, OAuth 2.1 protected resource) for platforms such as Meta Muse custom connectors and OpenAI plugins. Once configured, Claude can search the registry for registered vendor agents, issue task and spending mandates, call those agents directly, and retrieve the full audit receipt — all through natural conversation.
+
+The registry is the reference deployment by default, or your own self-hosted registry via `AROHA_REGISTRY_URL`. A hosted Hub service with sign-up and API keys is not currently offered.
 
 ---
 
@@ -15,7 +17,7 @@ Add the following block to your `claude_desktop_config.json` (on macOS: `~/Libra
       "command": "npx",
       "args": ["-y", "@aroha-sdk/mcp-server"],
       "env": {
-        "AROHA_API_KEY": "sk-aroha-..."
+        "AROHA_REGISTRY_URL": "https://registry.example.internal"
       }
     }
   }
@@ -28,8 +30,8 @@ Restart Claude Desktop. The tools below will appear in the tool list automatical
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `AROHA_API_KEY` | `""` | Bearer token for authenticated Hub calls |
-| `AROHA_REGISTRY_URL` | `https://aroha-registry.aroha-labs.workers.dev` | Override the Hub registry endpoint |
+| `AROHA_REGISTRY_URL` | `https://aroha-registry.aroha-labs.workers.dev` (reference deployment) | Registry endpoint — set it to your self-hosted registry |
+| `AROHA_API_KEY` | `""` | Bearer token for authenticated registry calls, issued by your registry's operator |
 | `AROHA_MCP_IDENTITY_DIR` / `AROHA_MCP_KEY_DIR` | `~/.aroha/mcp-server` | Where signing keys live |
 
 ---
@@ -121,7 +123,7 @@ Environment variables win over the JSON file named by `AROHA_MCP_CONFIG`
 ## Tools
 
 ### `aroha_discover`
-Search the Aroha Hub registry for agents by capability ID or free-text query. Returns up to 10 matching agents with their DIDs, names, capabilities, reputation scores, and endpoints.
+Search the configured registry for agents by capability ID or free-text query. Returns up to 10 matching agents with their DIDs, names, capabilities, reputation scores, and endpoints.
 
 ```
 aroha_discover(capability?: string, query?: string)
@@ -172,24 +174,26 @@ Fetch and verify the Key Event Log of a `did:aroha:E…` identity and its contro
 
 ---
 
-## Worked example — Book a flight via Air NZ agent
+## Worked example — Book a flight via an airline agent
 
-> **User:** Find an Air New Zealand agent that can book flights, then book me on the cheapest Auckland to Wellington flight tomorrow.
+The airline, agent and values below are illustrative.
+
+> **User:** Find an Example Air agent that can book flights, then book me on the cheapest Auckland to Wellington flight tomorrow.
 
 **Step 1 — Claude calls `aroha_discover`**
 
 ```json
-{ "capability": "book-flight", "query": "Air New Zealand" }
+{ "capability": "book-flight", "query": "Example Air" }
 ```
 
 Result (truncated):
 ```json
 [{
-  "did": "did:aroha:airnz-booking-agent",
-  "name": "Air NZ Booking Agent",
+  "did": "did:aroha:example-air-booking-agent",
+  "name": "Example Air Booking Agent",
   "capabilities": ["book-flight", "check-flight-status", "cancel-booking"],
   "reputation": 4.9,
-  "endpoint": "https://agents.airnz.co.nz/aroha"
+  "endpoint": "https://agents.example-air.example/aroha"
 }]
 ```
 
@@ -197,7 +201,7 @@ Result (truncated):
 
 ```json
 {
-  "agentDid": "did:aroha:airnz-booking-agent",
+  "agentDid": "did:aroha:example-air-booking-agent",
   "capability": "book-flight",
   "spendLimitUsd": 150,
   "ttlMinutes": 10
@@ -208,7 +212,7 @@ Result:
 ```json
 {
   "mandateId": "spend-mandate-1749123456-abc123",
-  "summary": "Spending mandate: up to $150 USD for book-flight with did:aroha:airnz-booking-agent",
+  "summary": "Spending mandate: up to $150 USD for book-flight with did:aroha:example-air-booking-agent",
   "validUntil": "2026-07-13T09:30:00.000Z"
 }
 ```
@@ -217,7 +221,7 @@ Result:
 
 ```json
 {
-  "agentDid": "did:aroha:airnz-booking-agent",
+  "agentDid": "did:aroha:example-air-booking-agent",
   "capability": "book-flight",
   "params": {
     "origin": "AKL",
@@ -237,8 +241,8 @@ Result:
 {
   "success": true,
   "result": {
-    "bookingRef": "NZ-X9K3M",
-    "flight": "NZ409",
+    "bookingRef": "EX-X9K3M",
+    "flight": "EX409",
     "departure": "07:00",
     "arrival": "08:05",
     "fareUsd": 89.00,

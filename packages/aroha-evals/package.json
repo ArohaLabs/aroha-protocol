@@ -32,6 +32,15 @@
     "node": ">=22"
   },
   "license": "Apache-2.0",
+  "homepage": "https://github.com/ArohaLabs/aroha-protocol/tree/main/packages/aroha-evals#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ArohaLabs/aroha-protocol.git",
+    "directory": "packages/aroha-evals"
+  },
+  "bugs": {
+    "url": "https://github.com/ArohaLabs/aroha-protocol/issues"
+  },
   "keywords": [
     "aroha",
     "agent",

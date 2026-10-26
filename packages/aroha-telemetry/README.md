@@ -50,7 +50,7 @@ whole chain can be stitched together in any trace backend.
 
 ## API
 
-- `ArohaTracer({ onSpanEnd? })` — `startSagaSpan(sagaId)`, `startChildSpan(name, parentTraceparent)`, `startRunSpan(agentName, model, sessionId, parentTraceparent?, trust?)`, `parseTraceparent(tp)`.
+- `ArohaTracer({ onSpanEnd? })` — `startSagaSpan(sagaId)`, `startChildSpan(name, parentTraceparent)`, `startRunSpan(agentName, model, sessionId, parentTraceparent?, trust?)`.
 - `Span` — `end(genAi?) → SpanRecord`, `traceparent()`; `GenAiAttributes` uses `gen_ai.*` names.
 - `TracingArohaClient(client)` — injects `traceparent` into outbound envelopes (`setActiveSpan`, `clearActiveSpan`, `send`).
 - `createTracingMiddleware(tracer, onSpan?)` — `ArohaServer` middleware.

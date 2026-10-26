@@ -90,18 +90,18 @@ const didDoc = await client.fetchDIDDocument("https://provider.example.com");
 `generateWebAgent` creates a domain-anchored agent identity verified by **both** HTTPS and DNS — not just HTTPS. See the [did:aroha-web: spec](../spec/web-did.md) for the full design rationale.
 
 ```typescript
-import { generateWebAgent, rotateKey, resolveWebDID, dnsTxtValue, wellKnownPath } from "@aroha-sdk/core";
+import { generateWebAgent, rotateKey, resolveWebDID, wellKnownPath } from "@aroha-sdk/core";
 
 // ── Create ────────────────────────────────────────────────────────────────────
-const agent = await generateWebAgent("stripe.com", "payments-agent");
-// agent.did === "did:aroha-web:stripe.com:payments-agent"
+const agent = await generateWebAgent("example.com", "payments-agent");
+// agent.did === "did:aroha-web:example.com:payments-agent"
 
 // 1. Serve DID document at the well-known path
-//    GET https://stripe.com/.well-known/aroha/agents/payments-agent/did.json
+//    GET https://example.com/.well-known/aroha/agents/payments-agent/did.json
 serveJson(wellKnownPath(agent.did), agent.document);
 
-// 2. Publish DNS TXT: _aroha.stripe.com IN TXT "v=aroha1; path=payments-agent; keyhash=..."
-console.log(dnsTxtValue(agent.document));
+// 2. Publish DNS TXT: _aroha.example.com IN TXT "v=aroha1; path=payments-agent; keyhash=..."
+console.log(agent.dnsTXTRecord);   // or dnsTXTValue(agent.did, agent.publicKey)
 
 // ── Mount in ArohaServer ───────────────────────────────────────────────────────
 const server = new ArohaServer({
@@ -117,7 +117,7 @@ const rotated = await rotateKey(agent, 24);
 // Update DID document and DNS TXT with new keyhash
 
 // ── Resolve and verify ────────────────────────────────────────────────────────
-const result = await resolveWebDID("did:aroha-web:stripe.com:payments-agent");
+const result = await resolveWebDID("did:aroha-web:example.com:payments-agent");
 if (result.fullyVerified) {
   // HTTPS + DNS + key cool-down all passed
 }
@@ -186,8 +186,9 @@ The envelope is signed using Ed25519 over the canonical body (keys sorted, `proo
 ```typescript
 import { signMessage, verifyMessageSignature, encryptBody, decryptBody } from "@aroha-sdk/core";
 
-const sig = await signMessage(data, privateKey);
-const ok = await verifyMessageSignature(data, sig, publicKey);
+// Sign a message object (canonical JSON, `proof` excluded) → MessageProof
+const proof = await signMessage(message, privateKey, `${did}#key-1`);
+const ok = await verifyMessageSignature({ ...message, proof }, publicKey);
 
 // Body encryption: X25519 ECDH key agreement + AES-256-GCM
 // Uses the correct Ed25519 → X25519 birational map (edwardsToMontgomery*)

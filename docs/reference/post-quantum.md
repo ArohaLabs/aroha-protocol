@@ -4,7 +4,7 @@
 # Post-Quantum Migration
 
 Aroha is designed for a **no-flag-day migration** to NIST post-quantum standards
-(FIPS 204 ML-DSA, FIPS 205 SLH-DSA, FIPS 206 ML-KEM).
+(FIPS 204 ML-DSA, FIPS 205 SLH-DSA, FIPS 203 ML-KEM).
 
 ---
 

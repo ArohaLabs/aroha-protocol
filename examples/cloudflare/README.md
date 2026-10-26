@@ -19,7 +19,7 @@ A Aroha-compliant provider agent running at the edge:
 
 ```bash
 git clone https://github.com/ArohaLabs/aroha-protocol
-cd aroha/examples/cloudflare
+cd aroha-protocol/examples/cloudflare
 npm install
 npx wrangler login
 
@@ -49,8 +49,8 @@ against that), so it reflects the latest release, not unreleased code in this re
 |----------|-------------|
 | `AROHA_PRIVATE_KEY` | Base64 of the 32-byte Ed25519 private key (seed) |
 | `AROHA_AGENT_DID` | Your agent's DID |
-| `ORCHESTRATOR_DID` | DID of the orchestrator allowed to call this agent |
-| `ORCHESTRATOR_PUBLIC_KEY` | Base64 of that orchestrator's 32-byte public key |
+| `ORCHESTRATOR_DID` | DID of the calling agent allowed to call this agent |
+| `ORCHESTRATOR_PUBLIC_KEY` | Base64 of that caller's 32-byte public key |
 
 ### Generate keys
 
@@ -87,7 +87,7 @@ async function handleCapability(capability: string, params: Record<string, unkno
 ## Architecture
 
 ```
-Orchestrator agent  (anywhere on the internet)
+Calling agent  (anywhere on the internet)
       │  POST /aroha/v1  { ArohaRequest, proof: Ed25519Signature2020 }
       ▼
 Cloudflare Worker  (nearest of 300+ PoPs)

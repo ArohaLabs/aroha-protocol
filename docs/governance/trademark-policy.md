@@ -30,10 +30,10 @@ Forks are encouraged under the Apache License 2.0. However:
 
 Projects wishing to display the "Aroha Conformant" badge must:
 1. Pass the relevant tier conformance test suite
-2. Submit `conformance-results.json` to the Aroha conformance registry
+2. Submit `conformance-results.json` in a Conformance Report issue (see the [implementer packet](../conformance/implementer-packet.md))
 3. Reference the spec version tested against
 
 ## Contact
 
-For trademark licensing enquiries: legal@aroha-labs.com
-For conformance certification: conformance@aroha-labs.com
+For trademark licensing enquiries: contact@aroha-labs.com
+For conformance certification: contact@aroha-labs.com

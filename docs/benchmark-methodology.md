@@ -85,7 +85,7 @@ Coordinator → Reserve (N participants) → Commit (partial) → Cancel (all)
 
 ### B6 — Mandate chain verification (offline)
 
-**What it measures:** Time for an agent to verify a two-link mandate chain (human → orchestrator → agent) before acting: every signature, every attenuation step, root and grantee binding.  
+**What it measures:** Time for an agent to verify a two-link mandate chain (person → agent → agent) before acting: every signature, every attenuation step, root and grantee binding.  
 **Why it matters:** This is the check Aroha adds to every delegated action. It needs no network call: `did:aroha:z` DIDs commit to their key, so no registry or identity-provider round trip is made.
 
 **Metrics:** p50 / p95 / p99 latency; token size in bytes  
@@ -101,8 +101,8 @@ Coordinator → Reserve (N participants) → Commit (partial) → Cancel (all)
 ```bash
 node --version   # Must be ≥22.0.0
 npm --version    # Must be ≥10.0.0
-git clone <aroha-repo>
-cd aroha
+git clone https://github.com/ArohaLabs/aroha-protocol.git
+cd aroha-protocol
 npm install && npm run build
 ```
 
@@ -115,12 +115,11 @@ npm run benchmark
 # Individual scenarios
 npm run benchmark:b1   # Single-hop latency
 npm run benchmark:b2   # Capability discovery
-npm run benchmark:b3   # Saga happy path
-npm run benchmark:b4   # Saga rollback
 npm run benchmark:b5   # Crypto throughput
+npm run benchmark:b6   # Mandate chain verification (not part of `npm run benchmark`)
 ```
 
-Scenarios B1, B2, and B5 are implemented in `scripts/benchmark/`. Run `npm run benchmark` to execute all three and produce a JSON artifact in `benchmark-results/`. Scenarios B3 (saga happy path) and B4 (saga rollback) require a live multi-agent network and are documented as a manual runbook below.
+Scenarios B1, B2, and B5 are implemented in `scripts/benchmark/`. Run `npm run benchmark` to execute all three and produce a JSON artifact in `benchmark-results/`. Scenarios B3 (saga happy path) and B4 (saga rollback) require a live multi-agent network; they have no script yet and their manual runbook has not been written.
 
 ### Environment for reproducible results
 
@@ -132,7 +131,7 @@ Scenarios B1, B2, and B5 are implemented in `scripts/benchmark/`. Run `npm run b
 
 ### Result format
 
-After each run, results are written to `benchmark-results/YYYY-MM-DD-<git-sha>.json`:
+After each run, results are written to `benchmark-results/benchmark-YYYY-MM-DD.json`. The target format is:
 
 ```json
 {
@@ -175,7 +174,7 @@ To allow third parties to reproduce results:
 
 1. Benchmark scripts are in `scripts/benchmark/` (open source, Apache-2.0).
 2. Environment spec is recorded in every result JSON.
-3. Results are published as GitHub Actions artifacts (see [.github/workflows/conformance.yml](../.github/workflows/conformance.yml)).
+3. Results are not yet published from CI: no workflow runs the benchmark suite. Runs write their results locally to `benchmark-results/`.
 4. Discrepancies in third-party reproductions should be filed as GitHub Issues with the `benchmark` label.
 
 ---

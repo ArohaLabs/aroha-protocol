@@ -96,7 +96,7 @@ Packages approaching suspension (CI red or no maintainer activity for 20+ days):
 |----------|-----------------|----------------------|
 | Direct framework outreach | — | — |
 | Community posts | — | — |
-| GitHub Issues (once public) | — | — |
+| GitHub Issues and Discussions | — | — |
 
 **Next month outreach targets:**
 - [Target 1]
@@ -120,4 +120,4 @@ Packages approaching suspension (CI red or no maintainer activity for 20+ days):
 
 ---
 
-*Distribute to: founders, GTM lead, core maintainers. Publish under docs/ecosystem/ once the repository is public.*
+*Distribute to: founders, GTM lead, core maintainers.*

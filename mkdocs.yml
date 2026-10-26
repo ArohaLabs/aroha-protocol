@@ -8,7 +8,7 @@ site_description: >-
 site_url: https://aroha-labs.com/
 repo_url: https://github.com/ArohaLabs/aroha-protocol
 repo_name: ArohaLabs/aroha-protocol
-copyright: Copyright &copy; 2026 Aroha Working Group
+copyright: Copyright &copy; 2026 Aroha Labs
 
 # ── Theme ──────────────────────────────────────────────────────────────────────
 theme:
@@ -113,7 +113,7 @@ extra:
     - icon: fontawesome/brands/github
       link: https://github.com/ArohaLabs/aroha-protocol
     - icon: fontawesome/brands/x-twitter
-      link: https://x.com/aroha_protocol
+      link: https://x.com/aroha_labs
   analytics:
     provider: google
     property: !ENV [GOOGLE_ANALYTICS_ID, ""]
@@ -158,10 +158,10 @@ nav:
       - aroha-registry: packages/registry.md
     - Extensions:
       - aroha-credentials: packages/credentials.md
-      - "aroha-settlement (aroha-extensions)": packages/settlement.md
-      - "aroha-reputation (aroha-extensions)": packages/reputation.md
-      - "aroha-commerce (aroha-extensions)": packages/commerce.md
-      - "aroha-orchestrator (aroha-extensions)": packages/orchestrator.md
+      - "aroha-settlement (separate repository)": packages/settlement.md
+      - "aroha-reputation (separate repository)": packages/reputation.md
+      - "aroha-commerce (separate repository)": packages/commerce.md
+      - "aroha-orchestrator (separate repository)": packages/orchestrator.md
       - aroha-preferences: packages/preferences.md
     - Bridges:
       - aroha-mcp-bridge: packages/mcp-bridge.md

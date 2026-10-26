@@ -86,7 +86,7 @@ Caption under the rail, small italic: `MCP calls the tools · A2A carries messag
 
 ## Footer
 
-Centered, muted, mono 12: `Apache-2.0 · spec: github.com/ArohaLabs/aroha-spec · docs: aroha-labs.com/docs`
+Centered, muted, mono 12: `Apache-2.0 · spec: github.com/ArohaLabs/aroha-protocol · docs: aroha-labs.com/docs`
 
 ## Layout balance notes
 

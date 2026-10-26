@@ -3,7 +3,7 @@
 
 # Aroha: The Network for Autonomous Agent Protocol
 
-> **Positioning note (2026-10-19).** This whitepaper (April 2026) frames Aroha around discovery, atomic transactions and commerce. That framing is superseded. Aroha now describes itself as the protocol for **bounded, verifiable agent authority** — who is acting, what a person allowed, how to stop it, and what happened. Discovery, sagas, settlement and commerce remain available as optional extensions and are documented here as such. See [What Aroha is (and is not)](positioning.md); the April text is kept below unchanged for the record.
+> **Positioning note (2026-10-19).** This whitepaper (April 2026) frames Aroha around discovery, atomic transactions and commerce. That framing is superseded. Aroha now describes itself as the protocol for **bounded, verifiable agent authority** — who is acting, what a person allowed, how to stop it, and what happened. Discovery, sagas, settlement and commerce remain available as optional extensions. See [What Aroha is (and is not)](positioning.md); the April text is kept below unchanged for the record. Where it differs, the current [specification](spec/aroha-1.0.md) wins: since its 2026-10-25 revision the core is Layers 0–3 (19 message types, mandates in §6.5–§6.9); orchestration (former Layer 4) and preference context (former Layer 5) are in the [extensions document](spec/extensions.md); the registry baseline is HTTP, with on-chain registration optional. The licence is Apache-2.0 (MIT before 2026-10-07).
 ## Whitepaper 1.0 (Draft)
 
 **Date:** April 28, 2026

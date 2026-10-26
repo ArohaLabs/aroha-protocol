@@ -66,7 +66,7 @@ If you have existing LangChain tools and want other Aroha agents to discover and
 ```typescript
 import { langChainAgentToArohaProvider, langChainToolsToCapabilities } from "@aroha-sdk/langchain-bridge";
 import { DynamicTool } from "langchain/tools";
-import { generateKeyPairFromSeed } from "@aroha-sdk/core";
+import { generateKeyPair, generateDid } from "@aroha-sdk/core";
 
 const myTools = [
   new DynamicTool({
@@ -80,7 +80,8 @@ const myTools = [
   }),
 ];
 
-const { privateKey, did } = await generateKeyPairFromSeed("my-agent-seed");
+const { privateKey, publicKey } = await generateKeyPair();   // persist this key: it is the agent's identity
+const did = generateDid(publicKey);
 
 const server = langChainAgentToArohaProvider(myTools, {
   agentDID: did,
@@ -102,7 +103,7 @@ import { arohaCapabilityToOpenAITool } from "@aroha-sdk/langchain-bridge";
 const tool = arohaCapabilityToOpenAITool("search-flights", {
   endpoint: "http://localhost:3001",
   agentDID: "did:aroha:flight-agent",
-  callerDID: "did:aroha:my-orchestrator",
+  callerDID: "did:aroha:my-assistant",
   callerPrivateKey: myKey,
   description: "Search available flights",
   schema: {

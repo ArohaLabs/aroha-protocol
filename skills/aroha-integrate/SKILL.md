@@ -2,7 +2,7 @@
 name: aroha-integrate
 description: Add Aroha bounded authority to an existing AI agent, tool server or API — pick the smallest integration path (wrap an MCP server with mcp-guard, verify mandates in a handler, present a mandate over MCP, or run the Aroha runtime), apply it, and prove it refuses what it should. Use when asked to "add Aroha", "limit what this agent can do", "require approval before tool calls", "verify who authorised this call", or to make an agent's permissions deny-by-default.
 license: Apache-2.0
-compatibility: Node.js 22+ (TypeScript/JavaScript) or Python 3.10+. Path A needs only @aroha-sdk/mcp-guard (published, 0.2.x) and an MCP client that speaks stdio. Paths B and C need @aroha-sdk/credentials >=2.0.0 and @aroha-sdk/core >=2.0.0 (published 2026-10-19), or Python aroha >=2.0.0.
+compatibility: Node.js 22+ (TypeScript/JavaScript) or Python 3.11+. Path A needs only @aroha-sdk/mcp-guard (published, 0.2.x) and an MCP client that speaks stdio. Paths B and C need @aroha-sdk/credentials >=2.0.0 and @aroha-sdk/core >=2.0.0 (published 2026-10-19), or Python aroha >=2.0.0.
 metadata:
   project: Aroha (https://github.com/ArohaLabs/aroha-protocol)
   related-skills: aroha-mandates, aroha-receipts, aroha-python-sdk

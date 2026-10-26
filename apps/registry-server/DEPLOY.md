@@ -54,15 +54,14 @@ curl -X POST https://aroha-registry.<your-account>.workers.dev/v1/auth/keys \
 
 ## Database migrations
 
-**Owner:** to assign (no named owner yet — see `MAINTAINERS.md`).
-**Status:** manual process. Nothing below is enforced by branch protection or
-a required check; it relies on the person deploying following it.
+**Owner:** @projectmed99 (the project's one maintainer — see `MAINTAINERS.md`).
+**Status:** manual process. Nothing below is enforced by the repository
+ruleset or a required check; it relies on the person deploying following it.
 
-> **Status note (this branch):** migrations `015_agent_controller.sql` and
-> `016_mandate_revocations_redemptions.sql` — and a `017` migration being
-> added on another branch — are **not yet applied** to the remote
-> (production) D1 database. A deploy of code that reads their columns will
-> fail until they are applied using the procedure below.
+> **Status note:** this file does not record which migrations are applied to
+> the Aroha-operated (production) D1 database. A deploy of code that reads
+> columns from a migration that has not been applied will fail; run
+> `npm run db:check:remote` and use the procedure below.
 
 Scripts (from `package.json`; all wrap `scripts/migrate.mjs`, which targets
 the D1 database `aroha-registry`):

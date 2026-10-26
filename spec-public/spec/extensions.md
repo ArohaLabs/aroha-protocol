@@ -23,7 +23,7 @@ defined in core §6.4, and their envelopes follow core §6.
 
 The reference implementations are `@aroha-sdk/orchestrator` (sagas) and
 `@aroha-sdk/preferences` (preference context), published on npm. The
-orchestrator is developed in the `ArohaLabs/aroha-extensions` repository.
+orchestrator's source is not in this repository.
 
 ---
 

@@ -218,6 +218,8 @@ The merchant agent validates:
 
 ## Part II — Agent Reputation
 
+> Reputation scoring is an optional extension, not part of the core protocol ([positioning](positioning.md)). Its reference implementation, `@aroha-sdk/reputation`, is published on npm; its source is not in this repository. The on-chain contract `ArohaReputation.sol` is likewise optional.
+
 ### The Problem: Who Do You Trust?
 
 When an orchestrator queries the registry and receives 12 agents all claiming to offer `currency-conversion`, it needs a signal beyond the capability name to choose between them. Price alone is not enough — a cheap agent that fails 30% of the time costs more in saga rollback overhead than an expensive agent with 99.9% reliability.

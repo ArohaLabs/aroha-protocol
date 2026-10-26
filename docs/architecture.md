@@ -3,9 +3,9 @@
 
 # Architecture
 
-> **Positioning note (2026-10-19).** This page describes the full layer stack, including the extensions. Aroha now describes itself as the protocol for **bounded, verifiable agent authority** — who is acting, what a person allowed, how to stop it, and what happened. Discovery, sagas, settlement and commerce remain available as optional extensions and are documented here as such. See [What Aroha is (and is not)](positioning.md).
+> **Positioning note (2026-10-19).** This page describes the full layer stack, including the extensions. Aroha now describes itself as the protocol for **bounded, verifiable agent authority** — who is acting, what a person allowed, how to stop it, and what happened. Discovery, sagas, settlement and commerce remain available as optional extensions and are documented here as such. See [What Aroha is (and is not)](positioning.md). Since the specification revision of 2026-10-25, orchestration (sagas) and preference context are specified in the [extensions document](spec/extensions.md), not the core specification.
 
-Aroha is a **four-layer protocol stack** (Layers 0–3) for agent-to-agent communication, with an opt-in extension system for settlement and commerce. Each layer is independently testable and replaceable.
+Aroha is a **four-layer protocol stack** (Layers 0–3) for agent-to-agent communication, with mandates defined in Layer 3 (spec §6.5–§6.9) and optional extensions for orchestration, preference context, settlement and commerce. Each layer is independently testable and replaceable.
 
 ## Design principle: kernel + extensions
 
@@ -27,9 +27,9 @@ Everything else — billing, B2B contracts, B2C subscriptions, C2B feedback, RBA
 ├─────────────────────────────────────────────┤
 │  Extension — Orchestration (was L4)         │  saga state machine (reserve/commit/cancel)
 ├─────────────────────────────────────────────┤
-│  Layer 3 — Messaging                        │  signed JSON-LD envelopes, 15 message types
+│  Layer 3 — Messaging                        │  signed JSON-LD envelopes, 19 message types, mandates
 ├─────────────────────────────────────────────┤
-│  Layer 2 — Registry                         │  EVM smart contract + IPFS capability manifests
+│  Layer 2 — Registry                         │  pluggable (HTTP baseline; optional EVM contract) + IPFS manifests
 ├─────────────────────────────────────────────┤
 │  Layer 1 — Identity & Auth                  │  did:aroha DIDs, Ed25519, VCs
 ├─────────────────────────────────────────────┤
@@ -111,7 +111,7 @@ Protocol Extensions
 ├── aroha-credentials/  RBAC middleware + human credential issuance (ArohaMiddleware)
 └── aroha-preferences/  PreferenceProfile + filtering + satisfaction signals
 
-Developed in ArohaLabs/aroha-extensions (published on npm)
+Published on npm; source not in this repository
 ├── aroha-settlement/   IArohaSettlement — 6 backends: Null · ApiKey · Quota · Escrow · Postgres · Stripe
 ├── aroha-commerce/     B2B agreements + SLA · B2C consent + subscriptions · C2B feedback + audit
 ├── aroha-orchestrator/ SagaEngine + HITL approval gate + AgentSelector + Negotiator
@@ -128,6 +128,8 @@ Enterprise Tooling
 ```
 
 ### Smart contracts
+
+Optional; not part of the core protocol (see [positioning](positioning.md)).
 
 ```
 contracts/
@@ -166,7 +168,7 @@ Aroha uses five trust levels:
 | Level | Requirements | Permitted Operations |
 |-------|-------------|---------------------|
 | 0 | None | Read manifests, query registry |
-| 1 | On-chain registration + stake | Search, negotiate |
+| 1 | Registered with a Layer 2 registry (stake only where an optional blockchain registry requires one) | Search, negotiate |
 | 2 | Verifiable Credential from trust anchor | Reserve (low-value) |
 | 3 | Reputation ≥ 8000 | Reserve + commit (high-value) |
 | 4 | Explicit user authorization | Full access + payments |
@@ -184,7 +186,7 @@ Layer 2 is intentionally pluggable — four modes with the same `IArohaRegistry`
 graph LR
     A[Agent] -->|IArohaRegistry| B{Registry}
     B -->|In-process Maps| C[InMemoryRegistry\nno external deps]
-    B -->|HTTP SaaS| D[aroha-registry.aroha-labs.workers.dev]
+    B -->|Reference HTTP deployment| D[aroha-registry.aroha-labs.workers.dev]
     B -->|Self-hosted HTTP| E[Your own server]
     B -->|EVM on-chain| F[ArohaRegistry.sol\nAnvil / mainnet]
 ```

@@ -128,7 +128,7 @@ engine.decide("delete_repo");  // { action: "block", reason: "..." }
 
 ## Part of the Aroha Protocol
 
-`mcp-guard` is the zero-config entry point to [Aroha](https://www.aroha-labs.com) — cryptographically bounded authority for AI agents. When you outgrow session-scoped globs and need signed, verifiable, delegable authority (spending mandates, task mandates, receipts), the same rules become [Ed25519-signed mandates](https://www.aroha-labs.com/docs/mandates) that survive across agents and organisations.
+`mcp-guard` is the zero-config entry point to [Aroha](https://www.aroha-labs.com) — cryptographically bounded authority for AI agents. When you outgrow session-scoped globs and need signed, verifiable, delegable authority (spending mandates, task mandates, receipts), the same rules become [Ed25519-signed mandates](https://github.com/ArohaLabs/aroha-protocol/tree/main/packages/aroha-credentials#readme) that survive across agents and organisations.
 
 MCP calls the tools. **mcp-guard bounds what they're allowed to do.**
 

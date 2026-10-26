@@ -9,30 +9,33 @@ Deploy a Aroha provider agent to serverless infrastructure in under two minutes 
 
 ## Vercel
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/ArohaLabs/aroha-protocol/tree/main/examples/vercel&env=AROHA_PRIVATE_KEY,AROHA_AGENT_DID,ORCHESTRATOR_PUBLIC_KEY&envDescription=Aroha+agent+identity+keys)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/ArohaLabs/aroha-protocol/tree/main/examples/vercel&env=AROHA_PRIVATE_KEY,AROHA_AGENT_DID,ORCHESTRATOR_DID,ORCHESTRATOR_PUBLIC_KEY&envDescription=Aroha+agent+identity+keys)
 
 The Vercel deployment runs a Aroha provider agent as a serverless function:
 
-- **Endpoint:** `https://<your-project>.vercel.app/api/aroha`
+- **Endpoint:** `https://<your-project>.vercel.app/aroha/v1` (rewritten to `api/aroha`)
 - **DID Document:** `https://<your-project>.vercel.app/.well-known/aroha-agent.json`
-- **Runtime:** Node.js 20, ~50ms cold start
+- **Runtime:** Node.js 22 serverless function
 
 **What you get after clicking the button:**
 
 1. Vercel forks `examples/vercel/` into your GitHub account
-2. You set three environment variables:
+2. You set four environment variables:
    - `AROHA_PRIVATE_KEY` — base64-encoded Ed25519 private key
    - `AROHA_AGENT_DID` — e.g. `did:aroha:my-vercel-agent`
-   - `ORCHESTRATOR_PUBLIC_KEY` — base64 public key of the orchestrator that may call this agent
+   - `ORCHESTRATOR_DID` — DID of the calling agent that may call this agent
+   - `ORCHESTRATOR_PUBLIC_KEY` — base64 public key of that caller
 3. Vercel builds and deploys — your agent is live
 
 **Generate keys:**
 
 ```bash
-npx @aroha-sdk/cli keygen --format base64
-# Outputs:
-#   AROHA_PRIVATE_KEY=<base64>
-#   AROHA_PUBLIC_KEY=<base64>
+node -e "
+const { generateKeyPairSync } = require('crypto');
+const jwk = generateKeyPairSync('ed25519').privateKey.export({ format: 'jwk' });
+console.log('AROHA_PRIVATE_KEY=' + Buffer.from(jwk.d, 'base64url').toString('base64'));
+console.log('public key (give to callers)=' + Buffer.from(jwk.x, 'base64url').toString('base64'));
+"
 ```
 
 **Add capabilities** by editing `api/aroha.ts` in your forked repo — add entries to the `handlers` map:
@@ -46,7 +49,7 @@ const handlers = {
 };
 ```
 
-**Production note:** Replace the in-memory `NonceRegistry` with [Vercel KV](https://vercel.com/docs/storage/vercel-kv) to prevent replay attacks across function instances.
+**Production note:** Replace the in-process `NonceRegistry` with shared storage (for example Redis); otherwise replay protection does not hold across function instances.
 
 [Full Vercel setup guide →](https://github.com/ArohaLabs/aroha-protocol/blob/main/examples/vercel/README.md)
 
@@ -56,7 +59,7 @@ const handlers = {
 
 [![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/ArohaLabs/aroha-protocol/tree/main/examples/cloudflare)
 
-The Cloudflare deployment runs at the edge — 300+ global PoPs with ~0ms cold start:
+The Cloudflare deployment runs at the edge:
 
 - **Endpoint:** `https://<your-worker>.workers.dev/aroha/v1`
 - **DID Document:** `https://<your-worker>.workers.dev/.well-known/aroha-agent.json`
@@ -71,12 +74,13 @@ wrangler login
 
 # Clone the example
 git clone https://github.com/ArohaLabs/aroha-protocol
-cd aroha/examples/cloudflare
+cd aroha-protocol/examples/cloudflare
 npm install
 
 # Set secrets
 wrangler secret put AROHA_PRIVATE_KEY
 wrangler secret put AROHA_AGENT_DID
+wrangler secret put ORCHESTRATOR_DID
 wrangler secret put ORCHESTRATOR_PUBLIC_KEY
 
 # Deploy globally
@@ -84,7 +88,7 @@ wrangler deploy
 # ✅  Deployed to https://aroha-agent.<yoursubdomain>.workers.dev
 ```
 
-**Add capabilities** in `src/aroha-worker.ts` — extend the `handleCapability` switch:
+**Add capabilities** in `aroha-worker.ts` — extend the `handleCapability` switch:
 
 ```typescript
 case "translate": {
@@ -97,14 +101,7 @@ case "translate": {
 }
 ```
 
-**Production note:** Use Cloudflare KV for nonce replay prevention across isolates:
-
-```toml
-# wrangler.toml
-[[kv_namespaces]]
-binding = "Aroha_NONCES"
-id = "<your-kv-namespace-id>"
-```
+**Production note:** the example's `NonceRegistry` remembers nonces only within one isolate. Record nonces in a Durable Object (one strongly consistent owner per agent) for replay protection across isolates; Cloudflare KV is eventually consistent and is not enough.
 
 [Full Cloudflare setup guide →](https://github.com/ArohaLabs/aroha-protocol/blob/main/examples/cloudflare/README.md)
 
@@ -134,9 +131,9 @@ Both examples work locally before deploying:
 cd examples/vercel && npm install
 AROHA_PRIVATE_KEY=... AROHA_AGENT_DID=did:aroha:local npx vercel dev
 
-# Cloudflare
+# Cloudflare — put the four values in a git-ignored .dev.vars file first
 cd examples/cloudflare && npm install
-AROHA_PRIVATE_KEY=... AROHA_AGENT_DID=did:aroha:local npx wrangler dev
+npx wrangler dev
 ```
 
 ---

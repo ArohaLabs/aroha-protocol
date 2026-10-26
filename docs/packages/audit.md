@@ -47,7 +47,7 @@ Each entry receives:
 |---|---|
 | `seq` | Monotonically increasing sequence number |
 | `timestamp` | ISO 8601 timestamp at append time |
-| `hash` | SHA-256 of the entry content (keys sorted, `hash` field excluded) |
+| `hash` | SHA-256 of the entry's JSON serialisation (`hash` field excluded) |
 | `previousHash` | Hash of the previous entry — empty string for the first entry |
 
 ---
@@ -66,7 +66,12 @@ type AuditEventType =
   | "credential_issued"   // A verifiable credential was issued
   | "credential_revoked"  // A verifiable credential was revoked
   | "key_rotated"         // DID key rotation occurred
-  | "key_revoked";        // DID key was revoked
+  | "key_revoked"         // DID key was revoked
+  | "consult_answered" | "consult_refused" | "consult_failed"   // cross-agent consults
+  | "admin_consults_toggled"                                     // operator kill switch
+  | "invite_sent" | "invite_accepted" | "invite_declined" | "invite_withdrawn"
+  | "action_pending" | "action_executed" | "action_refused" | "action_failed" | "action_cancelled"
+  | "log_rotated";        // rotation seam: names the archive's final hash
 ```
 
 ---
@@ -124,4 +129,4 @@ const server = new ArohaServer({
 - The hash chain can support a **GDPR** record of processing activities (Art. 30); it does not by itself satisfy the requirement.
 - It can be used as **SOC 2** evidence that log entries were not deleted or reordered after the fact (self-assessed; whether it is sufficient is for your auditor to decide).
 - For long-term storage, periodically snapshot `log.toJSONLines()` to an append-only store (S3 Object Lock, Cloudflare R2, WORM drives).
-- `@aroha-sdk/audit` deliberately has no network I/O — it is a pure in-process log. Persistence and shipping are the application's responsibility.
+- `@aroha-sdk/audit` deliberately has no network or filesystem I/O — it is an in-process log. Persistence and shipping are the application's responsibility: pass `onAppend` to write each entry to a durable sink and `initial` to resume the chain after a restart (`new AuditLog({ initial, onAppend })`). `log.persistence()` reports how many entries the sink failed to store.

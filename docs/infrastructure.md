@@ -2,7 +2,7 @@
 
 > **Audience:** Engineers operating, deploying, or updating the Aroha platform.  
 > **Last updated:** 2026-07-08  
-> **Scope:** All systems in this monorepo (paths are relative to the repository root) — website, registry, IPFS gateway, CI/CD, auth, packages, and agents.
+> **Scope:** All systems in this monorepo (paths are relative to the repository root) — registry, IPFS gateway, CI/CD, packages, and agents. The website (with its auth setup) moved to a separate private repository on 2026-08-23; sections that still describe it are marked.
 
 ---
 
@@ -32,11 +32,10 @@
 ## 1. Monorepo Structure
 
 ```
-aroha/                          ← root (private workspace)
+aroha-protocol/                 ← root (npm workspace root, not published)
 ├── packages/                   ← @aroha-sdk/* npm packages
 ├── agents/                     ← reference agent implementations
 ├── apps/                       ← deployed applications
-│   ├── website/                ← Next.js — Vercel
 │   ├── registry-server/        ← Cloudflare Worker + D1
 │   ├── ipfs-gateway/           ← Cloudflare Worker
 │   └── status/                 ← Express health-check service
@@ -66,7 +65,7 @@ aroha/                          ← root (private workspace)
 | declarationMaps | true |
 | sourceMap | true |
 
-Individual packages extend this and add `"DOM"` to `lib` if they use Web Crypto API (e.g. `@aroha-sdk/settlement`, now in [`ArohaLabs/aroha-extensions`](https://github.com/ArohaLabs/aroha-extensions)).
+Individual packages extend this and add `"DOM"` to `lib` if they use Web Crypto API (e.g. `@aroha-sdk/settlement`, now developed outside this repository and still published on npm).
 
 ---
 
@@ -80,7 +79,7 @@ The build script compiles packages in dependency order (core first, then depende
 
 | Purpose | Runner | Config |
 |---------|--------|--------|
-| Unit tests | vitest v1.6.0 | per-package |
+| Unit tests | vitest (version in root `package.json`) | per-package |
 | Conformance tests | vitest | `vitest.conformance.config.ts` |
 
 Conformance tests live at `packages/*/src/**/*.conformance.test.ts` and run with a 15 second timeout (saga tests simulate timeouts).
@@ -117,6 +116,8 @@ All workflows live in `.github/workflows/`. They are described below in full det
 | `build-and-test` | checkout → setup Node 22 (npm cache) → `npm ci` → `npm run build` → `npm test` |
 | `lint` | checkout → `npm ci` → `npm run lint` |
 | `typecheck` | checkout → `npm ci` → `npx tsc --noEmit -p tsconfig.json` |
+
+`ci.yml` also runs durable-store (Postgres/Redis), README-example, Python, Go and Java SDK, deployment-example, npm audit, link and spec-parity jobs. Which of them are required on `main` is set by the repository ruleset — see [trust.md](trust.md).
 
 **How to update:** Edit `.github/workflows/ci.yml`. To add a new check (e.g. a formatter), add a new job or step.
 
@@ -162,7 +163,7 @@ If a deploy workflow is reintroduced, take the Vercel identifiers from repositor
 **Triggers:** GitHub release published **whose tag is** `@aroha-sdk/<name>@<version>`, `create-aroha-agent@<version>` or `npm-v*` (any other release is ignored); manual (`workflow_dispatch`)  
 **Runs on:** `ubuntu-latest`, Node 24.x  
 **Registry:** `https://registry.npmjs.org`  
-**Permissions:** `contents: read`, `id-token: write` (for OIDC provenance)
+**Permissions:** `contents: read`, `id-token: write` (granted but unused: npm provenance is not used)
 
 **Required GitHub secret:** `NPM_TOKEN`
 
@@ -190,7 +191,7 @@ npm publish --access public
 
 ### `release-gate.yml` — Pre-Release Validation
 
-**Triggers:** Push of any release tag (`@aroha-sdk/*@*`, `create-aroha-agent@*`, `python-v*`, `java-v*`, `sdks/go/v*`, `runtime-v*`, `npm-v*`); manual with a tag input  
+**Triggers:** called as the first job of every publish workflow (`workflow_call`) for its release tag (`@aroha-sdk/*@*`, `create-aroha-agent@*`, `python-v*`, `java-v*`, `sdks/go/v*`, `npm-v*`); manual with a tag input. It does not run on a bare tag push.  
 **Permissions:** `contents: read`
 
 **Validation checklist (all must pass):**
@@ -209,7 +210,7 @@ The website was extracted to its own repository on 2026-08-23 and is no
 longer built or deployed from here. Its Vercel project, environment
 variables and deploy workflow moved with it.
 
-See the `aroha-website` repository.
+It now lives in a separate, private repository (`ArohaLabs/aroha-website`).
 
 ## 5. Cloudflare Workers
 
@@ -362,6 +363,8 @@ The schema is ANSI SQL compatible. Differences to handle:
 
 ## 7. Authentication — NextAuth v5
 
+> The website, and with it this auth setup, moved to a separate private repository on 2026-08-23. The `apps/website/` paths below are in that repository, not this one.
+
 **Package:** `next-auth@5.0.0-beta.31`  
 **Config file:** `apps/website/src/auth.ts`  
 **Route:** `apps/website/src/app/api/auth/[...nextauth]/route.ts`
@@ -428,14 +431,14 @@ Update in Vercel dashboard → Environment Variables. **Note:** rotating this in
 
 ### Stripe
 
-**Purpose:** Payment settlement backend via `StripeSettlement` in `@aroha-sdk/settlement`  
+**Purpose:** Payment settlement backend via `StripeSettlement` in `@aroha-sdk/settlement` (optional extension; source not in this repository)  
 **Env var:** `STRIPE_SECRET_KEY`  
 **Pattern:** Authorize on `onReserve`, capture on `onCommit`, void on `onCancel`  
 **Dashboard:** https://dashboard.stripe.com
 
 ### Anthropic / OpenAI / Google AI
 
-**Purpose:** LLM providers used by website Studio and personal-agent  
+**Purpose:** LLM providers used by demos and agent examples  
 **Env vars:** `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GOOGLE_API_KEY`  
 **Used via:** Vercel AI SDK (`@ai-sdk/anthropic`, `@ai-sdk/openai`, `@ai-sdk/google`)
 
@@ -445,18 +448,12 @@ Update in Vercel dashboard → Environment Variables. **Note:** rotating this in
 **Package:** `@aroha-sdk/composio-bridge`  
 **Env var:** `COMPOSIO_API_KEY`
 
----------|----------|---------------|
-| GitHub | `GITHUB_TOKEN` | `agents/aroha-github-agent` |
-| Jira Cloud | `JIRA_BASE_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN` | `agents/aroha-jira-agent` |
-| Salesforce | `SF_INSTANCE_URL`, `SF_API_VERSION`, `SF_ACCESS_TOKEN` | `agents/aroha-salesforce-agent` |
-| Stripe | `STRIPE_SECRET_KEY` | `agents/aroha-stripe-agent` |
-| Zendesk | `ZENDESK_SUBDOMAIN`, `ZENDESK_EMAIL`, `ZENDESK_API_TOKEN` | `agents/aroha-zendesk-agent` |
 
 ---
 
 ## 9. Environment Variables — Complete Reference
 
-### Website (`apps/website/.env.local`)
+### Website (`apps/website/.env.local`, in the separate website repository)
 
 ```bash
 # ── NextAuth ──────────────────────────────────────────────────
@@ -547,8 +544,8 @@ AROHA_TELEMETRY=0                   # 0=off, 1=on (CLI usage telemetry)
 2. **Update `CHANGELOG.md`** — list each release tag, e.g. `@aroha-sdk/core@1.10.0` (release-gate checks this)
 3. **Ensure no `file:` deps** in any package.json (release-gate rejects these)
 4. **Push to main**, ensure CI passes
-5. **Push the tag(s)** — `release-gate.yml` runs for each
-6. **Publish a GitHub Release** from each tag — `publish-npm.yml` publishes that package
+5. **Push the tag(s)**
+6. **Publish a GitHub Release** from each tag — `publish-npm.yml` runs `release-gate.yml` first, then publishes that package
 7. Monitor the Actions run — failed packages are logged with reasons
 
 ### Manual publish (single package)
@@ -605,7 +602,7 @@ hatch publish
 
 ### Go (`sdks/go`)
 
-**Status:** unreleased (no `sdks/go/v*` tag yet; the repository is private).  
+**Status:** unreleased (no `sdks/go/v*` tag yet; pkg.go.dev has no version).  
 **Trigger:** push of a `sdks/go/v<version>` tag, or manual dispatch (which creates the tag)  
 **Module:** `github.com/ArohaLabs/aroha-protocol/sdks/go`  
 **Process:** after `go mod verify`, vet and tests, requests the version from `proxy.golang.org` so pkg.go.dev indexes it — there is no explicit publish step for Go modules.
@@ -616,7 +613,7 @@ hatch publish
 
 | Domain / Subdomain | Purpose | Points to |
 |-------------------|---------|-----------|
-| `aroha-labs.com` | Main website | Vercel |
+| `www.aroha-labs.com` | Main website (apex `aroha-labs.com` redirects here) | Vercel |
 | `registry.aroha-labs.com` | Registry API (alias, planned — not configured) | `aroha-registry.aroha-labs.workers.dev` |
 | `ipfs.aroha-labs.com` | IPFS Gateway (alias, planned — not configured) | `aroha-ipfs-gateway.aroha-labs.workers.dev` |
 | `aroha-registry.aroha-labs.workers.dev` | Registry Worker (canonical) | Cloudflare |
@@ -627,7 +624,7 @@ hatch publish
 - `https://aroha-labs.com/contexts/v1` — JSON-LD context for DID documents
 - `https://aroha-labs.com/contexts/aroha-web/v1` — web DID context
 
-**OAuth callback URLs (registered in provider dashboards):**
+**OAuth callback URLs (website repository; registered in provider dashboards):**
 ```
 https://aroha-labs.com/api/auth/callback/github
 https://aroha-labs.com/api/auth/callback/google
@@ -643,52 +640,46 @@ Cloudflare Dashboard → Workers → `aroha-registry` → Settings → Triggers 
 
 ## 13. Packages — Full List
 
-All packages are under `packages/`, published as `@aroha-sdk/*` on npm.
+Packages are under `packages/` and published as `@aroha-sdk/*` on npm, except the four marked as developed outside this repository. Versions are those of release 2.0.0 (2026-10-19); the full list of npm packages in that release, including ones not listed here (`bbs`, `delegation`, `gmail-mcp`, `mcp-guard`, `mcp-server`, `trust`), is in [CHANGELOG.md](https://github.com/ArohaLabs/aroha-protocol/blob/main/CHANGELOG.md). `@aroha-sdk/store-postgres` and `@aroha-sdk/store-redis` are not yet published.
 
 | Package name | Version | Description |
 |-------------|---------|-------------|
-| `@aroha-sdk/core` | 1.2.4 | Identity (Ed25519 key pairs, DIDs), crypto primitives, message envelope, HTTP transport |
-| `@aroha-sdk/cli` | 1.2.4 | CLI scaffolder (`create-aroha-agent`), protocol format converters |
-| `@aroha-sdk/credentials` | 1.2.2 | Spending mandates (issue, attenuate, verify), RBAC, credential registry |
-| `@aroha-sdk/registry` | 1.3.5 | Registry SDK — HTTP client, blockchain wrapper, IPFS manifest storage |
-| `@aroha-sdk/settlement` | 1.3.0 | Pluggable payment backends: Null, Quota, Stripe, Escrow, ApiKey, Postgres, AP2 |
-| `@aroha-sdk/orchestrator` | 1.2.2 | SagaEngine, agent selection, capability negotiation, settlement hooks |
+| `@aroha-sdk/core` | 2.0.0 | Identity (Ed25519 key pairs, DIDs), crypto primitives, message envelope, HTTP transport |
+| `@aroha-sdk/cli` | 1.3.0 | CLI scaffolder (`create-aroha-agent`), protocol format converters |
+| `@aroha-sdk/credentials` | 2.0.0 | Spending mandates (issue, attenuate, verify), RBAC, credential registry |
+| `@aroha-sdk/registry` | 2.0.0 | Registry SDK — HTTP client, blockchain wrapper, IPFS manifest storage |
+| `@aroha-sdk/settlement` | 2.0.0 | Pluggable payment backends: Null, Quota, Stripe, Escrow, ApiKey, Postgres, AP2 (developed outside this repository) |
+| `@aroha-sdk/orchestrator` | 1.4.0 | SagaEngine, agent selection, capability negotiation, settlement hooks (developed outside this repository) |
 | `@aroha-sdk/a2a-bridge` | 2.0.0 | A2A 1.0 (Agent2Agent) protocol adapter |
-| `@aroha-sdk/audit` | 1.2.0 | Tamper-evident append-only audit log, SIEM export |
-| `@aroha-sdk/cache` | 1.2.1 | Semantic caching with content-addressed keys |
-| `@aroha-sdk/chaos` | 1.2.1 | Chaos engineering — fault injection, compensation testing |
-| `@aroha-sdk/commerce` | 1.2.1 | Commerce patterns (B2B, B2C, C2B) |
-| `@aroha-sdk/composio-bridge` | 1.2.2 | Composio integration — exposes Aroha as Composio actions |
-| `@aroha-sdk/evals` | 1.2.2 | Evaluation harness — golden-dataset tests, LLM-as-judge |
-| `@aroha-sdk/hermes-bridge` | 1.2.3 | Hermes Agent / ZeroClaw MCP stdio bridge |
-| `@aroha-sdk/langchain-bridge` | 1.2.2 | LangChain bridge and OpenAI function tools |
-| `@aroha-sdk/mcp-bridge` | 1.2.2 | Model Context Protocol adapter |
-| `@aroha-sdk/micro` | 1.2.2 | Minimal Express-like one-file API |
-| `@aroha-sdk/openclaw-bridge` | 1.2.2 | OpenClaw bridge — skills ↔ capabilities |
-| `@aroha-sdk/policy` | 1.2.2 | Policy-as-Code, JSON boundary enforcement |
-| `@aroha-sdk/preferences` | 1.2.2 | User preference layer — filtering and scoring |
-| `@aroha-sdk/reputation` | 1.3.2 | Bayesian Beta reputation engine, 11 signals, Thompson Sampling |
-| `@aroha-sdk/resilience` | 1.2.1 | Circuit breaker, bulkhead, retry, health checks |
-| `@aroha-sdk/run` | 1.2.2 | `/v1/run` server and client — core agent request/response |
-| `@aroha-sdk/telemetry` | 1.2.2 | W3C Trace Context propagation, OpenTelemetry Gen-AI semantics |
-| `@aroha-sdk/trusted-mesh` | 1.2.2 | Skip Ed25519 verification inside VPC / mTLS environments |
-| `create-aroha-agent` | 1.2.1 | Zero-config agent scaffolder (unscoped npm package) |
+| `@aroha-sdk/audit` | 1.4.1 | Tamper-evident append-only audit log, SIEM export |
+| `@aroha-sdk/cache` | 1.2.2 | Semantic caching with content-addressed keys |
+| `@aroha-sdk/chaos` | 1.2.2 | Chaos engineering — fault injection, compensation testing |
+| `@aroha-sdk/commerce` | 1.2.3 | Commerce patterns (B2B, B2C, C2B) (developed outside this repository) |
+| `@aroha-sdk/composio-bridge` | 1.2.3 | Composio integration — exposes Aroha as Composio actions |
+| `@aroha-sdk/evals` | 1.2.3 | Evaluation harness — golden-dataset tests, LLM-as-judge |
+| `@aroha-sdk/hermes-bridge` | 1.2.5 | Hermes Agent / ZeroClaw MCP stdio bridge |
+| `@aroha-sdk/langchain-bridge` | 2.0.0 | LangChain bridge and OpenAI function tools |
+| `@aroha-sdk/mcp-bridge` | 3.0.0 | Model Context Protocol adapter |
+| `@aroha-sdk/micro` | 2.0.0 | Minimal Express-like one-file API |
+| `@aroha-sdk/openclaw-bridge` | 2.0.0 | OpenClaw bridge — skills ↔ capabilities |
+| `@aroha-sdk/policy` | 1.3.1 | Policy-as-Code, JSON boundary enforcement |
+| `@aroha-sdk/preferences` | 1.2.3 | User preference layer — filtering and scoring |
+| `@aroha-sdk/reputation` | 1.4.1 | Bayesian Beta reputation engine, 11 signals, Thompson Sampling (developed outside this repository) |
+| `@aroha-sdk/resilience` | 1.2.2 | Circuit breaker, bulkhead, retry, health checks |
+| `@aroha-sdk/run` | 2.0.0 | `/v1/run` server and client — core agent request/response |
+| `@aroha-sdk/telemetry` | 1.2.3 | W3C Trace Context propagation, OpenTelemetry Gen-AI semantics |
+| `@aroha-sdk/trusted-mesh` | 2.0.0 | Skip Ed25519 verification inside VPC / mTLS environments |
+| `create-aroha-agent` | 1.3.0 | Zero-config agent scaffolder (unscoped npm package) |
 
 ---
 
 ## 14. Agents — Full List
 
-All agents are under `agents/`, published as `@aroha-sdk/*`.
+Only `agents/mock-provider-agent` remains under `agents/` (a private workspace, not published to npm). The other demo agents were removed (see [CHANGELOG.md](https://github.com/ArohaLabs/aroha-protocol/blob/main/CHANGELOG.md), Unreleased).
 
 | Package name | Version | Description | Default port |
 |-------------|---------|-------------|-------------|
-| `@aroha-sdk/github-agent` | 1.0.0 | GitHub API — repos, PRs, issues, commits | 3060 |
-| `@aroha-sdk/jira-agent` | 1.0.0 | Jira Cloud — tickets, projects, sprints | 3061 |
-| `@aroha-sdk/salesforce-agent` | 1.0.0 | Salesforce — leads, accounts, opportunities, cases | 3062 |
-| `@aroha-sdk/stripe-agent` | 1.0.0 | Stripe — payments, customers, invoices | 3010 |
-| `@aroha-sdk/zendesk-agent` | 1.0.0 | Zendesk — tickets, users, organizations | 3011 |
-| `@aroha-sdk/mock-provider-agent` | 1.0.0 | Reference provider (Expedia-style flight/hotel booking) | 3001 |
-| `@aroha-sdk/personal-agent` | 1.0.0 | Reference orchestrator — multi-agent, preference learning, vLLM | 3000 |
+| `@aroha-sdk/mock-provider-agent` | 1.0.1 | Reference provider (Expedia-style flight/hotel booking) | 3001 |
 
 ---
 
@@ -696,7 +687,7 @@ All agents are under `agents/`, published as `@aroha-sdk/*`.
 
 | App | Framework | Hosting | Description |
 |-----|-----------|---------|-------------|
-| `@aroha-sdk/website` | Next.js 14.2.5 | Vercel | Main website — docs, playground, Studio, API keys UI |
+| `@aroha-sdk/website` | Next.js | Vercel | Main website — moved to a separate private repository on 2026-08-23; its hosted Hub, Studio, Playground and API-keys pages are offline |
 | `@aroha/registry-server` | Cloudflare Workers + D1 | Cloudflare | Agent registry REST API with SQLite database |
 | `@aroha/ipfs-gateway` | Cloudflare Workers | Cloudflare | IPFS proxy — authenticates Pinata requests, service-binds to registry |
 | `@aroha-sdk/status` | Express | Self-hosted | Health check service — polls registry and IPFS gateway |
@@ -705,8 +696,8 @@ All agents are under `agents/`, published as `@aroha-sdk/*`.
 
 ## 16. Security & Compliance
 
-**Security contact:** email the maintainer listed in [MAINTAINERS.md](https://github.com/ArohaLabs/aroha-protocol/blob/main/MAINTAINERS.md) — see [SECURITY.md](https://github.com/ArohaLabs/aroha-protocol/blob/main/SECURITY.md)  
-**GitHub advisories:** https://github.com/ArohaLabs/aroha-protocol/security/advisories/new (once the repository is public; private vulnerability reporting is not enabled while it is private)  
+**Security contact:** contact@aroha-labs.com with the subject "SECURITY" — see [SECURITY.md](https://github.com/ArohaLabs/aroha-protocol/blob/main/SECURITY.md)  
+**GitHub advisories:** https://github.com/ArohaLabs/aroha-protocol/security/advisories/new (private vulnerability reporting is enabled)  
 **Advisory expiry:** 2027-01-01  
 **License:** Apache-2.0 (Copyright 2026 Aroha Labs)
 
@@ -800,12 +791,16 @@ Quick-reference for the most common operational tasks.
 
 ### Add a new doc page to the website
 
+*In the separate website repository.*
+
 1. Create `apps/website/src/app/docs/<slug>/page.tsx`
 2. Add sidebar entry in `apps/website/src/components/docs-sidebar.tsx`
 3. Add search entry in `apps/website/src/components/search.tsx` (the `INDEX` array)
 4. Push to `main`
 
 ### Add a new blog post
+
+*In the separate website repository.*
 
 1. Add the post metadata to the `POSTS` array in `apps/website/src/app/blog/page.tsx`
 2. Create `apps/website/src/app/blog/<slug>/page.tsx` with the full post
@@ -831,7 +826,7 @@ Quick-reference for the most common operational tasks.
 
 ### Release a new version of the SDK packages
 
-See [CONTRIBUTING.md → Releasing](https://github.com/ArohaLabs/aroha-protocol/blob/main/CONTRIBUTING.md#releasing): one tag per product and version (`@aroha-sdk/<name>@<v>`, `python-v<v>`, `java-v<v>`, `sdks/go/v<v>`, `runtime-v<v>`), each listed in `CHANGELOG.md`; each publish workflow acts only on its own tags.
+See [CONTRIBUTING.md → Releasing](https://github.com/ArohaLabs/aroha-protocol/blob/main/CONTRIBUTING.md#releasing): one tag per product and version (`@aroha-sdk/<name>@<v>`, `python-v<v>`, `java-v<v>`, `sdks/go/v<v>`), each listed in `CHANGELOG.md`; each publish workflow acts only on its own tags.
 
 ### Add a new npm package
 
@@ -871,6 +866,8 @@ If D1 write throughput becomes a bottleneck:
 3. Update the registry worker to use `env.DB` as a Postgres client instead of D1
 
 ### Add a new OAuth provider to the website
+
+*In the separate website repository.*
 
 1. Add provider to `apps/website/src/auth.ts`
 2. Add env vars to Vercel dashboard

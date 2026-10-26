@@ -37,11 +37,14 @@ aroha init [name] [options]
 
 | File | Purpose |
 |------|---------|
-| `src/server.ts` | `ArohaServer` setup, DID generation, peer registry |
+| `src/server.ts` | `ArohaServer` setup, peer registry |
+| `src/identity.ts` | Loads the agent's Ed25519 key from `AROHA_PRIVATE_KEY`, generating it into `.env` on first run |
+| `src/mandate.ts` | Mandate chain verification (`AROHA_MANDATE_ROOT_DID`) |
 | `src/handlers.ts` | Message dispatch + saga (reserve/commit/cancel) skeleton |
 | `src/manifest.ts` | Capability manifest builder + registry publisher |
-| `package.json` | Dependencies: `@aroha-sdk/core`, `@aroha-sdk/registry` |
+| `package.json` | Dependencies: `@aroha-sdk/core`, `@aroha-sdk/credentials`, `@aroha-sdk/registry` |
 | `tsconfig.json` | TypeScript config |
+| `.gitignore`, `.env.example` | `.env` is git-ignored |
 | `README.md` | Agent-specific quickstart |
 
 **Generated files (orchestrator)**
@@ -51,6 +54,7 @@ aroha init [name] [options]
 | `src/server.ts` | `ArohaServer` + REST API setup |
 | `src/orchestrate.ts` | Discovery → selection → saga execution |
 | `src/intent.ts` | Natural-language → task step decomposition stub |
+| `package.json`, `tsconfig.json`, `README.md` | Project files |
 
 **Examples**
 
@@ -202,7 +206,7 @@ aroha create-bridge [options]
 
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
-| `--name` | string | prompted | Bridge name (e.g. `hubspot`) → package `aroha-hubspot-bridge` |
+| `--name` | string | prompted | Bridge name (e.g. `hubspot`) → package `@aroha-sdk/hubspot-bridge` |
 | `--sdk` | string | prompted | SDK / API being wrapped (e.g. `HubSpot`) |
 | `--out` | path | `aroha-<name>-bridge` | Output directory |
 | `-y, --yes` | boolean | `false` | Skip all prompts, use defaults |
@@ -211,7 +215,7 @@ aroha create-bridge [options]
 
 | File | Purpose |
 |------|---------|
-| `package.json` | `name: "aroha-<name>-bridge"`, peer dep on `@aroha-sdk/core` |
+| `package.json` | `name: "@aroha-sdk/<name>-bridge"`, dependency on `@aroha-sdk/core` |
 | `tsconfig.json` | TypeScript config (ESM, strict) |
 | `src/index.ts` | Public exports |
 | `src/types.ts` | Duck-typed interfaces (no hard SDK version dependency) |
@@ -230,6 +234,7 @@ cd aroha-hubspot-bridge
 
 # Implement handleCapability() in src/bridge.ts
 npm run build
+# Rename the package to a scope you own (the @aroha-sdk scope is not open to others), then:
 npm publish --access public
 ```
 
@@ -237,15 +242,16 @@ npm publish --access public
 
 ```typescript
 // src/bridge.ts — generated skeleton
-export async function handleCapability(
+async function handleCapability(
+  client: HubSpotClientLike,            // duck-typed interface from src/types.ts — no SDK import
   capability: string,
-  params: Record<string, unknown>,
-  client: { apiKey?: string }           // duck-typed — no import needed
+  params: Record<string, unknown>
 ): Promise<Record<string, unknown>> {
   switch (capability) {
-    case "get-contact":
-      // Implement your REST call here
-      throw new Error("Not implemented");
+    case "example-read": {
+      // TODO: replace with real HubSpot call
+      return { status: "ok", capability, params };
+    }
     default:
       throw new Error(`Unknown capability: ${capability}`);
   }
@@ -289,6 +295,19 @@ What it modifies:
 
 !!! tip
     Run this command from the root of a `aroha init`-generated agent directory.
+
+---
+
+### Other commands
+
+| Command | What it does |
+|---------|--------------|
+| `aroha dev [--port <n>]` | Local dev sandbox: in-memory capability registry and live dashboard (default port 3000). See [Sandbox](sandbox.md). |
+| `aroha create-app [name] [-y]` | Scaffold a multi-agent project: `orchestrator/`, `agents/worker-a/`, `agents/worker-b/`, `frontend/`, `docker-compose.yml` |
+| `aroha doctor [endpoint]` | Check Node.js version, `.env` (`AROHA_AGENT_DID`), the endpoint's DID document and that `POST /aroha/v1` answers |
+| `aroha telemetry [status\|on\|off]` | No telemetry endpoint is built in; telemetry exists only if you set `AROHA_TELEMETRY_ENDPOINT` to an https URL you control |
+
+There is no `call`, `publish`, `discover`, `keygen` or `conformance` command.
 
 ---
 

@@ -77,7 +77,7 @@ Tiers create a **graduated trust ladder** — entry is easy, elevation requires 
 
 ## Tier 3 — Certified
 
-**How to enter:** Contact the Aroha maintainers to initiate the Certified review process. Intended for production integrations and implementations used in enterprise deployments.
+**How to enter:** Contact the Aroha maintainer (contact@aroha-labs.com) to initiate the Certified review process. Intended for production integrations and implementations used in enterprise deployments.
 
 **Requirements (all must be met):**
 - [ ] All Tier 2 requirements

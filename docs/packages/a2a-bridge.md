@@ -13,8 +13,9 @@ Aroha is complementary to A2A: A2A is the transport, Aroha adds authority. The b
 
 !!! note "No envelope proof"
     A2A messages carry no Aroha Ed25519 envelope proof. An envelope produced by
-    `a2aToAroha` is unsigned. Authority comes from verifying the mandate token
-    (`verifyMandate` from `@aroha-sdk/credentials`); caller identity comes from
+    `a2aToAroha` is unsigned. Authority comes from verifying the mandate chain
+    (`a2aToArohaVerified` / `verifyA2aMandate`, with `verifyMandateChain` from
+    `@aroha-sdk/credentials`); caller identity comes from
     the A2A transport's own authentication. For full envelope signing, convert
     the agent natively with the [A2A conversion recipe](../recipes/convert-from-a2a.md).
 

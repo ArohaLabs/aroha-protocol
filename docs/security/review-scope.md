@@ -29,9 +29,9 @@ Execute an independent security review of the Aroha 1.0 reference implementation
 | `packages/aroha-core` | Core protocol: envelope signing, DID operations, saga state machine |
 | `packages/aroha-credentials` | Verifiable credential issuance and verification |
 | `packages/aroha-registry` | Agent registration and capability discovery |
-| `aroha-extensions/packages/aroha-orchestrator` | Saga coordinator logic — most complex failure mode surface |
+| `@aroha-sdk/orchestrator` (published on npm; source not in this repository) | Saga coordinator logic — most complex failure mode surface |
 | `packages/aroha-policy` | Access control and policy enforcement |
-| `aroha-extensions/packages/aroha-settlement` | Payment and escrow — financial risk surface |
+| `@aroha-sdk/settlement` (published on npm; source not in this repository) | Payment and escrow — financial risk surface |
 | `packages/aroha-trusted-mesh` | Trust mesh composition |
 | Cryptographic primitives | Ed25519 key generation, signing, verification; nonce/replay prevention |
 | DID method implementation | Key rotation, DID document integrity |

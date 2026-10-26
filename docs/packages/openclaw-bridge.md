@@ -7,7 +7,7 @@ Aroha ↔ OpenClaw bridge. OpenClaw is a local personal AI assistant that connec
 
 This bridge works in both directions:
 
-- **`arohaCapabilityToOpenClawSkill()`** — exposes a remote Aroha capability as an OpenClaw skill. Your assistant calls it by name and Aroha handles identity, signing, and settlement.
+- **`arohaCapabilityToOpenClawSkill()`** — exposes a remote Aroha capability as an OpenClaw skill. Your assistant calls it by name and the bridge handles identity and signing. It does not attach a spending mandate; an agent that requires one rejects the call.
 - **`openClawSkillToArohaHandler()`** — wraps an existing OpenClaw skill as an Aroha message handler so other Aroha agents can call it via signed envelopes.
 
 ```bash
@@ -25,20 +25,20 @@ Create a file in your OpenClaw plugins directory:
 import { arohaCapabilityToOpenClawSkill } from "@aroha-sdk/openclaw-bridge";
 import { generateDID }                    from "@aroha-sdk/core";
 
-const identity = await generateDID("my-openclaw-caller");
+const identity = await generateDID("my-openclaw-caller", "https://caller.example/aroha/v1");
 
 export default {
   name: "aroha-travel",
   skills: [
     arohaCapabilityToOpenClawSkill("search-flights", {
-      endpoint:         "http://travel-agent.aroha-labs.com",
+      endpoint:         "https://travel-agent.example/aroha/v1",
       agentDID:         "did:aroha:travel-agent-prod",
       callerDID:        identity.did,
       callerPrivateKey: identity.privateKey,
       description:      "Search and book flights via the Aroha travel network",
     }),
     arohaCapabilityToOpenClawSkill("get-weather", {
-      endpoint:         "http://weather.aroha-labs.com",
+      endpoint:         "https://weather.example/aroha/v1",
       agentDID:         "did:aroha:weather-agent",
       callerDID:        identity.did,
       callerPrivateKey: identity.privateKey,
@@ -62,6 +62,7 @@ import { ArohaServer }                 from "@aroha-sdk/core";
 
 const myOpenClawSkill = {
   name: "translate",
+  description: "Translate text into another language",
   execute: async ({ text, targetLang }) => translateText(text, targetLang),
 };
 
@@ -78,25 +79,24 @@ const server = new ArohaServer({
 await server.start();
 ```
 
+`openClawSkillToArohaHandler` throws if `agentDID` or a 32-byte `agentPrivateKey` is missing. `keyId` (default `${agentDID}#key-1`) sets the verification method of the reply proof.
+
 ---
 
 ## createArohaOpenClawPlugin()
 
-Helper that registers multiple Aroha capabilities as a single OpenClaw plugin from a capability manifest:
+Helper that bundles several Aroha capabilities into a single OpenClaw plugin:
 
 ```typescript
 import { createArohaOpenClawPlugin } from "@aroha-sdk/openclaw-bridge";
 
-const plugin = await createArohaOpenClawPlugin({
-  pluginName:       "aroha-suite",
-  callerDID:        identity.did,
-  callerPrivateKey: identity.privateKey,
-  capabilities: [
-    { endpoint: "http://travel.example.com", agentDID: "did:aroha:travel-agent", capabilityId: "search-flights" },
-    { endpoint: "http://finance.example.com", agentDID: "did:aroha:finance-agent", capabilityId: "get-exchange-rate" },
-    { endpoint: "http://weather.example.com", agentDID: "did:aroha:weather-agent", capabilityId: "get-weather" },
-  ],
-});
+const caller = { callerDID: identity.did, callerPrivateKey: identity.privateKey };
+
+const plugin = createArohaOpenClawPlugin("aroha-suite", [
+  { capabilityId: "search-flights",    description: "Search flights",       endpoint: "https://travel.example.com/aroha/v1",  agentDID: "did:aroha:travel-agent",  ...caller },
+  { capabilityId: "get-exchange-rate", description: "Get an exchange rate", endpoint: "https://finance.example.com/aroha/v1", agentDID: "did:aroha:finance-agent", ...caller },
+  { capabilityId: "get-weather",       description: "Get the weather",      endpoint: "https://weather.example.com/aroha/v1", agentDID: "did:aroha:weather-agent", ...caller },
+]);
 
 export default plugin;
 ```
@@ -107,20 +107,20 @@ export default plugin;
 
 ```typescript
 interface ArohaSkillOptions {
-  /** URL of the Aroha agent. */
+  /** HTTP endpoint of the remote Aroha agent. */
   endpoint: string;
-  /** DID of the Aroha agent to call. */
+  /** DID of the remote Aroha agent. */
   agentDID: string;
-  /** Capability ID to invoke (matches the agent's registered capability). */
-  capabilityId?: string;
-  /** Caller DID for signing outbound envelopes. */
+  /** DID of this OpenClaw plugin acting as a caller. */
   callerDID: string;
-  /** Ed25519 private key for signing. */
+  /** Ed25519 private key for signing envelopes. */
   callerPrivateKey: Uint8Array;
-  /** Human-readable description shown in the assistant's help text. */
-  description?: string;
-  /** Timeout per call in ms. Default: 30_000 */
-  timeoutMs?: number;
+  /** Human-readable description used by the LLM to decide when to call this skill. */
+  description: string;
+  /** JSON Schema properties for the skill's parameters. */
+  parameters?: OpenClawSkill["parameters"];
+  /** ArohaClient to send with. Default: a new ArohaClient. */
+  client?: ArohaClient;
 }
 ```
 

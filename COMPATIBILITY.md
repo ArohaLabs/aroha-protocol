@@ -4,7 +4,7 @@ This document defines the stability guarantees for the Aroha Protocol and SDK.
 
 ## Stability Tiers
 
-Every package under `packages/` is listed below. Packages are versioned **independently**; the version shown is the one published on 2026-10-19 (release `npm-v2026.10.19`).
+Every npm package published in release `npm-v2026.10.19` (2026-10-19) is listed below, at the version published then. Packages are versioned **independently**. `@aroha-sdk/orchestrator`, `@aroha-sdk/settlement`, `@aroha-sdk/commerce` and `@aroha-sdk/reputation` are no longer developed in this repository; they stay on npm at the versions shown. `@aroha-sdk/store-postgres` and `@aroha-sdk/store-redis` (0.1.0) are in `packages/` but not yet published.
 
 ### Stable (semver-protected)
 
@@ -56,7 +56,7 @@ These may change shape or be removed in any release. Do not use them for product
 | `@aroha-sdk/delegation` | 0.3.0 | Multi-hop delegation, mandate-chain verification |
 | `@aroha-sdk/evals` | 1.2.3 | Evaluation harness (`aroha-evals` binary) |
 | `@aroha-sdk/gmail-mcp` | 0.1.1 | Gmail MCP server |
-| `@aroha-sdk/mcp-server` | 2.0.0 | MCP server for the Aroha Hub |
+| `@aroha-sdk/mcp-server` | 2.0.0 | MCP server: stdio and remote (Streamable HTTP + OAuth) connector |
 | `@aroha-sdk/openclaw-bridge` | 2.0.0 | OpenClaw bridge |
 | `@aroha-sdk/preferences` | 1.2.3 | Preference profile, filter, scoring |
 | `@aroha-sdk/reputation` | 1.4.1 | Reputation engine — API not finalised |
@@ -74,7 +74,7 @@ There are no `@aroha-sdk/escrow`, `@aroha-sdk/postgres` or `@aroha-sdk/stripe` p
 
 ### `@aroha-sdk/mcp-bridge` 1.2.2 → 2.0.0
 
-Released in commit `b27e866` (`fix(mcp-bridge)!`). This was a security fix and shipped **without** the deprecation period described below.
+Released in commit `b27e866` (`fix(mcp-bridge)!`, in the private development history; not in this repository's public history). This was a security fix and shipped **without** the deprecation period described below.
 
 - **`handlers` is now required** on `WrapMcpOptions`, keyed by MCP tool name. In 1.x, `wrapMcp()` never called the tool: it returned a placeholder `{ _note: "Handled by MCP tool: X" }`. `start()` now throws if any tool has no handler.
 - **`resolvePublicKey` is now required.** Every inbound request is now checked by `validateEnvelope()` (signature, expiry, nonce replay). In 1.x no verification ran. Use `registryPublicKeyResolver()` for the common case.
@@ -127,4 +127,4 @@ The token encoding (JSON body → UTF-8 bytes → Ed25519 sign) is stable and do
 
 ---
 
-*Last updated: 2026-10-06*
+*Last updated: 2026-10-25*

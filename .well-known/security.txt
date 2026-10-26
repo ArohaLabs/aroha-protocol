@@ -1,6 +1,7 @@
-# Contact is the project's security mailbox, which reaches the maintainer (see MAINTAINERS.md).
-# GitHub private vulnerability reporting is not enabled.
-Contact: mailto:security@aroha-labs.com
+# Email reaches the maintainer (see MAINTAINERS.md); put SECURITY in the subject line.
+# GitHub private vulnerability reporting is enabled (second Contact line).
+Contact: mailto:contact@aroha-labs.com
+Contact: https://github.com/ArohaLabs/aroha-protocol/security/advisories/new
 Expires: 2027-01-01T00:00:00.000Z
 Preferred-Languages: en
 # The policy is SECURITY.md in the repository root.

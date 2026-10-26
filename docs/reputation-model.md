@@ -6,6 +6,8 @@
 
 *This document specifies the v1.1 reputation model. The v1.0 EMA-based model remains supported for backwards compatibility. Implementations SHOULD migrate to v1.1.*
 
+> This model is an optional extension, not part of the core Aroha specification ([positioning](positioning.md)); the core specification defines only the EMA score of the optional on-chain registry ([§5.3](spec/aroha-1.0.md#53-reputation)). The reference implementation, `@aroha-sdk/reputation`, is published on npm; its source is not in this repository.
+
 ---
 
 ## Motivation

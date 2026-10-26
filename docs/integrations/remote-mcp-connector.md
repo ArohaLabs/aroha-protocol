@@ -30,7 +30,7 @@ tested against any hosted assistant.
 ## Enterprise-Managed Authorization (ID-JAG)
 
 Specs: the MCP extension `io.modelcontextprotocol/enterprise-managed-authorization`
-([ext-auth, specification/stable](https://github.com/modelcontextprotocol/ext-auth/blob/main/specification/stable/enterprise-managed-authorization.mdx),
+([ext-auth, specification/stable](https://github.com/modelcontextprotocol/ext-auth/blob/main/specification/stable/enterprise-managed-authorization/2026-07-28/enterprise-managed-authorization.mdx),
 status Stable, last changed 2026-06-18) and
 [draft-ietf-oauth-identity-assertion-authz-grant-04](https://datatracker.ietf.org/doc/draft-ietf-oauth-identity-assertion-authz-grant/)
 (2026-05-21).

@@ -9,9 +9,9 @@ This recipe walks through converting an agent that already has business logic (e
 
 ## Prerequisites
 
-- Node.js ≥ 20, TypeScript ≥ 5.4
+- Node.js ≥ 22, TypeScript ≥ 5.4
 - Existing service with at least one HTTP endpoint that performs a query or transaction
-- `@aroha-sdk/core` and `@aroha-sdk/registry` packages from this monorepo
+- `@aroha-sdk/core` and `@aroha-sdk/registry` (published on npm; `@aroha-sdk/credentials` for Phase 5)
 
 ```bash
 npm install @aroha-sdk/core @aroha-sdk/registry
@@ -46,7 +46,8 @@ console.log(identity.document);      // DID Document — serve this at /.well-kn
 ### 1.2 Start ArohaServer
 
 ```typescript
-import { ArohaServer, ArohaRole } from "@aroha-sdk/core";
+import { ArohaServer } from "@aroha-sdk/core";
+import { ArohaRole } from "@aroha-sdk/credentials";
 import { handleMessage } from "./handlers.js";  // your business logic (Phase 2)
 
 // Seed peers whose messages you will accept (expand as you integrate peers)
@@ -300,7 +301,7 @@ async function handleCancel(
 
 **Checkpoint:** run a reserve, commit and cancel round trip against your agent and check
 that each returns its acknowledgement (`ArohaReserveAck`, `ArohaCommitAck`, `ArohaCancelAck`).
-Sagas are an extension (`@aroha-sdk/orchestrator`, developed in `ArohaLabs/aroha-extensions`).
+Sagas are an extension ([extensions](../spec/extensions.md)); the saga coordinator `@aroha-sdk/orchestrator` is published on npm (1.4.0) and its source is no longer in this repository.
 
 ---
 
@@ -372,10 +373,10 @@ import { ArohaIpfsClient } from "@aroha-sdk/registry/ipfs";
 const ipfs = new ArohaIpfsClient({ endpoint: "https://aroha-ipfs-gateway.aroha-labs.workers.dev" });
 const manifestCID = await ipfs.add(JSON.stringify(manifest));
 
-// Register with the HTTP registry (SaaS or self-hosted)
+// Register with an HTTP registry: the reference deployment or your own (apps/registry-server)
 const registry = new ArohaHttpRegistry({
   baseUrl: "https://aroha-registry.aroha-labs.workers.dev",  // or your self-hosted URL
-  apiKey: process.env.Aroha_REGISTRY_API_KEY!,
+  apiKey: process.env.Aroha_REGISTRY_API_KEY!,              // org key issued by that registry's operator
 });
 
 await registry.register(identity.did, manifestCID, identity.publicKey);
@@ -407,7 +408,7 @@ Callers include credentials in the `ArohaRequest` or `ArohaReserve` body:
 ### 5.2 Verify in your handler
 
 ```typescript
-import { verifyHumanCredential, CredentialRegistry } from "@aroha-sdk/core";
+import { verifyHumanCredential, CredentialRegistry } from "@aroha-sdk/credentials";
 
 const credentialRegistry = new CredentialRegistry();
 

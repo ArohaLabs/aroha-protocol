@@ -15,10 +15,10 @@
 This playbook describes what the project can actually do today:
 
 - **One maintainer.** Every role below is held by the same person. There is no second reviewer, no on-call rotation and no paging.
-- **One intake channel:** the email address in [SECURITY.md](../../SECURITY.md). GitHub private vulnerability reporting and GitHub security advisories are **not enabled**.
+- **Two intake channels**, both described in [SECURITY.md](../../SECURITY.md): email to contact@aroha-labs.com with the subject "SECURITY", and [GitHub private vulnerability reporting](https://github.com/ArohaLabs/aroha-protocol/security/advisories/new).
 - **No private security fork.** Fixes are prepared on a local, unpushed branch until release (see Phase 3).
 - **Automated detection is minimal.** The only automated alert is the weekly scheduled conformance run, which opens or updates a GitHub issue on failure.
-- **Release controls are manual.** Branch protection, tag protection and required reviewers on the `release` environment are not available on the current repository plan.
+- **Release controls are partly enforced.** A ruleset on `main` requires a pull request with one approving review from a code owner, required status checks and signed commits; a tag ruleset restricts creating, updating and deleting release tags; and the `release` environment requires an approval before each publish. The three organisation admins can bypass both.
 
 ---
 
@@ -49,7 +49,7 @@ All roles are held by the Core Maintainer (@projectmed99), who is also the actin
 
 ## Phase 1 — Intake & Triage
 
-1. **Receive report** by email (address in [SECURITY.md](../../SECURITY.md)).
+1. **Receive report** by email (contact@aroha-labs.com, subject "SECURITY") or through GitHub private vulnerability reporting (see [SECURITY.md](../../SECURITY.md)).
 2. **Acknowledge** to the reporter within 48 hours (best-effort target from SECURITY.md).
 3. **Assess severity** using the table above. When uncertain, choose the higher severity.
 4. **Record the incident privately** — in a private note or local file held by the maintainer. Do not use public issues.
@@ -80,7 +80,7 @@ All roles are held by the Core Maintainer (@projectmed99), who is also the actin
 
 ## Phase 3 — Fix Development
 
-1. **Develop the fix** on a local branch that is not pushed until release. (There is no private security fork; the repository's collaborators can see pushed branches.)
+1. **Develop the fix** on a local branch that is not pushed until release. (There is no private security fork; the repository is public, so pushed branches are visible to everyone.)
 2. **Review** — the maintainer self-reviews. There is no second maintainer. Where the reporter agrees, ask them to validate the fix privately before release.
 3. **Test** — all existing tests must pass; add a regression test for the control weakness.
 
@@ -98,7 +98,7 @@ All roles are held by the Core Maintainer (@projectmed99), who is also the actin
 4. **Notify** known downstream integrations.
 5. **Update** the security table in [trust.md](../trust.md).
 
-A CVE identifier, if needed, must be requested through a CVE Numbering Authority; GitHub advisories are not available to this repository today.
+A CVE identifier, if needed, must be requested through a CVE Numbering Authority, for example from a GitHub security advisory on this repository.
 
 ---
 
@@ -118,7 +118,7 @@ Within 5 business days of resolution:
 
 | Resource | Link |
 |----------|------|
-| Security intake (email) | [SECURITY.md](../../SECURITY.md) |
+| Security intake (email or GitHub private vulnerability reporting) | [SECURITY.md](../../SECURITY.md) |
 | Maintainer contact | [MAINTAINERS.md](../../MAINTAINERS.md) |
 | Key and secret management | [key-management.md](key-management.md) |
 | Threat model | [threat-model.md](threat-model.md) |

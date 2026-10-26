@@ -1,10 +1,13 @@
-<!-- Internal note — this file exists only in the private monorepo and is
-     never pushed to the public spec repo. -->
+<!-- Internal note — maintainer process for the spec copies. It is not mirrored
+     to ArohaLabs/aroha-spec. -->
 
-# Published: github.com/ArohaLabs/aroha-spec
+# Spec mirror: github.com/ArohaLabs/aroha-spec (private)
 
-This directory is the staging copy of the **public** spec repo. The public repo
-is the canonical face; this directory is where edits originate.
+This directory is the staging copy of the `ArohaLabs/aroha-spec` repo, which is
+private. The specification is public in `ArohaLabs/aroha-protocol` and as ReSpec
+HTML at https://www.aroha-labs.com/spec/aroha-1.0.html and
+https://www.aroha-labs.com/spec/did-aroha-method-1.0.html; this directory is
+where edits originate.
 
 ## The three copies
 
@@ -14,7 +17,7 @@ The spec exists in three places, and `sync.sh` is what keeps them equal:
 |------|------|
 | `spec-public/spec/` | **Source of truth.** Edit here, nowhere else. |
 | `docs/spec/` | Monorepo mirror. Referenced by README, CONTRIBUTING, CHARTER, CODEOWNERS. May hold extra internal drafts (e.g. `cncf-sandbox-proposal.md`). |
-| `ArohaLabs/aroha-spec` | Public GitHub repo. Never edit directly. |
+| `ArohaLabs/aroha-spec` | Private GitHub repo. Never edit directly. |
 
 The old instructions here were a manual `cp` of two of the three, which is how
 `docs/spec/did-method.md` ended up a full section behind the source of truth

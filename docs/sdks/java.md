@@ -3,12 +3,13 @@
 
 # Java SDK
 
-**Artifact:** `com.aroha-labs:aroha-sdk:1.0.0` · **Requires:** Java 21+ · **Build:** Maven 3
+**Artifact (not released yet):** `com.aroha-labs:aroha-sdk:1.0.0` · **Requires:** Java 21+ · **Build:** Maven 3
 
 ## Installation
 
-> **Not on Maven Central.** `com.aroha-labs:aroha-sdk` has not been published, so the coordinates
-> below resolve only after you install the SDK into your local Maven repository from a checkout:
+> **Not released yet.** `com.aroha-labs:aroha-sdk` is not on Maven Central, so the coordinates
+> below resolve only after you build and install the SDK into your local Maven repository from a
+> checkout of https://github.com/ArohaLabs/aroha-protocol:
 >
 > ```bash
 > cd sdks/java && mvn -B install
@@ -191,7 +192,7 @@ Map<String, Object> envelope = ArohaEnvelope.build(
 
 ### `ArohaEnvelope.validate(...)`
 
-Validates an inbound envelope: recipient → expiry → nonce → signature.
+Validates an inbound envelope: recipient → timestamps → signature → nonce (the nonce is recorded only after the signature verifies).
 
 ```java
 import com.arohalabs.messages.ArohaEnvelope;
@@ -247,8 +248,12 @@ MessageTypes.Aroha_CANCEL_ACK    // "ArohaCancelAck"
 MessageTypes.Aroha_DELEGATE      // "ArohaDelegate"
 MessageTypes.Aroha_ERROR         // "ArohaError"
 MessageTypes.Aroha_SATISFACTION  // "ArohaSatisfactionSignal"
+MessageTypes.Aroha_SPENDING_MANDATE   // "ArohaSpendingMandate"
+MessageTypes.Aroha_TASK_MANDATE       // "ArohaTaskMandate"
+MessageTypes.Aroha_DISPUTE            // "ArohaDispute"
+MessageTypes.Aroha_DISPUTE_RESOLUTION // "ArohaDisputeResolution"
 
-MessageTypes.ALL  // Set<String> of all 15 types
+MessageTypes.ALL  // Set<String> of all 19 types
 ```
 
 ### `MessageTypes.ErrorCode`
@@ -278,6 +283,7 @@ ErrorCode.SERVICE_UNAVAILABLE       // "Aroha_SERVICE_UNAVAILABLE"
 // Generic
 ErrorCode.INTERNAL_ERROR            // "Aroha_INTERNAL_ERROR"
 ErrorCode.INVALID_PARAMS            // "Aroha_INVALID_PARAMS"
+// … and 11 more (CSN, task-mandate enforcement, settlement); ErrorCode.ALL holds all 28
 ```
 
 !!! warning "Wire format"
@@ -443,18 +449,19 @@ if (result.success()) {
 ```java
 import com.arohalabs.bridges.SpringAiBridge;
 
-// Wrap a Aroha capability as a Spring AI tool
-var tool = SpringAiBridge.arohaCapabilityAsTool(
-    "did:aroha:fx-agent",
-    "https://fx.example.com/aroha/v1",
-    "convert",
-    client,
-    identity
+// Aroha capabilities of discovered agents as Spring AI ToolCallbacks
+var tools = SpringAiBridge.toolsForAgent(
+    agents,                       // List<Map<String,Object>>: "did", "endpoint", "manifest"
+    List.of("convert"),
+    identity.did(),
+    identity.keyId(),
+    identity.privateKey(),
+    client
 );
 ```
 
 !!! note
-    The Spring AI bridge is currently a stub. Full implementation is on the roadmap. Community contributions welcome — see the [GitHub repo](https://github.com/ArohaLabs/aroha-protocol).
+    Needs Spring AI 1.0.x (`org.springframework.ai:spring-ai-model`) on the classpath; the SDK declares it optional.
 
 ---
 
@@ -590,8 +597,7 @@ See [@aroha-sdk/credentials →](../packages/credentials.md)
 import com.arohalabs.mandate.ArohaMandateCredential;
 import com.arohalabs.mandate.ArohaMandateCredential.*;
 
-var constraints = SpendingConstraints.builder()
-    .spendLimitUsd(500.0)
+var constraints = SpendingConstraints.builder(500.0)
     .currency("USD")
     .build();
 
@@ -600,16 +606,15 @@ var intent = ArohaMandateCredential.issueIntent(
     "did:aroha:personal-agent",
     constraints,
     userPrivKey,
-    3_600_000L
+    Duration.ofHours(1)
 );
 
-var cartConstraints = SpendingConstraints.builder()
-    .spendLimitUsd(79.99)
-    .allowedMerchants(List.of("did:aroha:bookshop"))
+var cartConstraints = SpendingConstraints.builder(79.99)
+    .merchants(List.of("did:aroha:bookshop"))
     .build();
 
 var cart = ArohaMandateCredential.attenuateToCart(
-    intent, "did:aroha:shopping-orchestrator", cartConstraints, personalAgentKey, 0L
+    intent, "did:aroha:shopping-orchestrator", cartConstraints, personalAgentKey, null   // null = the parent's expiry
 );
 
 var result = ArohaMandateCredential.verify(

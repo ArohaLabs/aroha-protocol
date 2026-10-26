@@ -78,12 +78,12 @@ const bridge = createBridge({
 ```bash
 # Prerequisites: Node.js ≥22, npm ≥10
 git clone https://github.com/ArohaLabs/aroha-protocol.git
-cd aroha
+cd aroha-protocol
 npm install && npm run build
 
 # Scaffold a new agent/bridge
-npx @aroha-sdk/cli create-agent my-agent
-npx @aroha-sdk/cli create-bridge my-bridge
+npx create-aroha-agent my-agent
+npx @aroha-sdk/cli create-bridge --name my-bridge
 ```
 
 ---
@@ -93,7 +93,7 @@ npx @aroha-sdk/cli create-bridge my-bridge
 ### Run the conformance suite locally
 
 ```bash
-# From the aroha repo root
+# From the aroha-protocol repo root
 npm test
 
 # Run only conformance tests (uses the dedicated conformance config)
@@ -146,7 +146,7 @@ Add your package to [docs/ecosystem.md](../ecosystem.md) using this template:
 
 ### Step 3 — Wait for review
 
-Ecosystem Maintainers review within **10 business days**. They may request:
+The maintainer (see [MAINTAINERS.md](../../MAINTAINERS.md)) reviews within **10 business days**. They may request:
 - Additional documentation
 - Conformance evidence
 - A bug fix before listing
@@ -163,14 +163,14 @@ Once approved, your entry is merged and you'll appear in the ecosystem docs. Ver
 |-------------|-------------|
 | Listed | Ecosystem listing; monthly report mention |
 | Verified | Verified badge; featured highlight |
-| Certified | Certified badge; co-authored blog post; W3C CG credit |
+| Certified | Certified badge; co-authored blog post |
 | First implementation in a language | "Pioneer" recognition |
 
 ---
 
 ## Support
 
-- **Questions about the protocol:** email the maintainer listed in [MAINTAINERS.md](../../MAINTAINERS.md) or open a [GitHub Issue](https://github.com/ArohaLabs/aroha-protocol/issues)
+- **Questions about the protocol:** ask in [GitHub Discussions](https://github.com/ArohaLabs/aroha-protocol/discussions) or open a [GitHub Issue](https://github.com/ArohaLabs/aroha-protocol/issues)
 - **Questions about your submission:** comment on your open PR
 - **Conformance questions:** open a conformance report issue
 - **Security issues:** see [SECURITY.md](../../SECURITY.md)

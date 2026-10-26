@@ -21,7 +21,7 @@ All variables are optional unless marked **required**.
 
 | Variable | Default | Used by | Description |
 |----------|---------|---------|-------------|
-| `Aroha_REGISTRY_URL` | `https://aroha-registry.aroha-labs.workers.dev` | `@aroha-sdk/registry` (`ArohaHttpRegistry`) | Base URL of the Aroha HTTP registry. |
+| `AROHA_REGISTRY_URL` | `https://aroha-registry.aroha-labs.workers.dev` | `@aroha-sdk/registry` (`ArohaHttpRegistry`) | Base URL of the Aroha HTTP registry. |
 | `Aroha_API_KEY` | — | `ArohaHttpRegistry` | API key for the HTTP registry. Required for `register()` and `updateManifest()`. |
 | `IPFS_ENDPOINT` | `https://aroha-ipfs-gateway.aroha-labs.workers.dev` | `ArohaIpfsClient` | IPFS gateway endpoint for publishing / fetching capability manifests. |
 

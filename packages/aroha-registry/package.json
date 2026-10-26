@@ -77,6 +77,15 @@
     "ethers": "^6.13.0"
   },
   "license": "Apache-2.0",
+  "homepage": "https://github.com/ArohaLabs/aroha-protocol/tree/main/packages/aroha-registry#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ArohaLabs/aroha-protocol.git",
+    "directory": "packages/aroha-registry"
+  },
+  "bugs": {
+    "url": "https://github.com/ArohaLabs/aroha-protocol/issues"
+  },
   "engines": {
     "node": ">=22"
   }

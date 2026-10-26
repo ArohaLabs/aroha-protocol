@@ -16,8 +16,8 @@ This page never contains secret values. It records what each secret is for, wher
 
 | # | Secret / key | Where stored | State (2026-10-09) | Custodian |
 |---|---|---|---|---|
-| 1 | `NPM_TOKEN` | GitHub Actions repository secret | Exists | owner — to assign |
-| 2 | `VERCEL_TOKEN` | GitHub Actions repository secret | Exists; not referenced by any current workflow | owner — to assign |
+| 1 | `NPM_TOKEN` | GitHub Actions secret | **Not yet set** on `ArohaLabs/aroha-protocol` (verified 2026-10-26) | owner — to assign |
+| 2 | `VERCEL_TOKEN` | GitHub Actions secret | **Not yet set**; not referenced by any current workflow | owner — to assign |
 | 3 | `ADMIN_SECRET` | Cloudflare Worker secret (`apps/registry-server`) | Deployed | owner — to assign |
 | 4 | `PINATA_JWT` | Cloudflare Worker secrets (`apps/ipfs-gateway`, `apps/registry-server`) | Deployed (owner to confirm on both Workers) | owner — to assign |
 | 5 | `CREDENTIAL_SECRET` | Cloudflare Worker secret (planned) | **Planned — not yet deployed** | owner — to assign |
@@ -28,7 +28,7 @@ This page never contains secret values. It records what each secret is for, wher
 | 10 | Windows Authenticode certificate (`WINDOWS_CERTIFICATE`) | GitHub Actions secret (planned) | **Planned — not provisioned** | owner — to assign |
 | 11 | `CLOUDFLARE_API_TOKEN` (+ `CLOUDFLARE_ACCOUNT_ID`) | GitHub Actions secret (planned) | **Planned — not provisioned** | owner — to assign |
 
-Verified facts behind this table (2026-10-09): the GitHub repository `ArohaLabs/aroha-protocol` is private on a free plan, and its only repository secrets are `NPM_TOKEN` and `VERCEL_TOKEN`. No `SONATYPE_*`, `GPG_*`, `APPLE_*` or `CLOUDFLARE_API_TOKEN` secret exists. On a free plan for a private repository, branch protection and environment protection rules cannot be enforced, so a workflow's `environment:` setting is a label, not an approval gate.
+Verified facts behind this table (2026-10-09): the GitHub repository `ArohaLabs/aroha-protocol` is private on a free plan, and its only repository secrets are `NPM_TOKEN` and `VERCEL_TOKEN`. No `SONATYPE_*`, `GPG_*`, `APPLE_*` or `CLOUDFLARE_API_TOKEN` secret exists. On a free plan for a private repository, branch protection and environment protection rules cannot be enforced, so a workflow's `environment:` setting is a label, not an approval gate. Since 2026-10-25 `ArohaLabs/aroha-protocol` is public and that plan limitation no longer applies. Re-checked 2026-10-26: the repository has no secrets yet, and the `release` environment requires approval from @projectmed99 or @rajganesan-aroha-labs.
 
 ## Standard compromise procedure
 
@@ -93,7 +93,7 @@ Recommended rotation cadences below are **targets**, labelled as such. None is o
 
 ## 6. Licence-issuer signing key
 
-- **Purpose:** Ed25519 key that signs licence files for licensed add-ons of `ArohaLabs/aroha-runtime`. The runtime verifies licences against the issuer **public** key, resolved in this order: `AROHA_LICENCE_ISSUER_KEY` environment variable, `licenceIssuerKey` in `config.toml`, then the build-time constant in `apps/aroha-runtime/src/host/licence-issuer.ts` (which is `null` in source, so an unconfigured build trusts no issuer and treats add-ons as unlicensed).
+- **Purpose:** Ed25519 key that signs licence files for licensed add-ons of the Aroha runtime. The runtime source, including the `apps/aroha-runtime/` paths and the `runtime-release.yml` workflow cited on this page, is in the private development repository, not in this one. The runtime verifies licences against the issuer **public** key, resolved in this order: `AROHA_LICENCE_ISSUER_KEY` environment variable, `licenceIssuerKey` in `config.toml`, then the build-time constant in `apps/aroha-runtime/src/host/licence-issuer.ts` (which is `null` in source, so an unconfigured build trusts no issuer and treats add-ons as unlicensed).
 - **Where stored:** **owner to document.** The repository does not record where the private key is held.
 - **Custodian:** owner — to assign.
 - **Rotation (target):** on suspected compromise; otherwise reviewed annually. Not yet operating. The runtime has no issuer-key revocation list: trust in an old key is removed only by shipping a build or configuration with a different issuer public key. Licences carry an `expiresAt`, which bounds exposure.

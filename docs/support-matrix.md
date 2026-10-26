@@ -15,7 +15,7 @@ What Aroha works with, and how sure we are. Every row says how it is verified �
 | ⚠️ | Partial — see the note |
 | ❌ | Not supported |
 
-> **Released 2026-10-19.** Everything on this page is published: npm (tag `npm-v2026.10.19`, 32 packages) and PyPI `aroha` 2.0.0 (tag `python-v2.0.0`). The Java SDK and Go module are not released (see [SDKs](#sdks)).
+> **Released 2026-10-19.** Everything on this page is published: npm (tag `npm-v2026.10.19`, 32 packages) and PyPI `aroha` 2.0.0 (tag `python-v2.0.0`). Both tags were made in the private development repository; this public repository has no tags or releases yet. The Java SDK and Go module are not released (see [SDKs](#sdks)).
 
 ---
 
@@ -42,7 +42,7 @@ The fastest way for an existing agent to adopt Aroha. The [`aroha-integrate`](ht
 | **B. Verify mandates in a handler** | Owners of a tool server or API that agents call | ~10 lines | Refuse anything outside the person's signed grant, offline; holder proof over MCP (`_meta`) or plain HTTP (`Aroha-Mandate` header) | ✅ (needs the 2.x release on npm) |
 | **C. Issue and present a mandate** | Agents acting on a person's behalf | ~15 lines | A narrowing, use-limited, expiring grant carried with each call | ✅ |
 | **D. Run the Aroha runtime** | A person's own assistant | Install | Deny-by-default tools, approvals with saved, revocable permissions, receipts, rooms | ✅ |
-| **E. Remote MCP connector** | Hosted assistants that add remote MCP servers | Deploy + OAuth provider | Aroha Hub as a remote connector | ⚠️ server ✅, per-host registration 📄 |
+| **E. Remote MCP connector** | Hosted assistants that add remote MCP servers | Deploy + OAuth provider | Aroha registry and mandate tools as a remote connector | ⚠️ server ✅, per-host registration 📄 |
 
 ---
 
@@ -52,7 +52,7 @@ The fastest way for an existing agent to adopt Aroha. The [`aroha-integrate`](ht
 |---|---|---|---|---|---|
 | **MCP** (Model Context Protocol, 2026-07-28) | TS | `@aroha-sdk/mcp-bridge` | MCP tools ↔ Aroha capabilities; `wrapMcp()`; mandate carriage in `_meta["aroha/mandate"]` with holder proof | ✅ | 5 test files |
 | MCP — guard | TS | `@aroha-sdk/mcp-guard` | Firewall in front of any stdio MCP server | ✅ | 2 test files |
-| MCP — server | TS | `@aroha-sdk/mcp-server` | Aroha Hub as an MCP server: stdio and remote (Streamable HTTP + OAuth, CIMD, RFC 9728) | ✅ | 4 test files; [verified scope](integrations/remote-mcp-connector.md) |
+| MCP — server | TS | `@aroha-sdk/mcp-server` | Aroha registry and mandate tools as an MCP server: stdio and remote (Streamable HTTP + OAuth, CIMD, RFC 9728) | ✅ | 4 test files; [verified scope](integrations/remote-mcp-connector.md) |
 | **A2A** 1.0 (Linux Foundation) | TS | `@aroha-sdk/a2a-bridge` | Message mapping, JSON-RPC client and server, signed agent cards, mandate carriage, `GetTask` / `CancelTask` | ✅ | 61 tests, including CI interop in both directions with the official `@a2a-js/sdk` 1.3.0 |
 | **LangChain** / OpenAI function tools | TS | `@aroha-sdk/langchain-bridge` | Aroha capabilities as LangChain tools, and as OpenAI function tools (any framework that accepts them) | ✅ | 25 tests, including an end-to-end run through the official `openai` client |
 | **Composio** | TS | `@aroha-sdk/composio-bridge` | Aroha capabilities as Composio actions | ✅ | 1 test file |
@@ -84,8 +84,8 @@ The fastest way for an existing agent to adopt Aroha. The [`aroha-integrate`](ht
 
 | Agent | What it is | Status | Published |
 |---|---|---|---|
-| GitHub, Jira | Provider agents over the real APIs (issues, PRs, transitions) | ✅ 2 test files each | No — in repository only |
-| Salesforce, Stripe, Zendesk | Proxy agents over the real APIs | ✅ 2 test files each | No — in repository only |
+| GitHub, Jira | Provider agents over the real APIs (issues, PRs, transitions) | ✅ 2 test files each | npm `@aroha-sdk/github-agent`, `@aroha-sdk/jira-agent` 1.0.0; source not in this repository |
+| Salesforce, Stripe, Zendesk | Proxy agents over the real APIs | ✅ 2 test files each | npm `@aroha-sdk/salesforce-agent`, `@aroha-sdk/stripe-agent`, `@aroha-sdk/zendesk-agent` 1.0.0; source not in this repository |
 | Gmail MCP server | Search, read, label, draft over the ordinary Gmail API | ✅ | npm `@aroha-sdk/gmail-mcp` |
 | Personal agent | Reference orchestrator | ✅ | No — reference |
 | Mock provider, sandbox agents (flight, hotel, weather, web search, summarizer) | **Mock data**, for demos and tests | ✅ | Examples |
@@ -119,11 +119,11 @@ Full detail: [SDK feature matrix](sdks/feature-matrix.md).
 | Conversation profile (rooms, consent, turns) verification | ✅ | ✅ | ✅ | ✅ |
 | Registry client | ✅ | ✅ | ✅ | ✅ |
 | Durable stores: nonces, enrollment, spending ledger (Postgres, Redis; one shared layout) | ✅ (unreleased) | ✅ (unreleased) | ❌ | ❌ |
-| Published | npm 2.0.0 | PyPI 2.0.0 | Not released (private repository) | Not released (no Maven Central credentials) |
+| Published | npm 2.0.0 | PyPI 2.0.0 | Not released | Not released (no Maven Central credentials) |
 
 ## Published versions
 
-Published on 2026-10-19 (release tags `npm-v2026.10.19` and `python-v2.0.0`); verified by installing from the public registries.
+Published on 2026-10-19 (release tags `npm-v2026.10.19` and `python-v2.0.0`, made in the private development repository); verified by installing from the public registries.
 
 | Package | Published version | Registry | Stability |
 |---|---|---|---|
@@ -149,13 +149,13 @@ Stability tiers: [COMPATIBILITY.md](https://github.com/ArohaLabs/aroha-protocol/
 
 ## Health metrics
 
-Each figure is from a run on the date given; re-run before quoting.
+Each figure is from a run on the date given; re-run before quoting. Commit hashes and run numbers refer to the private development repository; the public history starts at `14f09c6`.
 
 | Metric | Value | Measured | How to reproduce |
 |---|---|---|---|
 | CI on the branch head | Passing | 2026-10-19, run 39269362862 | GitHub Actions `ci.yml` |
 | Workspace tests (TypeScript) | 4,461 passed; 1 needs a local model | Commit `84003ae` (last full workspace run) | `npm test` |
-| Runtime tests | 2,027 passed of 2,031; 1 needs a local model, 2 timing-sensitive under full-suite load (pass alone), 1 skipped | 2026-10-19, `b63aef34` | `npm test -w apps/aroha-runtime` in [`ArohaLabs/aroha-runtime`](https://github.com/ArohaLabs/aroha-runtime) |
+| Runtime tests | 2,027 passed of 2,031; 1 needs a local model, 2 timing-sensitive under full-suite load (pass alone), 1 skipped | 2026-10-19, `b63aef34` | `npm test -w apps/aroha-runtime` in the private development repository (the runtime is not in this repository) |
 | Conformance suite | 123 / 123 | 2026-10-19, `b63aef34` | `npx vitest run --config vitest.conformance.config.ts` |
 | Python SDK tests | 476 passed (framework suites skip unless installed) | 2026-10-19 | `pytest` in `sdks/aroha-py` |
 | Java SDK tests | 174 passed (TypeScript interop included) | 2026-10-19 | `mvn test` in `sdks/java` |
@@ -172,4 +172,4 @@ Each figure is from a run on the date given; re-run before quoting.
 - Enterprise sign-in (ID-JAG) is tested against a reference IdP, not a production one.
 - MCP Tasks are polling-only and held in memory per process (several instances must route on `Mcp-Name`).
 - Multi-hop task-chain verification and task receipts are TypeScript-only.
-- Pre-built provider agents are not published to npm.
+- Pre-built provider agents are published to npm (1.0.0, 2026-06-23), but their source and tests are not in this repository.

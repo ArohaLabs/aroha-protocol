@@ -16,14 +16,14 @@ interop tests). Task mandates, conversation-profile verification and the
 registry client are now in all four SDKs, with task-mandate vectors
 (`task-mandate-v2.json`, `task-mandate-v2-cases.json`) and live interop in both
 directions against TypeScript. Not yet outside TypeScript: multi-hop task-chain
-verification (`@aroha-sdk/delegation`), task receipts, disputes, the four
-TypeScript-only message types and the 11 newer error codes. `did:aroha-web` in Python, Go and Java is a port of the
+verification (`@aroha-sdk/delegation`), task receipts and disputes. All four
+SDKs define the same 19 message types and 28 error codes. `did:aroha-web` in Python, Go and Java is a port of the
 TypeScript resolver, checked against a TypeScript-generated vector. Each SDK's
 README is the source of truth at a given commit.
 
 | Feature | TypeScript | Python | Go | Java |
 |---|:---:|:---:|:---:|:---:|
-| Package | `@aroha-sdk/core`, `@aroha-sdk/credentials`, `@aroha-sdk/registry` (npm) | `aroha` (PyPI) | module `github.com/ArohaLabs/aroha-protocol/sdks/go` — **unreleased**: no `sdks/go/v*` tag, private repo; build from source | `com.aroha-labs:aroha-sdk` — **not on Maven Central**; build from source |
+| Package | `@aroha-sdk/core`, `@aroha-sdk/credentials`, `@aroha-sdk/registry` (npm) | `aroha` (PyPI) | module `github.com/ArohaLabs/aroha-protocol/sdks/go` — **not released**: no `sdks/go/v*` tag; build from source | `com.aroha-labs:aroha-sdk` — **not released** (not on Maven Central); build from source |
 | Maturity | Reference | Beta | Partial | Partial |
 | Envelope build + Ed25519 sign | ✅ | ✅ | ✅ | ✅ |
 | Envelope verify (signature, expiry, nonce replay) | ✅ | ✅ | ✅ | ✅ |
@@ -34,43 +34,40 @@ README is the source of truth at a given commit.
 | Rotatable DIDs (`did:aroha:E…`) and Key Event Log verification | ✅ | ✅ | ✅ | ✅ |
 | `did:aroha-web` (current schema) | ✅ | ✅ | ✅ | ✅ |
 | Task mandates (issue, attenuate, verify, enforce) | ✅ | ✅ (`aroha.task_mandate`) | ✅ (`mandate.IssueTaskMandate`, `EnforceTaskConstraints`) | ✅ (`TaskMandate`) |
-| Saga (Reserve → Commit → Cancel, compensation) | ✅ (`@aroha-sdk/orchestrator`) | ✅ | ✅ | ✅ |
+| Saga (Reserve → Commit → Cancel, compensation) — orchestration extension | ✅ (`@aroha-sdk/orchestrator` 1.4.0 on npm; source no longer in this repository) | ✅ | ✅ | ✅ |
 | Registry client (register / discover / resolve) | ✅ (`@aroha-sdk/registry`) | ✅ (`aroha.hub`, HTTP) | ✅ (`registry`) | ✅ (`ArohaRegistryClient`) |
 | Conversation profile verification (rooms, consent, turns, disclosure, action receipts) | ✅ | ✅ (`aroha.conversation`) | ✅ (`conversation`, `receipts`) | ✅ (`conversation`) |
 | Task-mandate interop with TypeScript (shared vectors `task-mandate-v2.json` / live both directions) | — | ✅ | ✅ | ✅ |
-| Protocol message types defined | 19 | 15 | 15 | 15 |
-| Protocol error codes defined | 28 | 17 | 17 | 17 |
+| Durable stores: nonces, enrollment, spending ledger (Postgres, Redis) | ✅ (`@aroha-sdk/store-postgres`, `@aroha-sdk/store-redis`; unreleased) | ✅ (`aroha.stores`; unreleased) | ❌ | ❌ |
+| Protocol message types defined | 19 | 19 | 19 | 19 |
+| Protocol error codes defined | 28 | 28 | 28 | 28 |
 | Automated tests (2026-10-19) | core/credentials/registry suites | 476 passed; framework-bridge suites skip unless the framework is installed, and pass with all installed | 244 passed, `go vet` clean | 174 passed |
 
 ## Message types
 
-The **15 shared** message types, with identical wire strings in all four SDKs:
+The **19** message types, with identical wire strings in all four SDKs:
 `ArohaRequest`, `ArohaResponse`, `ArohaStream`, `ArohaNegotiate`,
 `ArohaCounterOffer`, `ArohaAccept`, `ArohaReserve`, `ArohaReserveAck`,
 `ArohaCommit`, `ArohaCommitAck`, `ArohaCancel`, `ArohaCancelAck`,
-`ArohaDelegate`, `ArohaError`, `ArohaSatisfactionSignal`.
-
-**TypeScript only (4):** `ArohaSpendingMandate`, `ArohaTaskMandate`,
-`ArohaDispute`, `ArohaDisputeResolution`.
+`ArohaDelegate`, `ArohaError`, `ArohaSatisfactionSignal`,
+`ArohaSpendingMandate`, `ArohaTaskMandate`, `ArohaDispute`,
+`ArohaDisputeResolution`.
 
 ## Error codes
 
-The **17 shared** codes, with identical `Aroha_*` wire strings in all four SDKs:
+The **28** codes, with identical wire strings in all four SDKs (`Aroha_` prefix
+except where noted):
 `UNAUTHORIZED`, `FORBIDDEN`, `INVALID_SIGNATURE`, `EXPIRED_MESSAGE`,
 `REPLAY_DETECTED`, `UNKNOWN_CAPABILITY`, `TRUST_LEVEL_INSUFFICIENT`,
 `RESERVATION_FAILED`, `RESERVATION_EXPIRED`, `COMMIT_FAILED`, `CANCEL_FAILED`,
 `INVALID_TOKEN`, `NO_INVENTORY`, `CAPACITY_EXCEEDED`, `SERVICE_UNAVAILABLE`,
-`INTERNAL_ERROR`, `INVALID_PARAMS`.
-
-**TypeScript only (11):** `CSN_NO_STRUCTURAL_MATCH` (no `Aroha_` prefix),
+`INTERNAL_ERROR`, `INVALID_PARAMS`, `CSN_NO_STRUCTURAL_MATCH` (no `Aroha_` prefix),
 `ACTION_LIMIT_EXCEEDED`, `COMPUTE_LIMIT_EXCEEDED`, `REVERSIBILITY_VIOLATION`,
 `HUMAN_GATE_REQUIRED`, `DATA_ACCESS_VIOLATION`, `SANDBOX_REQUIRED`,
 `DELEGATION_DEPTH_EXCEEDED`, `CAPABILITY_NOT_PERMITTED`,
 `SETTLEMENT_RAIL_MISMATCH`, `COMMIT_DISPUTED`.
 
-A Python, Go or Java consumer that receives one of the TypeScript-only codes
-will see an error code string it has no constant for. Treat unknown codes as
-generic errors.
+Treat a code you have no constant for (from a newer peer) as a generic error.
 
 ## Interoperability
 
@@ -82,7 +79,7 @@ cross-language tests against tokens produced by the TypeScript reference.
 
 | SDK | Files read |
 |---|---|
-| TypeScript | `packages/aroha-core/src/messages/types.ts` (`ArohaErrorCode`, `ArohaMessageType`), `packages/aroha-core/src/messages/envelope.ts`, `packages/aroha-credentials/src/mandate.ts`, `packages/aroha-delegation/src/chain.ts`, `packages/aroha-orchestrator/src/saga.ts`, `packages/aroha-registry/src/` |
+| TypeScript | `packages/aroha-core/src/messages/types.ts` (`ArohaErrorCode`, `ArohaMessageType`), `packages/aroha-core/src/messages/envelope.ts`, `packages/aroha-credentials/src/mandate.ts`, `packages/aroha-delegation/src/chain.ts`, `packages/aroha-registry/src/` (the saga engine, `@aroha-sdk/orchestrator`, is no longer in this repository) |
 | Python | `sdks/aroha-py/aroha/messages.py`, `envelope.py`, `mandate.py`, `orchestrator.py`, `hub.py`; tests in `sdks/aroha-py/tests/` |
 | Go | `sdks/go/aroha/messages/types.go`, `messages/envelope.go`, `mandate/mandate.go`, `orchestrator/saga.go`, `identity/kel.go`, `jcs/jcs.go`; tests alongside each package (`*_test.go`) |
 | Java | `sdks/java/src/main/java/com/arohalabs/messages/MessageTypes.java`, `ArohaEnvelope.java`, `mandate/ArohaMandateCredential.java`, `identity/Kel.java`, `crypto/Jcs.java`, `orchestrator/SagaEngine.java`; tests in `sdks/java/src/test` |

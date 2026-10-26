@@ -140,64 +140,38 @@ case "ArohaRequest": {
 
 ## Option C — Python LangChain with Aroha Python SDK
 
-Use the Aroha Python SDK (`sdks/python/`) to wrap Python LangChain agents.
+Use the Aroha Python SDK (package `aroha`, source in `sdks/aroha-py/`) to wrap Python LangChain agents.
 
 ### Setup
 
 ```bash
-cd sdks/python
-pip install -e .
+pip install "aroha[langchain]"     # or, from a checkout: pip install -e "sdks/aroha-py[langchain]"
 ```
 
-### Wrap a LangChain tool
+### Wrap a chain or AgentExecutor
+
+`from_chain` wraps any LangChain Runnable (an LCEL chain, an `AgentExecutor`, …) as an
+agent served on `POST /v1/run`:
 
 ```python
-from aroha import ArohaServer, generate_did, build_envelope, ArohaErrorCode
-from langchain_community.tools import TavilySearchResults
+from langchain_anthropic import ChatAnthropic
+from langchain_core.prompts import ChatPromptTemplate
+from aroha.bridges.langchain_v1 import from_chain
 
-search = TavilySearchResults(max_results=5)
+llm = ChatAnthropic(model="claude-sonnet-4-6")
+prompt = ChatPromptTemplate.from_messages([
+    ("system", "You are a helpful assistant."),
+    ("human", "{message}"),
+])
 
-async def handle_message(envelope, respond):
-    body = envelope["body"]
-    if envelope["type"] == "ArohaRequest":
-        cap = body["capability"]
-        params = body["params"]
-
-        if cap == "web-search":
-            result = await search.ainvoke(params.get("query", ""))
-            reply = await build_envelope(
-                "ArohaResponse", agent_did, envelope["from"],
-                {"capability": cap, "result": {"text": result}},
-                envelope["correlationId"], private_key
-            )
-            respond(reply)
-            return
-
-        reply = await build_envelope(
-            "ArohaError", agent_did, envelope["from"],
-            {"code": ArohaErrorCode.UNKNOWN_CAPABILITY, "message": f"Unknown: {cap}", "retryable": False},
-            envelope["correlationId"], private_key
-        )
-        respond(reply)
-
-identity = generate_did("my-lc-agent", "http://localhost:3001/aroha/v1")
-server = ArohaServer(agent_did=identity["did"], did_document=identity["document"], port=3001, on_message=handle_message)
-await server.start()
+agent = from_chain(prompt | llm, name="LangChain Agent")   # callers must sign requests (auth="aroha-sig") by default
+agent.start(port=8000)
 ```
 
-### Wrap a LangChain AgentExecutor (Python)
-
-```python
-from langchain.agents import AgentExecutor, create_react_agent
-from langchain_openai import ChatOpenAI
-
-llm = ChatOpenAI(model="gpt-4o-mini")
-agent_executor = AgentExecutor(agent=create_react_agent(llm, tools), tools=tools)
-
-if cap == "run-agent":
-    agent_result = await agent_executor.ainvoke({"input": params["query"]})
-    reply = await build_envelope("ArohaResponse", ..., {"capability": cap, "result": {"output": agent_result["output"]}}, ...)
-```
+`from_graph` does the same for a LangGraph graph. In the other direction,
+`aroha.bridges.langchain_bridge.aroha_tools_for_agent` gives a LangChain agent tools that
+call Aroha providers with signed `ArohaRequest` envelopes. See the
+[Python SDK README](https://github.com/ArohaLabs/aroha-protocol/blob/main/sdks/aroha-py/README.md#framework-bridges).
 
 ---
 

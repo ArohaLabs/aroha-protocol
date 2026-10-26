@@ -100,7 +100,7 @@ Use the **Conformance Report** issue template at [.github/ISSUE_TEMPLATE/conform
 ## Support
 
 - GitHub Issues with the `conformance` label
-- Email the maintainer (hello@aroha-labs.com, see [MAINTAINERS.md](../../MAINTAINERS.md))
+- Email contact@aroha-labs.com (see [MAINTAINERS.md](../../MAINTAINERS.md))
 - Maintainer response SLA: 5 business days (see [governance.md](../governance.md))
 
 ---

@@ -21,19 +21,30 @@ The kernel covers the three things every Aroha agent needs: a verifiable identit
 Extensions are fully optional. Mount them via middleware or inject them into the saga engine — the kernel never imports them.
 
 ```
-@aroha-sdk/credentials    RBAC middleware, human credential issuance + verification
+@aroha-sdk/credentials    RBAC middleware, human credential issuance + verification, mandates
 @aroha-sdk/settlement     Pluggable billing: NullSettlement, ApiKey, Quota, EscrowSettlement
 @aroha-sdk/commerce       B2B contracts + SLA · B2C subscriptions + GDPR consent · C2B quality signals
 @aroha-sdk/orchestrator   Saga engine, agent selection (fan-out), negotiation
+@aroha-sdk/reputation     Bayesian reputation engine, Thompson Sampling agent selection
 @aroha-sdk/preferences    Preference profiles, budget constraints, satisfaction signals
+@aroha-sdk/delegation     Multi-hop delegation: verified mandate chains, ctx.delegate(), receipts
+@aroha-sdk/store-postgres Durable Postgres stores for credentials (nonces, enrollment, spending ledger)
+@aroha-sdk/store-redis    Durable Redis stores for credentials (nonces, enrollment, spending ledger)
+@aroha-sdk/trust          Caller uniqueness: KYC issuer trust, Chaum-Pedersen nullifier proofs
+@aroha-sdk/bbs            BBS signatures over BLS12-381 (selective disclosure) — unaudited
 ```
+
+`@aroha-sdk/settlement`, `@aroha-sdk/commerce`, `@aroha-sdk/orchestrator` and `@aroha-sdk/reputation` are published on npm, but their source is not in this repository.
 
 ## Protocol Bridges
 
 Wrap existing agents from other protocols — your current code keeps running, the bridge speaks Aroha.
 
 ```
-@aroha-sdk/mcp-bridge          MCP ↔ Aroha (tools become capabilities)
+@aroha-sdk/mcp-bridge          MCP ↔ Aroha (tools become capabilities; wrapMcp mandate gate)
+@aroha-sdk/mcp-guard           Wrap any MCP server with spending/action limits, approval gates, audit log
+@aroha-sdk/mcp-server          MCP server (stdio and remote Streamable HTTP + OAuth) for MCP clients
+@aroha-sdk/gmail-mcp           MCP server for Gmail over the ordinary Gmail API
 @aroha-sdk/a2a-bridge          A2A ↔ Aroha (tasks become saga steps)
 @aroha-sdk/langchain-bridge    LangChain / OpenAI function tools ↔ Aroha (BYOF — no hard dep)
 @aroha-sdk/hermes-bridge       Hermes Agent + ZeroClaw ↔ Aroha via stdio MCP
@@ -58,6 +69,7 @@ Wrap existing agents from other protocols — your current code keeps running, t
 @aroha-sdk/cache          Semantic caching — content-addressed ArohaRequest deduplication (InMemory + Redis)
 @aroha-sdk/policy         Policy-as-Code — deterministic JSON enforcement before LLM sees any request
 @aroha-sdk/cli            Scaffold new agents; convert from A2A, MCP, LangChain, Agntcy; create-bridge
+create-aroha-agent        Zero-config scaffolder (npx create-aroha-agent)
 ```
 
 ## Testing & Reliability
@@ -67,9 +79,9 @@ Wrap existing agents from other protocols — your current code keeps running, t
 @aroha-sdk/chaos         Fault injection for sagas — verify LIFO compensation and circuit breaker trips
 ```
 
-## Ecosystem Packages (community-built)
+## Ecosystem Packages
 
-Pre-built proxy agents that wrap popular SaaS APIs:
+Pre-built proxy agents that wrap popular SaaS APIs. They are published on npm (1.0.0) but their source is not in this repository:
 
 ```
 @aroha-sdk/stripe-agent        Payments, customers, invoices — saga-capable
@@ -116,7 +128,6 @@ graph TD
     CLI --> REG
     PREF --> CORE
     PREF --> REG
-    PREF --> ORCH
     ORCH --> CORE
     ORCH --> REG
     ORCH --> SETT
@@ -124,8 +135,11 @@ graph TD
     A2A --> CORE
     MCP --> CORE
     MCP --> REG
+    MCP --> CRED
     LC --> CORE
     HERMES --> CORE
+    HERMES --> REG
+    HERMES --> MCP
     OC --> CORE
     COMP --> CORE
     CRED --> CORE
@@ -137,12 +151,9 @@ graph TD
     POL --> CORE
     RUN --> CORE
     MICRO --> CORE
-    EVALS --> CORE
-    CHAOS --> CORE
-    RES --> CORE
 ```
 
-The arrow means "depends on". Notice that `@aroha-sdk/core` has no arrows pointing away from it to extensions — the kernel is clean and extension-free.
+The arrow means "depends on". `@aroha-sdk/evals`, `@aroha-sdk/audit`, `@aroha-sdk/resilience` and `@aroha-sdk/chaos` have no `@aroha-sdk` dependencies. The arrows for `@aroha-sdk/orchestrator`, `@aroha-sdk/settlement` and `@aroha-sdk/commerce` are not checked against this repository, since their source is not here. Notice that `@aroha-sdk/core` has no arrows pointing away from it to extensions — the kernel is clean and extension-free.
 
 ---
 

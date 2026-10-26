@@ -5,7 +5,7 @@
 
 Agntcy (agntcy.ai) uses the Open Agent Specification (OAS) — a YAML-based capability manifest
 and a JSON-over-HTTP `POST /invoke { capability, input }` call convention. Aroha adds
-Ed25519 identity, atomic sagas, and decentralized registry discovery.
+Ed25519 identity, sagas (an extension), and registry discovery.
 
 ---
 
@@ -184,7 +184,7 @@ case "ArohaCancel": {
 | `capabilities[].output` | `outputSchema` | JSON Schema |
 | `capabilities[].description` | `description` | Direct |
 | _(none)_ | `sagaRole` | Set `"participant"` for write capabilities |
-| _(none)_ | `requiredTrustLevel` | Set `1` for public, `2` for authenticated |
+| _(none)_ | `requiredTrustLevel` | Minimum caller trust level, 0–4 ([spec §4.4](../spec/aroha-1.0.md#44-trust-levels)) |
 | _(none)_ | `pricing` | Set pricing model |
 
 ---

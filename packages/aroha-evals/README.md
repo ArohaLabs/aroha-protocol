@@ -23,7 +23,7 @@ const suite: EvalSuite = {
 };
 
 const report = await runEvals(suite, {
-  endpoint: "http://localhost:3001/v1/run",
+  endpoint: "http://localhost:3001", // agent base URL; /v1/run is appended
   // Optional LLM-as-judge (any OpenAI-compatible chat completions API)
   judge: { apiUrl: "https://api.openai.com/v1", apiKey: process.env.OPENAI_API_KEY ?? "", model: "gpt-4o-mini" },
   passThreshold: 0.7,

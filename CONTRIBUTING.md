@@ -113,7 +113,7 @@ This adds a `Signed-off-by: Your Name <you@example.com>` trailer. The name and e
 
 The **DCO** check ([.github/workflows/dco.yml](.github/workflows/dco.yml)) runs on every pull request to `main` and fails if a commit made **after the DCO cut-off** lacks a sign-off whose email matches the commit author.
 
-**Cut-off.** No commit made before the DCO was introduced carries a sign-off, and history is not rewritten to add one. A commit is exempt when it is an ancestor of `7473e091839c8686c1f804f7d58de4504f391c38` (the tip of `fix/audit-remediation` in the private development repository when the check was introduced; that commit is not in this repository's public history) **or** its committer date is before **2026-11-01T00:00:00Z**. Both values live in `dco.yml` (`DCO_EXEMPT_BASE`, `DCO_CUTOFF_DATE`); change them only together and only by owner decision.
+**Cut-off.** No commit made before the DCO was introduced carries a sign-off, and history is not rewritten to add one. A commit is exempt when its committer date is before **2026-11-01T00:00:00Z**. The value lives in `dco.yml` (`DCO_CUTOFF_DATE`); change both together and only by owner decision.
 
 **Status:** the check is advisory. DCO is not one of the required status checks in the `main` ruleset, so merging a PR with a red DCO check is prevented only by the reviewer (manual process).
 

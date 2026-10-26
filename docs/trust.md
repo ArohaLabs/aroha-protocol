@@ -135,7 +135,7 @@ Spec: [aroha-1.0 §6.6–§6.8 and §12](spec/aroha-1.0.md). Schemas and vectors
 
 ## Conformance
 
-The reference implementation is tested against the Aroha conformance suite on pushes and pull requests to `main` that touch `packages/**`, and on a weekly scheduled run (Mondays 02:00 UTC). A failed scheduled run opens or updates a GitHub issue. See [conformance.yml](https://github.com/ArohaLabs/aroha-protocol/blob/main/.github/workflows/conformance.yml).
+The reference implementation is tested against the Aroha conformance suite on pushes and pull requests to `main` that touch `packages/**` (or the suite's config, its workflow, or the root `package.json` / `package-lock.json`), and on a weekly scheduled run (Mondays 02:00 UTC). For other changes the check still reports, as skipped-and-passing, so it can stay a required check. A failed scheduled run opens or updates a GitHub issue. See [conformance.yml](https://github.com/ArohaLabs/aroha-protocol/blob/main/.github/workflows/conformance.yml).
 
 | Layer | Tests | Status |
 |-------|-------|--------|
@@ -192,4 +192,4 @@ GTM PDFs and third-party PDFs were removed from the working tree before the repo
 
 ---
 
-*Last updated: 2026-10-25. Maintained by the core maintainer. Update this page whenever any status row changes.*
+*Last updated: 2026-10-26. Maintained by the core maintainer. Update this page whenever any status row changes.*

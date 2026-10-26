@@ -4,19 +4,14 @@
 name: Conformance
 
 on:
+  # No `paths:` filter: "Aroha Conformance Suite" is a required check on main,
+  # and a filtered-out workflow never reports, so a docs-only PR would wait
+  # forever. The job always runs and the "Detect protocol changes" step skips
+  # the suite (job still succeeds) when no protocol file changed.
   push:
     branches: [main]
-    # Conformance tests protocol packages — website/docs changes cannot affect it
-    paths:
-      - "packages/**"
-      - "vitest.conformance.config.ts"
-      - ".github/workflows/conformance.yml"
   pull_request:
     branches: [main]
-    paths:
-      - "packages/**"
-      - "vitest.conformance.config.ts"
-      - ".github/workflows/conformance.yml"
   schedule:
     # Weekly freshness check (Mondays 02:00 UTC) — was daily, trimmed to save minutes
     - cron: "0 2 * * 1"
@@ -41,21 +36,69 @@ jobs:
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
+          fetch-depth: 0   # full history, so the change detection below can diff
           persist-credentials: false
 
+      # Decides whether the suite must run. Plain git, no third-party action.
+      # Fails safe: anything unexpected (unknown event, missing base commit,
+      # diff error) runs the full suite.
+      - name: Detect protocol changes
+        id: changes
+        env:
+          EVENT: ${{ github.event_name }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD: ${{ github.event.pull_request.head.sha }}
+          PUSH_BEFORE: ${{ github.event.before }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          run=true
+          range=""
+          case "$EVENT" in
+            pull_request) range="$PR_BASE...$PR_HEAD" ;;
+            push)
+              if [ -n "$PUSH_BEFORE" ] && [[ ! "$PUSH_BEFORE" =~ ^0+$ ]] \
+                 && git cat-file -e "${PUSH_BEFORE}^{commit}" 2>/dev/null; then
+                range="$PUSH_BEFORE..$SHA"
+              fi ;;
+          esac
+          if [ -n "$range" ]; then
+            if changed=$(git diff --name-only "$range"); then
+              # Files that can affect conformance: the packages, the suite's
+              # config, this workflow, and the root manifest and lockfile.
+              # Here-string, not a pipe: with pipefail, `printf | grep -q` can fail
+              # with SIGPIPE when grep exits early and would wrongly skip the suite.
+              if grep -qE '^(packages/|vitest\.conformance\.config\.ts$|\.github/workflows/conformance\.yml$|package\.json$|package-lock\.json$)' <<< "$changed"; then
+                run=true
+              else
+                run=false
+              fi
+            fi
+          fi
+          echo "run=$run" >> "$GITHUB_OUTPUT"
+          echo "Event: $EVENT  range: ${range:-<none: full run>}  run suite: $run"
+          if [ "$run" = false ]; then
+            echo "## Aroha Conformance Report" >> "$GITHUB_STEP_SUMMARY"
+            echo "Skipped: no protocol files changed (${range}). The check reports success so required-check gating does not stall." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
       - name: Setup Node.js
+        if: steps.changes.outputs.run == 'true'
         uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
         with:
           node-version: 22.x
           cache: "npm"
 
       - name: Install dependencies
+        if: steps.changes.outputs.run == 'true'
         run: npm ci
 
       - name: Build
+        if: steps.changes.outputs.run == 'true'
         run: npm run build
 
       - name: Run conformance tests
+        if: steps.changes.outputs.run == 'true'
         run: |
           # Use the dedicated conformance config so individual package test runs are unaffected.
           # The config sets include: ["packages/*/src/**/*.conformance.test.ts"].
@@ -68,6 +111,7 @@ jobs:
         # No continue-on-error — a broken or empty test run must fail the workflow
 
       - name: Generate conformance scorecard
+        if: steps.changes.outputs.run == 'true'
         run: |
           node -e "
             const fs = require('fs');
@@ -117,6 +161,7 @@ jobs:
       # tests red, so it may fail — and the summary below says when it did.
       - name: Upload scorecard artifact
         id: upload
+        if: steps.changes.outputs.run == 'true'
         continue-on-error: true
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
@@ -125,6 +170,7 @@ jobs:
           retention-days: 7
 
       - name: Publish conformance summary
+        if: steps.changes.outputs.run == 'true'
         env:
           UPLOAD_OUTCOME: ${{ steps.upload.outcome }}
         run: |

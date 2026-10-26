@@ -39,9 +39,7 @@ describe("createArohaRegistryServer — no auth (dev mode)", () => {
   let base: string;
 
   beforeAll(async () => {
-    server = createArohaRegistryServer({ port: 0 as unknown as number });
-    // port 0 is not supported by the implementation — use a fixed free port
-    server = createArohaRegistryServer({ port: 47201 });
+    server = createArohaRegistryServer({ port: 0 });
     await server.listen();
     base = `http://127.0.0.1:${server.port}`;
   });
@@ -183,7 +181,7 @@ describe("createArohaRegistryServer — with apiKey", () => {
   let base: string;
 
   beforeAll(async () => {
-    server = createArohaRegistryServer({ port: 47202, apiKey: API_KEY });
+    server = createArohaRegistryServer({ port: 0, apiKey: API_KEY });
     await server.listen();
     base = `http://127.0.0.1:${server.port}`;
   });

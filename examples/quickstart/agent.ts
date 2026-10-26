@@ -23,12 +23,14 @@
  *   export AGENT_DID="did:aroha:..."
  *   export AROHA_MANIFEST_CID="bafy..."
  *   export AGENT_PRIVATE_KEY_HEX="<64 hex chars>"
+ *   export AROHA_REGISTRY_URL="https://registry.example.com"
  *   npx tsx agent.ts --register --endpoint https://my-agent.fly.dev
  *
- * Set AROHA_REGISTRY_URL to a registry you run yourself — e.g. a self-hosted
- * apps/registry-server (see apps/registry-server/DEPLOY.md, which also shows
- * how to provision the org API key used as AROHA_API_KEY). If it is unset,
- * the SDK falls back to the Aroha-managed registry URL. For purely local
+ * AROHA_REGISTRY_URL must point at a registry you run yourself — e.g. a
+ * self-hosted apps/registry-server (see apps/registry-server/DEPLOY.md, which
+ * also shows how to provision the org API key used as AROHA_API_KEY). If it is
+ * unset, --register exits with an error rather than falling back to the
+ * Aroha-managed registry URL. For purely local
  * experiments, `aroha dev` runs an in-memory registry and dashboard on
  * localhost:3000; note that it does not serve the /v1/agents API that
  * --register uses.
@@ -95,6 +97,17 @@ if (registerIdx !== -1) {
     console.error("Usage: tsx agent.ts --register --endpoint https://my-agent.example.com");
     process.exit(1);
   }
+  // No fallback: the SDK's default (the Aroha-managed registry) is not a
+  // registry this quickstart can register with, so require an explicit one.
+  const registryUrl = process.env.AROHA_REGISTRY_URL?.trim();
+  if (!registryUrl) {
+    console.error(
+      "Set AROHA_REGISTRY_URL to the URL of a registry you run yourself (e.g. a self-hosted " +
+      "apps/registry-server, see apps/registry-server/DEPLOY.md). --register does not fall back " +
+      "to the Aroha-managed registry.",
+    );
+    process.exit(1);
+  }
   const apiKey = process.env.AROHA_API_KEY;
   if (!apiKey) {
     console.error("Set AROHA_API_KEY env var — an org API key issued by the registry at AROHA_REGISTRY_URL");
@@ -108,7 +121,7 @@ if (registerIdx !== -1) {
     process.exit(1);
   }
   const privateKey = new Uint8Array(Buffer.from(seedHex, "hex"));
-  agent.register(endpointUrl, { apiKey, did, manifestCID, privateKey }).then((result) => {
+  agent.register(endpointUrl, { apiKey, registryUrl, did, manifestCID, privateKey }).then((result) => {
     console.log("✓ Registered with the registry");
     console.log("  DID:     ", result.did);
     console.log("  didHash: ", result.didHash);

@@ -84,8 +84,9 @@ contract ArohaReputation {
 
     /**
      * Record the outcome of a saga step for one participant agent.
+     * Only callable by the contract owner (the deployer).
      *
-     * @param sagaId       The saga correlation ID (bytes32)
+     * @param sagaId      The saga correlation ID (bytes32)
      * @param agentDID     The participant agent's DID hash
      * @param outcome      SUCCESS | FAILURE | COMPENSATED | DISPUTE_LOST
      * @param qualityStars 0 = unrated; 1–5 = subjective quality rating.
@@ -97,6 +98,7 @@ contract ArohaReputation {
         SagaOutcome outcome,
         uint8 qualityStars
     ) external {
+        if (msg.sender != owner) revert Unauthorized();
         if (qualityStars > 5) revert InvalidQualityStars(qualityStars);
 
         OutcomeRecord[] storage records = _outcomes[agentDID];

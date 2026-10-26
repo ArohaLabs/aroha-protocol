@@ -62,7 +62,20 @@ createAgent({
 
 Dev mode skips inbound signature verification, answers `ArohaReserve` with an immediate `ArohaCommitAck`, registers the agent with a local `aroha dev` sandbox if one is running, and prints a banner. The server refuses to start in dev mode unless `NODE_ENV=development`. Your handler code is the same in both modes.
 
-Outside dev mode, the agent's public-key resolver knows only the agent's own (ephemeral) DID, so envelopes from any other sender are rejected as `Unknown sender DID`, and there is no option to supply a peer key resolver or a persistent key. To accept signed requests from other agents, use `ArohaServer` from `@aroha-sdk/core` with your own `resolvePublicKey`.
+Outside dev mode, the agent by default resolves only its own (ephemeral) DID's public key, so envelopes from any other sender are rejected as `Unknown sender DID` (401). To accept signed requests from other agents, pass `resolvePublicKey` — any `PublicKeyResolver` from `@aroha-sdk/core`, the same option `ArohaServer` takes:
+
+```typescript
+createAgent({
+  name: "weather-agent",
+  port: 3001,
+  // Return the sender's Ed25519 public key, or null to reject it.
+  resolvePublicKey: async (senderDid) => trustedPeers.get(senderDid) ?? null,
+})
+  .on("get-weather", handler)
+  .start();
+```
+
+The agent's own DID always resolves. In dev mode the resolver is not consulted. There is still no option for a persistent agent key.
 
 ## API
 
@@ -73,6 +86,7 @@ Outside dev mode, the agent's public-key resolver knows only the agent's own (ep
   - `opts.registryUrl` — registry URL (default `AROHA_REGISTRY_URL`, else the reference registry; in dev mode `http://localhost:3000`).
   - `opts.endpoint` — public base URL of the agent (default `AGENT_ENDPOINT`, else `http://localhost:{port}`).
   - `opts.host` — interface to bind (default `127.0.0.1`).
+  - `opts.resolvePublicKey` — `(senderDid, verificationMethodId?) => Promise<Uint8Array | null>`, how peers' public keys are resolved outside dev mode (default: only the agent's own DID resolves).
 
 - `.on(capability, handler)` — register a capability handler. Returns the agent for chaining.
   - `handler(params)` — receives the request's `params` and returns any JSON-serialisable value.

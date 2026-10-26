@@ -29,7 +29,7 @@ aroha doctor
 aroha doctor http://localhost:3001
 # ✓ Node.js  v22.11.0
 # ✓ .env     AROHA_AGENT_DID=did:aroha:my-agent
-# ✓ Endpoint http://localhost:3001  (did:aroha:my-agent, 2 capabilities)
+# ✓ DID document  did:aroha:my-agent  12ms
 # ✓ Round-trip  200 in 38ms
 
 # Start local dev registry + dashboard
@@ -47,7 +47,7 @@ Scaffold commands produce agents that verify the full mandate chain (`verifyMand
 - `aroha convert --from <a2a|agntcy|mcp|langchain>` — wrap an existing agent as an Aroha agent.
 - `aroha add capability [id]` — add a capability to an existing agent (`--saga` for reserve/commit/cancel handlers).
 - `aroha create-bridge` — scaffold a bridge package (`--name`, `--sdk`, `--out`).
-- `aroha doctor [endpoint]` — check Node version (≥ 22), env vars, endpoint reachability, and signed round-trip.
+- `aroha doctor [endpoint]` — check Node version (≥ 22), env vars, the endpoint's DID document at `/.well-known/aroha-agent.json` (its `id` must equal `AROHA_AGENT_DID` and its `verificationMethod` must hold a usable Ed25519 key; an `@aroha-sdk/run` manifest is reported as a warning), and an unsigned round-trip.
 - `aroha dev` — start a local registry and developer dashboard.
 - `aroha telemetry [status|on|off]` — the CLI has no built-in telemetry endpoint and sends nothing unless you set `AROHA_TELEMETRY_ENDPOINT`.
 

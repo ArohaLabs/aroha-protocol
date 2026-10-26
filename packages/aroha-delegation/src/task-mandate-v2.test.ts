@@ -14,7 +14,7 @@
 import { describe, it, expect, beforeAll, afterEach, vi } from "vitest";
 import * as ed from "@noble/ed25519";
 import { sha512 } from "@noble/hashes/sha512";
-import { incept, revokeKelSelf, type KelEvent, type KelSource, type ArohaEnvelope, type TaskConstraints } from "@aroha-sdk/core";
+import { incept, revokeKelSelf, ArohaErrorCode, type KelEvent, type KelSource, type ArohaEnvelope, type TaskConstraints } from "@aroha-sdk/core";
 import { issueTaskMandate, attenuateTaskMandate, type SignedTaskMandate } from "@aroha-sdk/credentials";
 import type { ArohaAgent } from "@aroha-sdk/run";
 import {
@@ -292,7 +292,7 @@ describe("createDelegationMiddleware enforces the leaf's constraints before the 
     });
     const reject = vi.fn();
     await mw(await envelopeFor(["export-db"], RECORDS, "export-db"), reject);
-    expect(reject).toHaveBeenCalledWith(403, "ARHOA_DATA_ACCESS_VIOLATION", expect.stringContaining("customer-db"));
+    expect(reject).toHaveBeenCalledWith(403, "Aroha_DATA_ACCESS_VIOLATION",expect.stringContaining("customer-db"));
 
     const ok = vi.fn();
     await mw(await envelopeFor(["lookup"], RECORDS, "lookup"), ok);
@@ -303,7 +303,7 @@ describe("createDelegationMiddleware enforces the leaf's constraints before the 
     const mw = createDelegationMiddleware({ did: SERVER, trustAnchors: { [A.did]: A.pub } });
     const reject = vi.fn();
     await mw(await envelopeFor(["research"], {}, "delete-everything"), reject);
-    expect(reject).toHaveBeenCalledWith(403, "ARHOA_CAPABILITY_NOT_PERMITTED", expect.any(String));
+    expect(reject).toHaveBeenCalledWith(403, "Aroha_CAPABILITY_NOT_PERMITTED",expect.any(String));
   });
 
   it("refuses an envelope whose capability cannot be determined", async () => {
@@ -321,6 +321,16 @@ describe("createDelegationMiddleware enforces the leaf's constraints before the 
     expect(first).not.toHaveBeenCalled();
     const second = vi.fn();
     await mw(env, second);
-    expect(second).toHaveBeenCalledWith(403, "ARHOA_ACTION_LIMIT_EXCEEDED", expect.any(String));
+    expect(second).toHaveBeenCalledWith(403, "Aroha_ACTION_LIMIT_EXCEEDED", expect.any(String));
+  });
+
+  it("sends the canonical ArohaErrorCode for a constraint violation", async () => {
+    const mw = createDelegationMiddleware({ did: SERVER, trustAnchors: { [A.did]: A.pub } });
+    const irreversible = vi.fn();
+    await mw(await envelopeFor(["send"], { reversibleOnly: true }, "send"), irreversible);
+    expect(irreversible).toHaveBeenCalledWith(403, ArohaErrorCode.ReversibilityViolation, expect.any(String));
+    const gated = vi.fn();
+    await mw(await envelopeFor(["send"], { humanGates: ["send"] }, "send"), gated);
+    expect(gated).toHaveBeenCalledWith(403, ArohaErrorCode.HumanGateRequired, expect.any(String));
   });
 });

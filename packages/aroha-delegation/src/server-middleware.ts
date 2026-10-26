@@ -33,7 +33,7 @@
 // capability (or the data it touched) still reached the handler.
 // Attenuation/delegation calls remain the app's.
 
-import type { ArohaEnvelope, ArohaMiddleware } from "@aroha-sdk/core";
+import { ArohaErrorCode, type ArohaEnvelope, type ArohaMiddleware } from "@aroha-sdk/core";
 import type { KelSource, KelStore } from "@aroha-sdk/core/identity";
 import type { MandateRevocationCheck } from "@aroha-sdk/credentials";
 import {
@@ -103,6 +103,14 @@ function extractFromEnvelope(envelope: ArohaEnvelope): DelegationEnvelope | null
 // extra field only this middleware cares about.
 const verifiedByEnvelope = new WeakMap<ArohaEnvelope, ChainVerificationResult>();
 
+// Constraint violations go out as their spec Appendix A code (Aroha_*).
+// Codes with no canonical counterpart keep their previous string.
+const CANONICAL_CODES = new Set<string>(Object.values(ArohaErrorCode));
+function violationCode(code: string): string {
+  const canonical = `Aroha_${code}`;
+  return CANONICAL_CODES.has(canonical) ? canonical : `ARHOA_${code}`;
+}
+
 /** Read the verified mandate chain result for an envelope, once createDelegationMiddleware has run. Undefined if no chain was sent and require:false. */
 export function getVerifiedMandate(envelope: ArohaEnvelope): ChainVerificationResult | undefined {
   return verifiedByEnvelope.get(envelope);
@@ -165,7 +173,7 @@ export function createDelegationMiddleware(options: DelegationMiddlewareOptions)
     }
     const violation = enforceScope(result.mandates!, scope, counter);
     if (violation) {
-      reject(403, `ARHOA_${violation.code}`, `Mandate constraint violated: ${violation.message}`);
+      reject(403, violationCode(violation.code), `Mandate constraint violated: ${violation.message}`);
       return;
     }
 

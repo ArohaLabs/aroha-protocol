@@ -70,7 +70,7 @@ const response = await client.sendUnsigned(
 );
 ```
 
-The client refuses a plain `http://` endpoint unless the host is loopback (`localhost`, `127.0.0.0/8`, `::1`). `TrustedMeshClient` takes no `allowInsecureHttp` option, so use an `https://` endpoint for any other host.
+The client refuses a plain `http://` endpoint unless the host is loopback (`localhost`, `127.0.0.0/8`, `::1`), so use an `https://` endpoint for any other host. For development only, pass `{ allowInsecureHttp: true }` as the third constructor argument to allow `http://` to other hosts; it has the same meaning and default (off) as on `ArohaClient`. Envelopes, which are unsigned in mesh mode, then cross the network in clear.
 
 ### Using a trust zone helper
 
@@ -112,7 +112,17 @@ createTrustedMeshOptions({
 
 ### `TrustedMeshClient`
 
-Extends `ArohaClient`. All standard methods are available. Adds:
+Extends `ArohaClient`. All standard methods are available.
+
+```typescript
+new TrustedMeshClient(
+  senderDID: string,
+  recipientDID: string,
+  opts?: ArohaClientOptions   // { pool?, allowInsecureHttp? } — passed to ArohaClient unchanged
+)
+```
+
+Adds:
 
 ```typescript
 sendUnsigned<T extends ArohaMessageType>(
@@ -131,7 +141,7 @@ Convenience helper that creates shared server options and a client factory for a
 ```typescript
 const zone = createTrustedZone(dids);
 zone.serverOptions    // spread into ArohaServerOptions
-zone.createClient(senderDID, recipientDID)  // TrustedMeshClient
+zone.createClient(senderDID, recipientDID, opts?)  // TrustedMeshClient
 ```
 
 ### `ipInCidr(ip, cidr)` / `ipInAnyRange(ip, ranges)`

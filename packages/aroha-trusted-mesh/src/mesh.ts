@@ -33,6 +33,7 @@ import type { IncomingMessage } from "node:http";
 import {
   ArohaClient,
   buildUnsignedEnvelope,
+  type ArohaClientOptions,
   type ArohaEnvelope,
   type ArohaMessageType,
   type ArohaBodyByType,
@@ -142,13 +143,18 @@ export function createTrustedMeshOptions(opts: TrustedMeshServerOptions): {
  *
  * All standard ArohaClient methods are available — only send() is overridden
  * to inject the unsigned envelope builder.
+ *
+ * `opts` are passed to ArohaClient unchanged (`pool`, `allowInsecureHttp`):
+ * plain http:// to a non-loopback host is refused unless `allowInsecureHttp`
+ * is set.
  */
 export class TrustedMeshClient extends ArohaClient {
   constructor(
     private readonly senderDID: string,
-    private readonly recipientDID: string
+    private readonly recipientDID: string,
+    opts: ArohaClientOptions = {}
   ) {
-    super();
+    super(opts);
   }
 
   /**
@@ -198,8 +204,8 @@ export function createTrustedZone(
 
   return {
     serverOptions,
-    createClient(senderDID: string, recipientDID: string): TrustedMeshClient {
-      return new TrustedMeshClient(senderDID, recipientDID);
+    createClient(senderDID: string, recipientDID: string, opts?: ArohaClientOptions): TrustedMeshClient {
+      return new TrustedMeshClient(senderDID, recipientDID, opts);
     },
   };
 }

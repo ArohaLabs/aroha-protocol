@@ -31,7 +31,7 @@ const server = new ArohaServer({
 });
 
 // Client inside the mesh: send unsigned envelopes. Plain http:// is refused for any
-// non-loopback host (and TrustedMeshClient has no allowInsecureHttp option), so use https://.
+// non-loopback host unless you pass { allowInsecureHttp: true } (development only), so use https://.
 const client = new TrustedMeshClient("did:aroha:flight-agent", "did:aroha:hotel-agent");
 const reply = await client.sendUnsigned("https://hotel-agent.internal:3001/aroha/v1", "ArohaRequest", {
   capability: "check-availability",
@@ -52,8 +52,8 @@ unaffected — a mandate is still verified by whoever acts on it.
 ## API
 
 - `createTrustedMeshOptions({ trustedDIDs, trustedPrefixes?, trustedNetworks?, isTrustedTransport? })` → `{ bypassSignatureForRequest }` to spread into `ArohaServerOptions`.
-- `TrustedMeshClient(senderDID, recipientDID)` — `sendUnsigned(endpoint, type, body, correlationId?, opts?)`.
-- `createTrustedZone(dids, prefixes?, network?)` → `{ serverOptions, createClient(sender, recipient) }`.
+- `TrustedMeshClient(senderDID, recipientDID, opts?)` — `sendUnsigned(endpoint, type, body, correlationId?, opts?)`. `opts` are `ArohaClientOptions` (`pool`, `allowInsecureHttp`), passed to `ArohaClient` unchanged; `allowInsecureHttp` defaults to off.
+- `createTrustedZone(dids, prefixes?, network?)` → `{ serverOptions, createClient(sender, recipient, opts?) }`.
 - `ipInCidr(ip, cidr)`, `ipInAnyRange(ip, ranges)`.
 
 ## License

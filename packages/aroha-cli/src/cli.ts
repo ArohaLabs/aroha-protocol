@@ -101,7 +101,8 @@ const HELP = `
   Checks your environment and verifies the agent is reachable:
     ✓ Node.js version (must be ≥22)
     ✓ .env file has AROHA_AGENT_DID
-    ✓ Endpoint returns a valid DID document (if given)
+    ✓ /.well-known/aroha-agent.json is a DID document whose id is AROHA_AGENT_DID
+      and whose verificationMethod has a usable Ed25519 key (if given)
     ✓ Unsigned test request to /aroha/v1 gets a 200, 400 or 401 reply (if given)
 
   Examples:

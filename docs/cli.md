@@ -304,7 +304,7 @@ What it modifies:
 |---------|--------------|
 | `aroha dev [--port <n>]` | Local dev sandbox: in-memory capability registry and live dashboard (default port 3000). See [Sandbox](sandbox.md). |
 | `aroha create-app [name] [-y]` | Scaffold a multi-agent project: `orchestrator/`, `agents/worker-a/`, `agents/worker-b/`, `frontend/`, `docker-compose.yml` |
-| `aroha doctor [endpoint]` | Check Node.js version, `.env` (`AROHA_AGENT_DID`), the endpoint's DID document and that `POST /aroha/v1` answers |
+| `aroha doctor [endpoint]` | Check Node.js version, `.env` (`AROHA_AGENT_DID`), the endpoint's DID document (`id` equals `AROHA_AGENT_DID`, a usable Ed25519 `verificationMethod` key) and that `POST /aroha/v1` answers |
 | `aroha telemetry [status\|on\|off]` | No telemetry endpoint is built in; telemetry exists only if you set `AROHA_TELEMETRY_ENDPOINT` to an https URL you control |
 
 There is no `call`, `publish`, `discover`, `keygen` or `conformance` command.

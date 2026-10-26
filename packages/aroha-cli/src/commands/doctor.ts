@@ -3,6 +3,7 @@
 
 import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
+import { extractPublicKey, type DIDDocument } from "@aroha-sdk/core/identity";
 
 // ─── Colours ──────────────────────────────────────────────────────────────────
 const GREEN  = (s: string) => `\x1b[32m${s}\x1b[0m`;
@@ -71,26 +72,64 @@ function checkEnv(): { did: string | null; hasKey: boolean; ok: boolean } {
   return { did, hasKey, ok };
 }
 
-async function checkEndpoint(endpoint: string): Promise<boolean> {
+/**
+ * Check the DID document served at /.well-known/aroha-agent.json the way
+ * core consumes it (`ArohaClient.fetchDIDDocument` + `extractPublicKey`).
+ * Returns null when usable, otherwise what is wrong.
+ */
+export function didDocumentProblem(doc: unknown, expectedDid?: string | null): string | null {
+  if (!doc || typeof doc !== "object" || Array.isArray(doc)) return "response is not a JSON object";
+  const d = doc as Record<string, unknown>;
+  if (typeof d.id !== "string" || !d.id.startsWith("did:")) return "DID document has no `id` DID";
+  if (expectedDid && d.id !== expectedDid) return `DID document id ${d.id} does not match AROHA_AGENT_DID=${expectedDid}`;
+  if (!Array.isArray(d.verificationMethod) || d.verificationMethod.length === 0) {
+    return "DID document has no verificationMethod";
+  }
+  try {
+    const key = extractPublicKey(d as unknown as DIDDocument);
+    if (key.length !== 32) return `verificationMethod key is ${key.length} bytes, expected a 32-byte Ed25519 key`;
+  } catch (err) {
+    return `no usable public key: ${(err as Error).message}`;
+  }
+  return null;
+}
+
+/** An @aroha-sdk/run manifest: no DID document fields at all. */
+function isRunManifest(doc: unknown): boolean {
+  if (!doc || typeof doc !== "object") return false;
+  const d = doc as Record<string, unknown>;
+  return "arohaProtocolVersion" in d && !("id" in d) && !("verificationMethod" in d);
+}
+
+async function checkEndpoint(endpoint: string, expectedDid?: string | null): Promise<boolean> {
   const wellKnown = `${endpoint.replace(/\/$/, "")}/.well-known/aroha-agent.json`;
   const start = Date.now();
 
-  let doc: { did?: string; capabilities?: unknown[] };
+  let doc: { id?: string };
   try {
     const res = await fetch(wellKnown);
     if (!res.ok) {
       fail("Endpoint", `HTTP ${res.status} from ${wellKnown}`, `Ensure your agent server is running at ${endpoint}`);
       return false;
     }
-    doc = await res.json() as { did?: string; capabilities?: unknown[] };
+    doc = await res.json() as { id?: string };
   } catch (err) {
     fail("Endpoint", String(err), `Check that your agent is running at ${endpoint}\nRun: npm run dev`);
     return false;
   }
 
   const ms = Date.now() - start;
-  const capCount = Array.isArray(doc.capabilities) ? doc.capabilities.length : "?";
-  pass("Endpoint", `${doc.did ?? endpoint}  (${capCount} capabilities)  ${ms}ms`);
+  if (isRunManifest(doc)) {
+    warn("Endpoint", `serves an agent manifest, not a DID document  ${ms}ms`,
+      "DID and key not checked. Agents built with @aroha-sdk/run serve a manifest at this path.");
+    return true;
+  }
+  const problem = didDocumentProblem(doc, expectedDid);
+  if (problem) {
+    fail("DID document", problem, `Serve the agent's DID document (id = its DID, with an Ed25519 verificationMethod) at ${wellKnown}`);
+    return false;
+  }
+  pass("DID document", `${doc.id}  ${ms}ms`);
   return true;
 }
 
@@ -131,7 +170,7 @@ export async function runDoctor(endpoint?: string): Promise<void> {
 
   if (endpoint) {
     console.log();
-    const alive = await checkEndpoint(endpoint);
+    const alive = await checkEndpoint(endpoint, env.did);
     ok = alive && ok;
     if (alive) {
       await checkRoundTrip(endpoint);

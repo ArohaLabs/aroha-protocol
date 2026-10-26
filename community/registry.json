@@ -149,7 +149,7 @@
     }
   ],
   "submit": {
-    "instructions": "To add your bridge or agent to this registry, open an issue at https://github.com/ArohaLabs/aroha-spec/issues with your package name and repo link. Requirements: Apache-2.0 or MIT license, public npm package, README with usage example.",
+    "instructions": "To add your bridge or agent to this registry, open an issue at https://github.com/ArohaLabs/aroha-protocol/issues with your package name and repo link. Requirements: Apache-2.0 or MIT license, public npm package, README with usage example.",
     "schema": "https://aroha-labs.com/schemas/ecosystem-registry/v1.json"
   }
 }

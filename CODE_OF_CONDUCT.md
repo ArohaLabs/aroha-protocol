@@ -24,7 +24,7 @@ We as contributors and maintainers pledge to make participation in the Aroha pro
 
 ## Enforcement
 
-Instances of unacceptable behavior may be reported by contacting the maintainers listed in [MAINTAINERS.md](MAINTAINERS.md). All complaints will be reviewed and investigated and will result in a response that is deemed necessary and appropriate. Maintainers are obligated to maintain confidentiality with regard to the reporter.
+Instances of unacceptable behavior may be reported by email to contact@aroha-labs.com or to the maintainer listed in [MAINTAINERS.md](MAINTAINERS.md). All complaints will be reviewed and investigated and will result in a response that is deemed necessary and appropriate. Maintainers are obligated to maintain confidentiality with regard to the reporter.
 
 Maintainers who do not follow or enforce the Code of Conduct in good faith may face temporary or permanent repercussions as determined by other members of the project's leadership.
 

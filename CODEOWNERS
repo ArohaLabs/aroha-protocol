@@ -2,7 +2,7 @@
 # Each line assigns ownership of a path to one or more GitHub users/teams.
 # The last matching rule takes precedence.
 #
-# Every owner is @projectmed99, the only maintainer (MAINTAINERS.md). The
+# Every owner is @projectmed99 (Rajagopal Ganesan), the only maintainer (MAINTAINERS.md). The
 # @aroha-labs/* teams this file used to name belong to a different GitHub
 # organisation (Aroha-Labs) and could never satisfy a review requirement here.
 # Add a user or an ArohaLabs team when a second maintainer joins.

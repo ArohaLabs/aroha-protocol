@@ -3,15 +3,15 @@
 
 # aroha-reputation
 
-> **Developed in `ArohaLabs/aroha-extensions`.** `@aroha-sdk/reputation` stays published on npm; its
-> source moved out of the protocol repository on 2026-10-25.
+> **Source not in this repository.** `@aroha-sdk/reputation` stays published on npm; its TypeScript
+> source moved out of the protocol repository on 2026-10-25 and is not in a public repository.
 
 
-**Package:** `@aroha-sdk/reputation` · **Version:** 1.0.0 · **License:** Apache-2.0
+**Package:** `@aroha-sdk/reputation` · **Version:** 1.4.1 · **License:** Apache-2.0
 
 The Bayesian Beta reputation engine for Aroha agents. Implements the **Aroha Reputation Model v1.1** — 11-signal model with Thompson Sampling for Multi-Armed Bandit agent selection.
 
-Available in all four SDKs: TypeScript, Python, Go, Java.
+Implemented in all four SDKs: TypeScript, Python, Go, Java. The TypeScript package and the Python `aroha` package are published; the Go module and the Java SDK are not yet released.
 
 ---
 
@@ -339,18 +339,10 @@ is more informative than an old one, so stale failure penalties fade quickly.
 
 ## On-Chain Sync (ERC-8004)
 
-The composite score can be written to an ERC-8004 on-chain registry
-for cross-vendor reputation portability:
-
-```typescript
-import { ArohaRegistryClient } from "@aroha-sdk/registry";
-
-const compositeScore = await engine.compositeScore("did:aroha:hotel-agent", "travel");
-// Scale 0–1 → 0–10000 for on-chain storage
-const onChainScore = Math.round(compositeScore * 10_000);
-
-await registry.updateReputationScore("did:aroha:hotel-agent", onChainScore);
-```
+The composite score (0–1) is designed to be written to an on-chain reputation registry
+(scaled to 0–10000) for cross-vendor portability. `@aroha-sdk/registry` does not currently
+export a client for this: there is no `ArohaRegistryClient` or `updateReputationScore` in the
+package. Write the score with your own contract client.
 
 ---
 

@@ -39,7 +39,7 @@ The generated agent:
 - Accepts signed Aroha envelopes on port 3001
 - Verifies Ed25519 signatures and enforces RBAC
 - Converts each envelope to an A2A message using `arohaToA2a()`
-- Forwards to your A2A agent via `POST /message`
+- Forwards to your A2A agent as a JSON-RPC `SendMessage` call (`sendMessage()` from `@aroha-sdk/a2a-bridge`)
 - Converts the A2A response back using `a2aToAroha()` + re-signs
 
 **Limitation:** The bridge runs at Trust Level 1 (no Ed25519 proof on A2A messages).
@@ -190,12 +190,14 @@ stream(await buildEnvelope("ArohaStream", agentDID, from,
 
 ### Trust level upgrade path
 
-| Trust Level | How to achieve |
+Trust levels are defined in [§4.4 of the specification](../spec/aroha-1.0.md#44-trust-levels):
+
+| Trust Level | Requirement (spec §4.4) |
 |-------------|---------------|
-| 1 (default bridge) | A2A bridge sidecar (no change to A2A agent) |
-| 2 (verified) | Native Aroha handler + valid DID Document |
-| 3 (trusted) | DID registered on-chain, staked |
-| 4 (privileged) | Verifiable Credential from a trusted issuer |
+| 1 | Registered with a Layer 2 registry |
+| 2 | Verifiable credential from a trust anchor |
+| 3 | Reputation ≥ 8000 |
+| 4 | Explicit user authorization |
 
 ---
 

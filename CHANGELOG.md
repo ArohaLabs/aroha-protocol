@@ -15,8 +15,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/). Version
 
 - **Specification scope (protocol change):** the core specification now covers Layers 0–3 (Transport, Identity, Registry, Messaging). §7 (orchestration, sagas) and §8 (preference context) moved unchanged to a companion [extensions document](spec-public/spec/extensions.md); §7 and §8 remain as pointers so section numbers do not shift. §11 conformance items 4 and 5 now apply to implementations that adopt those extensions.
 - **Repository scope:** this repository now holds the protocol, its SDKs and its adapters. Moved out (history kept in the private archive):
-  - `apps/aroha-runtime`, `apps/aroha-desktop`, `apps/aroha-ui` and `packaging/` → `ArohaLabs/aroha-runtime` (the `runtime-v*` tags and their release workflow go with them).
-  - `@aroha-sdk/orchestrator`, `@aroha-sdk/settlement`, `@aroha-sdk/commerce`, `@aroha-sdk/reputation` → `ArohaLabs/aroha-extensions`. They stay published on npm at their current versions.
+  - `apps/aroha-runtime`, `apps/aroha-desktop`, `apps/aroha-ui` and `packaging/` → a private repository (the `runtime-v*` tags and their release workflow go with them).
+  - `@aroha-sdk/orchestrator`, `@aroha-sdk/settlement`, `@aroha-sdk/commerce`, `@aroha-sdk/reputation` → a private repository. They stay published on npm at their current versions.
   - The demo agents in `agents/` removed, except `agents/mock-provider-agent`, kept as the reference agent for the implementer packet's interoperability test. `services/rag-engine` removed. `scripts/test-e2e.mjs` and `scripts/demo-server.mjs`, which drove the demo agents, removed with them.
 
 ### Added
@@ -692,8 +692,3 @@ these SDKs. Every item below is additive — no breaking changes.
 - Signed envelope format: Ed25519Signature2020 over ArohaEnvelope
 - Saga pattern: Reserve/ReserveAck/Commit/CommitAck/Cancel/CancelAck
 - Capability manifest schema v1.0
-
-[Unreleased]: https://github.com/ArohaLabs/aroha-protocol/compare/v1.2.0...HEAD
-[1.2.0]: https://github.com/ArohaLabs/aroha-protocol/compare/v1.1.0...v1.2.0
-[1.1.0]: https://github.com/ArohaLabs/aroha-protocol/compare/v1.0.0...v1.1.0
-[1.0.0]: https://github.com/ArohaLabs/aroha-protocol/releases/tag/v1.0.0

@@ -5,7 +5,7 @@
 
 **Cryptographically bounded authority for AI agents.**
 
-This repository contains the open specification for the Aroha Protocol — signed, verifiable,
+This directory contains the open specification for the Aroha Protocol — signed, verifiable,
 delegable authority for agent systems. Mandates carry spending limits, task constraints, human
 gates, and expiry; downstream agents can only narrow authority, never widen it; every action
 traces back to a human issuer.
@@ -17,7 +17,8 @@ language, without permission or coordination.
 
 | Document | What it covers |
 |----------|----------------|
-| [spec/aroha-1.0.md](spec/aroha-1.0.md) | Core protocol: five-layer architecture, envelopes, mandate chains, saga pattern, settlement, reputation |
+| [spec/aroha-1.0.md](spec/aroha-1.0.md) | Core protocol: Layers 0–3 (transport, identity, registry, messaging), envelopes, mandate chains, reputation, the Conversation and Memory Profile |
+| [spec/extensions.md](spec/extensions.md) | Extensions: orchestration (saga pattern) and preference context, formerly §7 and §8 of the core |
 | [spec/messages.md](spec/messages.md) | Wire format: ArohaRequest / ArohaResponse envelope schemas, signing, replay protection |
 | [spec/did-method.md](spec/did-method.md) | The `did:aroha` method: identifier format, key binding, rotation |
 | [spec/web-did.md](spec/web-did.md) | Web-based DID resolution for domain-bound agent identity |
@@ -46,7 +47,7 @@ Aroha is a complement, not a competitor, to the protocols agents already use:
 |----------------|----------|--------|
 | `@aroha-sdk/*` (reference) | TypeScript | Published on [npm](https://www.npmjs.com/package/@aroha-sdk/core) with full source in the tarballs (`src/` included) |
 | `aroha` | Python | Published on [PyPI](https://pypi.org/project/aroha/) |
-| Go and Java SDKs | Go, Java | Coming soon — see the roadmap at [aroha-labs.com/sdks](https://www.aroha-labs.com/sdks) |
+| Go and Java SDKs | Go, Java | Not released — partial implementations in [`sdks/go`](../sdks/go) and [`sdks/java`](../sdks/java) |
 
 Independent implementations are welcome — the conformance suite defines compatibility,
 not any particular codebase.
@@ -54,8 +55,8 @@ not any particular codebase.
 ## Changes and governance
 
 The spec follows semantic versioning; `aroha-1.0` is frozen except for errata.
-Proposals for 1.x extensions are made by opening an issue in this repository with the
-`rfc` label. Substantive changes require a published rationale and a compatibility
+Proposals for 1.x extensions are made by opening an issue in
+[ArohaLabs/aroha-protocol](https://github.com/ArohaLabs/aroha-protocol/issues) with the `rfc` label. Substantive changes require a published rationale and a compatibility
 statement against the [conformance test matrix](conformance/test-matrix.md).
 
 Trademark policy and long-term governance: [aroha-labs.com/docs/governance](https://www.aroha-labs.com/docs/governance).
@@ -63,4 +64,4 @@ Trademark policy and long-term governance: [aroha-labs.com/docs/governance](http
 ## License
 
 The specification is released under the [Apache License 2.0](LICENSE) (relicensed from MIT on
-2026-10-19; see [NOTICE](NOTICE)). You may implement, copy, fork, and redistribute it freely.
+2026-10-07; see [NOTICE](NOTICE)). You may implement, copy, fork, and redistribute it freely.

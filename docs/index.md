@@ -91,7 +91,7 @@ Four questions, answered for every action.
 
     ---
 
-    Signed revocation status from a registry witness, pushed to subscribers as SSF/CAEP security events, and a graduated kill switch: throttled, paused, stopped.
+    Signed revocation status from a registry witness, pushed to subscribers as SSF/CAEP security events, and an on/off kill switch.
 
 -   :material-receipt-text-check-outline: **4. What actually happened?**
 
@@ -123,7 +123,7 @@ Four questions, answered for every action.
 
     ```bash
     git clone https://github.com/ArohaLabs/aroha-protocol
-    cd "aroha"
+    cd aroha-protocol
     npm install && npm run build
     npm run demo:mandate
     ```
@@ -182,7 +182,7 @@ Core — the four questions
   @aroha-sdk/delegation   Multi-hop delegation with depth limits and stitched receipts
   @aroha-sdk/policy       Deterministic limits checked before any model sees a request
   registry-server         Revocation status, SSF push, witness anchoring
-  aroha-runtime           Local runtime: kill switch, receipts, rooms, scoped memory (ArohaLabs/aroha-runtime)
+  aroha-runtime           Local runtime: kill switch, receipts, rooms, scoped memory (separate repository; not yet released)
 
 Adapters
   @aroha-sdk/mcp-server   Remote MCP server (2026 authorization spec)
@@ -192,7 +192,7 @@ Adapters
   @aroha-sdk/langchain-bridge · composio-bridge · telemetry (OTLP)
 
 Extensions (maintained, optional)
-  orchestrator (sagas) · settlement · commerce · reputation  (ArohaLabs/aroha-extensions)
+  orchestrator (sagas) · settlement · commerce · reputation  (developed outside this repository; on npm)
   preferences · cache · registry discovery
 ```
 
@@ -207,7 +207,7 @@ See [the repository map](positioning.md#map-of-the-repository) for every package
 | 0 | **Transport** | HTTPS endpoints, `/.well-known/aroha-agent.json`, WebSocket streaming |
 | 1 | **Identity** | `did:aroha:` DIDs, Ed25519 keys, Verifiable Credentials, RBAC |
 | 2 | **Registry** | Signed witness: revocation status, anchoring, agent metadata (optional discovery extension) |
-| 3 | **Messaging** | Signed JSON-LD envelopes, 15 message types, replay protection |
+| 3 | **Messaging** | Signed JSON-LD envelopes, 19 message types, replay protection |
 
 Sagas (Reserve → Commit → Cancel) and preference context are extensions, specified in the [extensions document](spec/extensions.md).
 

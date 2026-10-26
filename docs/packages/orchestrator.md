@@ -3,8 +3,8 @@
 
 # @aroha-sdk/orchestrator
 
-> **Developed in `ArohaLabs/aroha-extensions`.** `@aroha-sdk/orchestrator` stays published on npm; its
-> source moved out of the protocol repository on 2026-10-25.
+> **Source not in this repository.** `@aroha-sdk/orchestrator` stays published on npm; its
+> source moved out of the protocol repository on 2026-10-25 and is not in a public repository.
 
 
 Layer 4 — saga state machine, agent selection, and negotiation.

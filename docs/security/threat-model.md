@@ -131,7 +131,7 @@ Full playbook: [docs/security/incident-response.md](incident-response.md).
 
 **If you discover a vulnerability:**
 1. Do NOT open a public GitHub issue.
-2. Email the maintainer listed in [MAINTAINERS.md](../../MAINTAINERS.md), as described in [SECURITY.md](../../SECURITY.md). Email is the only reporting channel; GitHub private vulnerability reporting is not enabled.
+2. Report it privately, as described in [SECURITY.md](../../SECURITY.md): email contact@aroha-labs.com with the subject "SECURITY", or use [GitHub private vulnerability reporting](https://github.com/ArohaLabs/aroha-protocol/security/advisories/new).
 3. Expect acknowledgement within 48 hours and a severity assessment within 5 business days.
 
 ---

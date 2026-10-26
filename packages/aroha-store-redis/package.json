@@ -41,6 +41,15 @@
   },
   "keywords": ["aroha", "redis", "nonce", "replay-protection", "spending-ledger", "enrollment"],
   "license": "Apache-2.0",
+  "homepage": "https://github.com/ArohaLabs/aroha-protocol/tree/main/packages/aroha-store-redis#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ArohaLabs/aroha-protocol.git",
+    "directory": "packages/aroha-store-redis"
+  },
+  "bugs": {
+    "url": "https://github.com/ArohaLabs/aroha-protocol/issues"
+  },
   "publishConfig": {
     "access": "public"
   },

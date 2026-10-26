@@ -3,8 +3,8 @@
 
 # Cross-implementation test vectors
 
-Fixtures every Aroha SDK runs against, so implementations in different
-languages provably agree rather than merely intending to.
+Fixtures the TypeScript and Python SDKs both run against, so implementations
+in different languages provably agree rather than merely intending to.
 
 A protocol whose implementations disagree on a boundary case has a bug that
 appears only in production, between two parties, with no shared log to

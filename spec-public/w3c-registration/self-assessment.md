@@ -2,7 +2,7 @@
 
 Submitted with the registration PR per the did-extensions registration
 process. This document explains how the `did:aroha` method specification
-([spec/did-method.md](https://github.com/ArohaLabs/aroha-spec/blob/main/spec/did-method.md))
+([docs/spec/did-method.md](https://github.com/ArohaLabs/aroha-protocol/blob/main/docs/spec/did-method.md))
 conforms to the baseline requirements for DID method specifications in
 [DID 1.0/1.1 §8](https://www.w3.org/TR/did-1.1/#methods), and how this PR
 conforms to the registration policies of the DID Extensions registry.

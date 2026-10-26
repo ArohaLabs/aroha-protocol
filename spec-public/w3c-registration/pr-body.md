@@ -4,7 +4,7 @@ This PR registers the `did:aroha` DID method in the DID Extensions registry.
 
 ## Specification
 
-https://github.com/ArohaLabs/aroha-spec/blob/main/spec/did-method.md
+https://github.com/ArohaLabs/aroha-protocol/blob/main/docs/spec/did-method.md
 
 Published under the Apache License 2.0 at a stable URL, implementable
 royalty-free by anyone. The specification defines all four DID Core §8.2
@@ -13,7 +13,7 @@ verifiable data registry, and includes the Security and Privacy
 Considerations sections required by DID Core §8.3 and §8.4.
 
 A ReSpec rendering is available at
-https://github.com/ArohaLabs/aroha-spec/blob/main/spec/did-aroha-method-1.0.html
+https://www.aroha-labs.com/spec/did-aroha-method-1.0.html
 
 ## Method name
 

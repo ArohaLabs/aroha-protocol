@@ -2,9 +2,11 @@
 
 ## Where to ask
 
-- **Questions, bug reports, ideas:** open a
+- **Bug reports and feature requests:** open a
   [GitHub Issue](https://github.com/ArohaLabs/aroha-protocol/issues/new/choose).
-- **Anything you would rather not post publicly:** email hello@aroha-labs.com.
+- **Questions and ideas:** start a
+  [GitHub Discussion](https://github.com/ArohaLabs/aroha-protocol/discussions).
+- **Anything you would rather not post publicly:** email contact@aroha-labs.com.
 - **Security vulnerabilities:** never in an issue; see [SECURITY.md](SECURITY.md).
 
 Expect a reply within 5 business days. There is one maintainer.
@@ -13,12 +15,12 @@ Expect a reply within 5 business days. There is one maintainer.
 
 | Resource | URL |
 |----------|-----|
-| Quickstart | [aroha-labs.com/docs/quickstart](https://aroha-labs.com/docs/quickstart) |
-| MCP guide | [aroha-labs.com/docs/quickstart-mcp](https://aroha-labs.com/docs/quickstart-mcp) |
-| LangChain guide | [aroha-labs.com/docs/quickstart-langchain](https://aroha-labs.com/docs/quickstart-langchain) |
-| Sandbox registry | [aroha-labs.com/docs/sandbox](https://aroha-labs.com/docs/sandbox) |
+| Quickstart | [aroha-labs.com/docs/quickstart](https://www.aroha-labs.com/docs/quickstart/) |
+| MCP guide | [aroha-labs.com/docs/quickstart-mcp](https://www.aroha-labs.com/docs/quickstart-mcp/) |
+| LangChain guide | [docs/quickstart-langchain.md](docs/quickstart-langchain.md) |
+| Sandbox registry | [docs/sandbox.md](docs/sandbox.md) |
 | Full specification | [docs/spec/aroha-1.0.md](docs/spec/aroha-1.0.md) |
-| CLI reference | [aroha-labs.com/docs/cli](https://aroha-labs.com/docs/cli) |
+| CLI reference | [docs/cli.md](docs/cli.md) |
 
 ## Bug reports
 
@@ -34,4 +36,4 @@ Whether by issue or by email, please include:
 
 ## Chat
 
-There is no official chat server.
+There is no official chat server. Use [GitHub Discussions](https://github.com/ArohaLabs/aroha-protocol/discussions).

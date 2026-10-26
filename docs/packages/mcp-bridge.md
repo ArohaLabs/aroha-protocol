@@ -10,6 +10,8 @@ Works in both directions.
 npm install @aroha-sdk/mcp-bridge
 ```
 
+To put an existing MCP server behind a mandate gate and serve its tools as an Aroha agent, use `wrapMcp` — see the [package README](https://github.com/ArohaLabs/aroha-protocol/tree/main/packages/aroha-mcp-bridge#readme).
+
 ---
 
 ## arohaAgentToMcpTools
@@ -25,7 +27,8 @@ const { tools, handleToolCall } = arohaAgentToMcpTools(
   orchestratorDID,          // string
   orchestratorPrivateKey,   // Uint8Array
   arohaClient,               // ArohaClient
-  correlationId             // string
+  correlationId,            // string
+  { mandateToken, resolvePublicKey }  // optional: mandate to carry; verify response envelopes
 );
 
 // Register tools with your MCP server

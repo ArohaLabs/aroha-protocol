@@ -19,9 +19,9 @@ The protocol is deliberately layered:
 |---|---|---|
 | **Layer 0** — Transport | HTTP, WebSocket | Never (handled by `ArohaServer`) |
 | **Layer 1** — Identity | `did:aroha:` DIDs, Ed25519 keys | Day 2 (generating a key pair) |
-| **Layer 2** — Capability | Discovery, negotiation | Day 1 (defining what your agent can do) |
-| **Layer 3** — Messaging | Signed envelopes, saga flow | Day 2 (Reserve → Commit → Cancel) |
-| **Layer 4** — Value | Settlement, credentials | Optional (commerce use cases) |
+| **Layer 2** — Registry | Capability manifests, discovery | Day 1 (defining what your agent can do) |
+| **Layer 3** — Messaging | Signed envelopes, mandates | Day 2 (flipping `devMode` off) |
+| Extensions | Sagas (Reserve → Commit → Cancel), settlement, commerce | Optional — see the [extensions document](spec/extensions.md) |
 
 On Day 0 you operate entirely in Layer 2. The lower layers are there — you just don't see them yet.
 
@@ -274,9 +274,9 @@ createAgent({ ... })
   .start();
 ```
 
-### Step 4 — Use the saga flow for atomic transactions
+### Step 4 — Use the saga flow for atomic transactions (optional extension)
 
-The three-phase saga prevents double-billing and partial failures:
+Sagas are an optional extension, not part of the core protocol ([extensions document](spec/extensions.md)). The three-phase saga prevents double-billing and partial failures:
 
 ```typescript
 createAgent({ ... })
@@ -307,7 +307,7 @@ createAgent({ ... })
   .start();
 ```
 
-The `@aroha-sdk/orchestrator` drives this flow automatically when you declare a capability as `transactional: true` in your DID Document.
+The `@aroha-sdk/orchestrator` extension (published on npm; source not in this repository) drives this flow automatically when you declare a capability as `transactional: true` in your DID Document.
 
 ### Step 5 — Wire up distributed tracing
 

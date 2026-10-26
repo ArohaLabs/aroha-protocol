@@ -12,7 +12,7 @@ been opened against the registry, and `did:aroha` does not appear in it.
 | `aroha.json` | The registry entry, in the registry's own JSON format |
 | `pr-body.md` | Draft body for the registration pull request |
 | `self-assessment.md` | Self-assessment against DID Core §8, to be pasted into the PR |
-| `SUBMIT.md` | Internal submission checklist (not mirrored publicly) |
+| `SUBMIT.md` | Internal submission checklist (not part of the PR) |
 
 ## About `"status": "registered"` in `aroha.json`
 
@@ -22,11 +22,12 @@ has happened. It becomes true only once the registry editors merge the pull requ
 
 ## URLs in these files
 
-`aroha.json` and `pr-body.md` link to `github.com/ArohaLabs/aroha-spec`. Those are the canonical
-**future** URLs: the `aroha-spec` repository is private today, so the links do not resolve for
-the public (or for registry editors). The specification repository must be made public before
-the pull request is opened. The same applies to the `ArohaLabs/aroha-protocol` URLs in the Python
-`pyproject.toml` and the Java `pom.xml`.
+The specification is public in `ArohaLabs/aroha-protocol` (`docs/spec/did-method.md`) and as
+ReSpec HTML at https://www.aroha-labs.com/spec/did-aroha-method-1.0.html. `pr-body.md`,
+`self-assessment.md` and `SUBMIT.md` link there. `aroha.json` (and the copy of the entry in
+`did-aroha-method-1.0.html`) still names `github.com/ArohaLabs/aroha-spec` as its
+`specification`; that repository is private, so the URL does not resolve for the public or for
+registry editors, and it must be changed before the pull request is opened.
 
 Implementation status for the registration is stated in `pr-body.md`: the TypeScript packages
 are the reference implementation; the Python, Go and Java SDKs verify E-form DIDs and Key Event

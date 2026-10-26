@@ -11,19 +11,23 @@ This page is the single source of truth for Aroha's build health, standards stat
 
 ## Repository and plan constraints
 
-The `ArohaLabs/aroha-protocol` repository is **private** and the organisation is on GitHub's **Free plan** (verified 2026-10-09). On this plan the following controls are **not available**, so none of them is in place:
+The `ArohaLabs/aroha-protocol` repository is **public** since 2026-10-25; the organisation is on GitHub's **Free plan**. Its public history starts with a single squashed commit ("Aroha: initial public release"). Controls in force (verified 2026-10-25):
 
 | Control | Status |
 |---------|--------|
-| Branch protection / rulesets on `main` (required checks, required reviews) | **Not enforced** — repository plan does not support it (owner decision: make public or upgrade) |
-| `CODEOWNERS` review enforcement | **Not enforced** — the file exists, but without branch protection review is a **manual process** |
-| Tag protection (who may push release tags) | **Not enforced** — repository plan does not support it (owner decision: make public or upgrade) |
-| Private vulnerability reporting (GitHub security advisories intake) | **Not enabled** — report by email (see [SECURITY.md](https://github.com/ArohaLabs/aroha-protocol/blob/main/SECURITY.md)) |
-| Required reviewers on the `release` deployment environment | **Not enforced** — repository plan does not support it; release approval is a **manual process** |
-| GitHub artifact attestations | **Not available** on this plan |
-| GitHub Discussions | Disabled |
+| Ruleset "main" on the default branch | ✅ Active — pull request required with **1 approving review from a code owner**; required status checks `Build & Test (22.x)`, `TypeScript`, `Lint`, `Python SDK (pytest)`, `Durable stores (Postgres 16, Redis 7)`, `Links (internal, blocking)`, `Aroha Conformance Suite`; **signed commits required**; force-push and deletion blocked. ⚠️ **Organisation admins can bypass** (bypass mode "always"; three admin accounts) |
+| Classic branch protection | Not used — the rulesets replace it |
+| `CODEOWNERS` review | ✅ Required — the "main" ruleset requires a code owner's approval, and `CODEOWNERS` names @projectmed99 for every path. ⚠️ Organisation admins can bypass |
+| Ruleset "release tags" (who may create, update or delete release tags) | ✅ Active — tags matching `npm-v*`, `python-v*`, `java-v*`, `sdks/go/v*`, `runtime-v*`, `@aroha-sdk/*`, `create-aroha-agent@*` are restricted. ⚠️ Organisation admins can bypass |
+| Private vulnerability reporting (GitHub security advisories intake) | ✅ Enabled — see [SECURITY.md](https://github.com/ArohaLabs/aroha-protocol/blob/main/SECURITY.md) |
+| Secret scanning and push protection | ✅ Enabled |
+| Dependabot security updates | ✅ Enabled |
+| CodeQL code scanning (default setup) | ✅ Active |
+| Required reviewers on the `release` deployment environment | ✅ Required reviewers: @projectmed99 or @rajganesan-aroha-labs must approve each publish run (verified 2026-10-26). Deployments are not yet restricted to release tags |
+| GitHub artifact attestations | ⬜ Not used |
+| GitHub Discussions | ✅ Enabled — [Discussions](https://github.com/ArohaLabs/aroha-protocol/discussions) |
 
-Repository access: five accounts hold access (two admin, three write); only one is documented as a maintainer. See the "Access" section of [MAINTAINERS.md](https://github.com/ArohaLabs/aroha-protocol/blob/main/MAINTAINERS.md). Whether that access is appropriate is an **owner decision**.
+Repository access: five accounts hold access (three admin, two write); only one is documented as a maintainer. See the "Access" section of [MAINTAINERS.md](https://github.com/ArohaLabs/aroha-protocol/blob/main/MAINTAINERS.md). Whether that access is appropriate is an **owner decision**.
 
 ---
 
@@ -35,11 +39,11 @@ Repository access: five accounts hold access (two admin, three write); only one 
 | Conformance Suite | [![Conformance](https://github.com/ArohaLabs/aroha-protocol/actions/workflows/conformance.yml/badge.svg)](https://github.com/ArohaLabs/aroha-protocol/actions/workflows/conformance.yml) |
 | Release Gate | [![Release Gate](https://github.com/ArohaLabs/aroha-protocol/actions/workflows/release-gate.yml/badge.svg)](https://github.com/ArohaLabs/aroha-protocol/actions/workflows/release-gate.yml) |
 
-**CI policy:** CI runs build, typecheck and tests on every push and pull request. Merges to `main` are **not blocked** on these checks: they are not required checks, because the repository plan does not support branch protection (owner decision: make public or upgrade). Keeping `main` green is a **manual process**.
+**CI policy:** CI runs build, typecheck and tests on every push and pull request. Since 2026-10-25, merges to `main` require the status checks listed under [Repository and plan constraints](#repository-and-plan-constraints) (the "main" ruleset); organisation admins can bypass them. The first push-triggered CI and Conformance runs on public `main` (2026-10-25) never started and are stuck queued in GitHub; CI and Conformance have since passed on pull requests, and the scheduled Conformance run passed on `main` on 2026-10-26.
 
-**Dependency audit:** CI runs `npm audit --audit-level=high --omit=dev`. It is currently **report-only** — the dependency tree has open high/critical advisories — with accepted exceptions tracked in [`.github/audit-allowlist.json`](https://github.com/ArohaLabs/aroha-protocol/blob/main/.github/audit-allowlist.json). It becomes blocking once the tree is clean. Dependabot version updates are configured in [`.github/dependabot.yml`](https://github.com/ArohaLabs/aroha-protocol/blob/main/.github/dependabot.yml); whether Dependabot **alerts** are enabled is **unverified** (owner to check in repository settings).
+**Dependency audit:** CI runs `npm audit --audit-level=high --omit=dev`. It is currently **report-only** — the dependency tree has open high/critical advisories — with accepted exceptions tracked in [`.github/audit-allowlist.json`](https://github.com/ArohaLabs/aroha-protocol/blob/main/.github/audit-allowlist.json). It becomes blocking once the tree is clean. Dependabot version updates are configured in [`.github/dependabot.yml`](https://github.com/ArohaLabs/aroha-protocol/blob/main/.github/dependabot.yml), and Dependabot security updates are enabled.
 
-**DCO:** the [DCO workflow](https://github.com/ArohaLabs/aroha-protocol/blob/main/.github/workflows/dco.yml) runs on pull requests to `main` and checks only commits after the cut-off recorded in [CONTRIBUTING.md](https://github.com/ArohaLabs/aroha-protocol/blob/main/CONTRIBUTING.md). It is **not a required check** (the plan does not support required checks). No commit currently on `main` carries a `Signed-off-by` line.
+**DCO:** the [DCO workflow](https://github.com/ArohaLabs/aroha-protocol/blob/main/.github/workflows/dco.yml) runs on pull requests to `main` and checks only commits after the cut-off recorded in [CONTRIBUTING.md](https://github.com/ArohaLabs/aroha-protocol/blob/main/CONTRIBUTING.md). It is **not** one of the required checks in the "main" ruleset, so a failing DCO run is advisory (**manual process**: the reviewer does not merge a PR with a red DCO check).
 
 ---
 
@@ -49,7 +53,7 @@ Repository access: five accounts hold access (two admin, three write); only one 
 |-------|--------|--------|
 | Protocol specification | ✅ v1.0 published (draft-quality; changes go through the spec process) | [aroha-1.0.md](spec/aroha-1.0.md) |
 | W3C Community Group | ⬜ Not yet proposed | [CHARTER.md](https://github.com/ArohaLabs/aroha-protocol/blob/main/CHARTER.md) is a draft; nothing has been submitted to W3C |
-| W3C Agent Identity Registry CG | ⬜ Not joined — **owner to join** | An existing CG (proposed 2026-04-24) whose scope covers an agent DID method, agent credentials and revocation. Joining it, and submitting `did:aroha` and the KEL as input, replaces proposing a separate CG. Owner: @projectmed99. Target: 2026-11-30. |
+| W3C Agent Identity Registry Protocol CG | ⬜ Not joined — **owner to join** | An existing CG (proposed 2026-04-24) whose scope covers an agent DID method, agent credentials and revocation. Joining it, and submitting `did:aroha` and the KEL as input, replaces proposing a separate CG. Owner: @projectmed99. Target: 2026-11-30. |
 | `did:aroha` DID method | 🔄 Specified, **not registered** in the W3C DID Method Registry | [did-method.md](spec/did-method.md) |
 | CNCF Sandbox proposal | ⬜ Draft only, not submitted | [cncf-sandbox-proposal.md](spec/cncf-sandbox-proposal.md) |
 | npm packages | ✅ Published (without npm provenance — see [Release integrity](#release-integrity)); release `npm-v2026.10.19` (2026-10-19) published 32 packages, including `@aroha-sdk/core` and `@aroha-sdk/credentials` 2.0.0 | `@aroha-sdk/*` on npmjs.com; stability tiers in [COMPATIBILITY.md](https://github.com/ArohaLabs/aroha-protocol/blob/main/COMPATIBILITY.md) |
@@ -58,10 +62,10 @@ Repository access: five accounts hold access (two admin, three write); only one 
 | Go SDK | 🔄 Partial — envelope, signatures, spending and task mandates, conversation profile verification, registry client, saga; not released | [feature matrix](sdks/feature-matrix.md) |
 | Java SDK | 🔄 Partial — envelope, signatures, spending and task mandates, conversation profile verification, registry client, saga; 174 automated tests; not released | [feature matrix](sdks/feature-matrix.md) |
 | Maven Central publishing | ⬜ **Not operational** — owner must provision `SONATYPE_*` / `GPG_*` secrets; the workflow fails fast without them | [publish-maven.yml](https://github.com/ArohaLabs/aroha-protocol/blob/main/.github/workflows/publish-maven.yml) |
-| Local runtime | ⬜ Not released — no runtime release has been published | |
+| Local runtime | ⬜ Not released — no runtime release has been published; the runtime is no longer in this repository | |
 | License | ✅ Apache-2.0 | [LICENSE](https://github.com/ArohaLabs/aroha-protocol/blob/main/LICENSE) |
 | Maintainers | ⚠️ One maintainer (bus factor 1) | [MAINTAINERS.md](https://github.com/ArohaLabs/aroha-protocol/blob/main/MAINTAINERS.md) |
-| Governance model | 🔄 Published; review and approval rules are a manual process, not enforced | [governance.md](governance.md) |
+| Governance model | 🔄 Published; one approving review from a code owner (the Core Maintainer) on `main` is enforced by a ruleset (organisation admins can bypass); the spec comment period is a manual process | [governance.md](governance.md) |
 
 **Consistency note:** The status rows above are the canonical source. Do not publish conflicting status in README, pitch decks, announcements or blog posts without updating this table first.
 
@@ -73,9 +77,9 @@ Repository access: five accounts hold access (two admin, three write); only one 
 |------|--------|--------|
 | Independent security review / SOC 2 | ⬜ Auditor not selected; no SOC 2 report | See [security/review-scope.md](security/review-scope.md) |
 | Threat model | 🔄 Draft | See [security/threat-model.md](security/threat-model.md) |
-| Published security advisories | None published | Fixes are recorded as CHANGELOG security entries. GitHub security advisories are not in use (private vulnerability reporting is not enabled) |
+| Published security advisories | None published | Fixes are recorded as CHANGELOG security entries. Private vulnerability reporting is enabled (since 2026-10-25); no GitHub security advisory has been published yet |
 | Incident response process | 🔄 Draft — single maintainer, manual process | See [security/incident-response.md](security/incident-response.md) |
-| Responsible disclosure | 🔄 Published — email intake only | Report by email to the maintainer ([SECURITY.md](https://github.com/ArohaLabs/aroha-protocol/blob/main/SECURITY.md)) |
+| Responsible disclosure | 🔄 Published — GitHub private vulnerability reporting or email | [Report a vulnerability](https://github.com/ArohaLabs/aroha-protocol/security/advisories/new), or email contact@aroha-labs.com with the subject "SECURITY" ([SECURITY.md](https://github.com/ArohaLabs/aroha-protocol/blob/main/SECURITY.md)) |
 | Key and secret management | 🔄 Draft | See [security/key-management.md](security/key-management.md) |
 | Production hardening guide | 🔄 Draft | See [security/hardening.md](security/hardening.md) |
 | Automated alerting | 🔄 Minimal | The only automated alert is the scheduled conformance run, which opens or updates a GitHub issue on failure. There is no paging or on-call. |
@@ -97,11 +101,12 @@ Repository access: five accounts hold access (two admin, three write); only one 
 | OTLP export and receipt trace links | ✅ Best-effort exporter (drops spans and never blocks); receipts carry a validated `traceparent` | ⬜ Not wired into the runtime | `packages/aroha-telemetry/src/otlp.test.ts` |
 | Credential vault rule (the model never has access to credentials) | n/a | 🔄 Credentials stay in the OS keystore and transport; tool results are not filtered for secrets | [hardening §11](security/hardening.md#11-credential-vault-rule) |
 | Evidence preservation | n/a | 🔄 Manual runbook; witnessed anchoring is off by default | [evidence-preservation.md](security/evidence-preservation.md) |
-| Graduated stop (`throttled` / `paused`), SSF/CAEP revocation events | ⬜ Not implemented | ⬜ Not implemented | The kill switch is on/off and covers consults; revocation is pull-only |
+| Graduated stop (`throttled` / `paused`) | ⬜ Not implemented | ⬜ Not implemented | The kill switch is on/off and covers consults |
+| SSF/CAEP revocation events | ✅ The reference registry (`apps/registry-server`) is an OpenID Shared Signals transmitter: a mandate revocation emits CAEP `session-revoked`, a newly accepted KEL revocation emits CAEP `credential-change`; push (RFC 8935) or poll (RFC 8936) delivery | ⬜ The runtime does not subscribe; SDK verifiers check revocation by pull | `apps/registry-server/src/routes/ssf.test.ts`, `ssf-credential.test.ts`; CHANGELOG 2.0.0 |
 
 Spec: [aroha-1.0 §6.6–§6.8 and §12](spec/aroha-1.0.md). Schemas and vectors: `spec-public/schemas/`, `spec-public/vectors/conversation-v1.json`. Integration drafts: [UCP mapping](integrations/ucp-mapping.md) (documentation only); [ID-JAG profile](integrations/id-jag-profile.md) — the resource-server side is implemented in `@aroha-sdk/mcp-server` and tested against a reference IdP and authorization server, not yet against a production IdP.
 
-**To report a vulnerability:** email the maintainer listed in [MAINTAINERS.md](https://github.com/ArohaLabs/aroha-protocol/blob/main/MAINTAINERS.md) (see [SECURITY.md](https://github.com/ArohaLabs/aroha-protocol/blob/main/SECURITY.md)) — do not open a public issue.
+**To report a vulnerability:** use [GitHub private vulnerability reporting](https://github.com/ArohaLabs/aroha-protocol/security/advisories/new) or email contact@aroha-labs.com with the subject "SECURITY" (see [SECURITY.md](https://github.com/ArohaLabs/aroha-protocol/blob/main/SECURITY.md)) — do not open a public issue.
 
 ---
 
@@ -112,7 +117,7 @@ Spec: [aroha-1.0 §6.6–§6.8 and §12](spec/aroha-1.0.md). Schemas and vectors
 | `@aroha-sdk/core` | ≥22 | ≥5.4 | ✅ |
 | `@aroha-sdk/cli` | ≥22 | ≥5.4 | ✅ |
 | `@aroha-sdk/credentials` | ≥22 | ≥5.4 | ✅ |
-| `@aroha-sdk/orchestrator` | ≥22 | ≥5.4 | ✅ |
+| `@aroha-sdk/orchestrator` (no longer in this repository; 1.4.0 remains on npm) | ≥22 | ≥5.4 | ✅ |
 | `@aroha-sdk/registry` | ≥22 | ≥5.4 | ✅ |
 | `@aroha-sdk/mcp-bridge` | ≥22 | ≥5.4 | ✅ |
 | `@aroha-sdk/a2a-bridge` | ≥22 | ≥5.4 | ✅ |
@@ -163,7 +168,7 @@ The [release quality gate](https://github.com/ArohaLabs/aroha-protocol/blob/main
 | Java SDK | `java-v<version>` |
 | Go SDK | `sdks/go/v<version>` |
 
-Older tags of the form `v1.2.3` and `python-sdk-v*` exist in the repository. They are **legacy** and are not recognised by the gate.
+No tags or GitHub releases exist in this public repository yet; the 2.0.0 release tags (`npm-v2026.10.19`, `python-v2.0.0`) were made in the private development repository. Older tags of the form `v1.2.3` and `python-sdk-v*` are **legacy** and are not recognised by the gate.
 
 The gate's CHANGELOG check requires the tag to appear under a **dated release heading** in CHANGELOG.md, not under `[Unreleased]`.
 
@@ -173,18 +178,18 @@ The gate's CHANGELOG check requires the tag to appear under a **dated release he
 
 ### Release integrity
 
-- Every publish workflow ([publish-npm.yml](https://github.com/ArohaLabs/aroha-protocol/blob/main/.github/workflows/publish-npm.yml), [publish-pypi.yml](https://github.com/ArohaLabs/aroha-protocol/blob/main/.github/workflows/publish-pypi.yml), [publish-go.yml](https://github.com/ArohaLabs/aroha-protocol/blob/main/.github/workflows/publish-go.yml), [publish-maven.yml](https://github.com/ArohaLabs/aroha-protocol/blob/main/.github/workflows/publish-maven.yml), [runtime-release.yml](https://github.com/ArohaLabs/aroha-protocol/blob/main/.github/workflows/runtime-release.yml)) runs the release quality gate first, and the publish job depends on it.
-- Publish jobs run in a GitHub environment named `release`. **Required reviewers on that environment are not configured** — the repository plan does not support them — so release approval is a **manual process** until the owner upgrades the plan or makes the repository public.
-- Tag protection is **not enforced** (see [Repository and plan constraints](#repository-and-plan-constraints)): anyone with write access can push a release tag.
-- npm packages are published **without npm provenance** (provenance requires a public repository). The target, once the repository is public, is npm Trusted Publishing (OIDC). No GitHub artifact attestations are produced.
-- The runtime release attaches a CycloneDX SBOM and `checksums.txt`. Runtime binaries are **unsigned**: Windows binaries are not signed, and macOS signing steps exist but the required signing secrets are not provisioned, so macOS binaries are unsigned too. No runtime release has been published yet.
+- Every publish workflow ([publish-npm.yml](https://github.com/ArohaLabs/aroha-protocol/blob/main/.github/workflows/publish-npm.yml), [publish-pypi.yml](https://github.com/ArohaLabs/aroha-protocol/blob/main/.github/workflows/publish-pypi.yml), [publish-go.yml](https://github.com/ArohaLabs/aroha-protocol/blob/main/.github/workflows/publish-go.yml), [publish-maven.yml](https://github.com/ArohaLabs/aroha-protocol/blob/main/.github/workflows/publish-maven.yml)) runs the release quality gate first, and the publish job depends on it.
+- Publish jobs run in a GitHub environment named `release`, which requires approval from @projectmed99 or @rajganesan-aroha-labs before a publish job runs (verified 2026-10-26). Deployments are not yet restricted to release tags, and no secrets are set yet (see [key-management.md](security/key-management.md)).
+- Release tags are restricted by the "release tags" ruleset (see [Repository and plan constraints](#repository-and-plan-constraints)); organisation admins can bypass it.
+- npm packages are published **without npm provenance**: every published version, including 2.0.0, was built while the repository was private, and provenance requires a public repository. The target is npm Trusted Publishing (OIDC). No GitHub artifact attestations are produced.
+- The runtime and its release workflow have moved out of this repository. No runtime release has been published.
 - Maven Central publishing is **not operational** until the owner provisions the `SONATYPE_*` and `GPG_*` secrets.
 - Secrets inventory, custodians and rotation: [security/key-management.md](security/key-management.md).
 
 ### Content removed from the tree
 
-GTM PDFs and third-party PDFs were removed from the working tree but **remain in git history**. No history rewrite has been done — that is pending an owner decision.
+GTM PDFs and third-party PDFs were removed from the working tree before the repository was made public. The public history starts with a single squashed commit that does not contain them.
 
 ---
 
-*Last updated: 2026-10-21. Maintained by the core maintainer. Update this page whenever any status row changes.*
+*Last updated: 2026-10-25. Maintained by the core maintainer. Update this page whenever any status row changes.*

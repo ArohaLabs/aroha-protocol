@@ -3,8 +3,8 @@
 
 # `@aroha-sdk/commerce`
 
-> **Developed in `ArohaLabs/aroha-extensions`.** `@aroha-sdk/commerce` stays published on npm; its
-> source moved out of the protocol repository on 2026-10-25.
+> **Source not in this repository.** `@aroha-sdk/commerce` stays published on npm; its
+> source moved out of the protocol repository on 2026-10-25 and is not in a public repository.
 
 
 The `@aroha-sdk/commerce` package implements all three principal commercial interaction patterns between Aroha agents: **B2B**, **B2C**, and **C2B**. It is an optional extension — the Aroha protocol kernel never requires it.

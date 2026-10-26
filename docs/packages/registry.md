@@ -31,14 +31,14 @@ Four concrete implementations are provided — including `InMemoryRegistry` for 
 
 ## ArohaHttpRegistry
 
-HTTP-based registry (SaaS at `aroha-registry.aroha-labs.workers.dev` or self-hosted).
+HTTP registry client, for a self-hosted registry (`createArohaRegistryServer()` from `@aroha-sdk/registry/server`). A reference deployment answers at `aroha-registry.aroha-labs.workers.dev`, but a hosted registry service with API keys is not currently offered, so registering needs a registry you run (or an API key from its operator).
 
 ```typescript
 import { ArohaHttpRegistry } from "@aroha-sdk/registry";
 
 const registry = new ArohaHttpRegistry({
-  baseUrl: "https://aroha-registry.aroha-labs.workers.dev",   // or your self-hosted URL
-  apiKey: process.env.Aroha_API_KEY!,
+  baseUrl: "https://registry.example.internal",   // your self-hosted registry
+  apiKey: process.env.AROHA_API_KEY!,              // issued by the registry operator
 });
 
 // Register
@@ -58,16 +58,17 @@ const record = await registry.resolveByDID("did:aroha:my-agent");
 On-chain registry backed by `ArohaRegistry.sol` (EVM). Adds staking and trustless capability indexing.
 
 ```typescript
+import { ethers } from "ethers";
 import { ArohaRegistryContract } from "@aroha-sdk/registry/contract";
 
-const registry = new ArohaRegistryContract({
-  rpcUrl: "http://127.0.0.1:8545",
-  contractAddress: "0x...",
-  signerPrivateKey: "0x...",
-});
+const registry = new ArohaRegistryContract(
+  "http://127.0.0.1:8545",       // rpcUrl
+  "0x...",                       // contractAddress
+  new ethers.Wallet("0x..."),    // optional signer, needed for writes
+);
 
 await registry.register(identity.did, manifestCID, identity.publicKey, {
-  stakeWei: BigInt("1000000000000000"),  // 0.001 ETH minimum stake
+  stakeWei: BigInt("1000000000000000"),  // optional; defaults to the contract's minimum stake
 });
 ```
 
@@ -104,7 +105,7 @@ console.log(registry.listAll());   // all active agents
 console.log(registry.size);        // total count including inactive
 ```
 
-The `InMemoryRegistry` uses the same SHA-256 DID hashing as `ArohaRegistryContract` so records are structurally identical. You can swap implementations without changing discovery or saga code.
+The `InMemoryRegistry` returns the same `AgentRecord` shape as the other implementations, so you can swap implementations without changing discovery or saga code. Its `didHash` is a truncated SHA-256 of the DID, not the contract's keccak-256, so hash values differ between backends.
 
 ---
 
@@ -115,30 +116,31 @@ Publish and fetch capability manifests on IPFS.
 ```typescript
 import { ArohaIpfsClient } from "@aroha-sdk/registry/ipfs";
 
-const ipfs = new ArohaIpfsClient({ endpoint: "https://aroha-ipfs-gateway.aroha-labs.workers.dev" });
+// Pinning backend (Pinata JWT) for uploads, or { type: "gateway", gatewayUrl } for reads only
+const ipfs = new ArohaIpfsClient({ type: "pinata", jwt: process.env.PINATA_JWT! });
 
 // Publish manifest
-const cid = await ipfs.add(JSON.stringify(manifest));
+const { cid, capabilityIds } = await ipfs.uploadManifest(manifest);
 
 // Fetch manifest by CID
-const manifest = await ipfs.fetchManifest(cid);
+const fetched = await ipfs.fetchManifest(cid);
 ```
 
 ---
 
 ## ArohaDiscovery
 
-High-level discovery engine — wraps registry + IPFS + manifest signature verification.
+High-level discovery engine for the on-chain backend — wraps `ArohaRegistryContract` + IPFS + manifest signature verification. For the HTTP registry, use `resolveAgent` / `listAgents` (see the package README).
 
 ```typescript
 import { ArohaDiscovery } from "@aroha-sdk/registry";
 
-const discovery = new ArohaDiscovery(registry, ipfs);
+const discovery = new ArohaDiscovery(contractRegistry, ipfs);   // ArohaRegistryContract, ArohaIpfsClient
 
 // Discover all agents with a capability
 const agents = await discovery.discover(
   ["book-flight"],
-  { minReputationScore: 4000, active: true }
+  { minReputationScore: 4000, maxRequiredTrustLevel: 2 }
 );
 
 // agents: DiscoveredAgent[]
@@ -187,8 +189,9 @@ const manifest = {
   signature: "",
 };
 
-// Sign (keys must be sorted)
-const input = JSON.stringify(sortKeys({ ...manifest, signature: "" }));
+// Sign (keys sorted, `signature` field left out)
+const { signature: _omit, ...body } = manifest;
+const input = JSON.stringify(sortKeys(body));
 const sig = await ed.signAsync(new TextEncoder().encode(input), identity.privateKey);
 manifest.signature = Buffer.from(sig).toString("base64url");
 ```

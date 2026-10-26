@@ -45,7 +45,7 @@ engine.addPolicy({
 
 // Block destructive actions globally
 engine.addPolicy({
-  capabilityId: "*",   // wildcard — applies to all capabilities
+  capabilityId: "*",   // default — applies to capabilities that have no policy of their own
   blockedParamValues: [
     { key: "action", value: "delete" },
     { key: "action", value: "drop-table" },

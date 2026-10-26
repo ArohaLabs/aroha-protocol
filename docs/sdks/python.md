@@ -3,7 +3,7 @@
 
 # Python SDK
 
-**Package:** `aroha` · **Module:** `aroha` · **Requires:** Python ≥ 3.11
+**Package:** `aroha` (2.0.0 on PyPI, beta) · **Module:** `aroha` · **Requires:** Python ≥ 3.11
 
 ## Installation
 
@@ -37,7 +37,7 @@ server = ArohaServer(
     did_document=identity["document"],
     on_message=on_message,
     resolve_public_key=lambda did: None,  # add real key resolution
-    dev_mode=True,                         # disable for production
+    dev_mode=True,                         # disable for production; refused unless AROHA_DEV_MODE=1
 )
 
 server.run(host="0.0.0.0", port=3001)
@@ -55,7 +55,8 @@ from aroha.agent import serve
     system_prompt="You provide FX rates.",
     provider="anthropic",
     model="claude-sonnet-4-6",
-    bearer_tokens={"secret-token"},   # optional auth
+    auth="bearer",                    # default is "aroha-sig" (Ed25519-signed callers)
+    bearer_tokens={"secret-token"},
     expose_mcp=True,                  # expose /mcp endpoint
 )
 async def pricing_agent(message: str, session_id, history, context, **kw) -> str:
@@ -196,11 +197,11 @@ from aroha.messages import build_envelope, new_correlation_id
 
 envelope = build_envelope(
     type_="ArohaRequest",
-    from_did=identity.did,
+    from_did=identity["did"],
     to_did="did:aroha:target-agent",
     body={"capability": "convert", "amount": 100, "from": "USD", "to": "EUR"},
     correlation_id=new_correlation_id(),
-    private_key=identity.private_key,
+    private_key=identity["private_key"],
     ttl_seconds=300,          # optional, default 300
     traceparent="00-...",     # optional W3C trace context
     routing_hint={"complexity": "standard"},  # optional
@@ -209,7 +210,7 @@ envelope = build_envelope(
 
 | Parameter | Type | Default | Description |
 |---|---|---|---|
-| `type_` | `str` | required | One of the 15 Aroha message type strings |
+| `type_` | `str` | required | One of the 19 Aroha message type strings |
 | `from_did` | `str` | required | Sender DID |
 | `to_did` | `str` | required | Recipient DID |
 | `body` | `dict` | required | Message payload |
@@ -221,7 +222,7 @@ envelope = build_envelope(
 
 ### `validate_envelope(...) → tuple[bool, str | None]`
 
-Validates an inbound envelope: recipient match → expiry → nonce replay → signature.
+Validates an inbound envelope: recipient match → timestamps → signature → nonce replay (the nonce is recorded only after the signature verifies).
 
 ```python
 from aroha.messages import validate_envelope, NonceRegistry
@@ -230,10 +231,10 @@ nonces = NonceRegistry()
 
 valid, reason = validate_envelope(
     envelope=inbound,
-    sender_public_key=resolved_pub_key,
-    my_did=identity.did,
+    sender_key=resolved_pub_key,   # public key, raw bytes, or the sender's DID document
+    my_did=identity["did"],
     nonce_registry=nonces,
-    skip_signature=False,   # set True for mTLS/VPC trusted mesh
+    skip_signature=False,   # True only with acknowledge_unauthenticated=True (mTLS/VPC trusted mesh)
 )
 
 if not valid:
@@ -255,13 +256,15 @@ is_fresh = nonces.check(nonce="abc123", expires_at="2026-04-29T12:00:00+00:00")
 ### Message Types
 
 ```python
-from aroha.messages import Aroha_MESSAGE_TYPES
+from aroha.messages import MESSAGE_TYPES   # Aroha_MESSAGE_TYPES is a backward-compatible alias
 
-# Set of all 15 valid type strings:
+# Set of all 19 valid type strings:
 # {"ArohaRequest", "ArohaResponse", "ArohaStream", "ArohaNegotiate",
 #  "ArohaCounterOffer", "ArohaAccept", "ArohaReserve", "ArohaReserveAck",
 #  "ArohaCommit", "ArohaCommitAck", "ArohaCancel", "ArohaCancelAck",
-#  "ArohaDelegate", "ArohaError", "ArohaSatisfactionSignal"}
+#  "ArohaDelegate", "ArohaError", "ArohaSatisfactionSignal",
+#  "ArohaSpendingMandate", "ArohaTaskMandate",
+#  "ArohaDispute", "ArohaDisputeResolution"}
 ```
 
 ### `ArohaErrorCode`
@@ -376,14 +379,14 @@ engine = SagaEngine(
 result = await engine.execute([
     SagaStep(
         agent_did="did:aroha:flight-agent",
-        agent_endpoint="http://flights.example.com/aroha/v1",
+        agent_endpoint="https://flights.example.com/aroha/v1",
         capability="book-flight",
         params={"origin": "JFK", "dest": "NRT", "date": "2026-06-01"},
         hold_duration_ms=30_000,
     ),
     SagaStep(
         agent_did="did:aroha:hotel-agent",
-        agent_endpoint="http://hotels.example.com/aroha/v1",
+        agent_endpoint="https://hotels.example.com/aroha/v1",
         capability="book-hotel",
         params={"city": "Tokyo", "nights": 5},
         hold_duration_ms=30_000,
@@ -418,8 +421,8 @@ result = await selector.select(
     capability="sentiment-analysis",
     params={"ticker": "BTC", "window": "1h"},
     candidates=[
-        {"did": "did:aroha:feed-a", "endpoint": "http://feed-a/aroha/v1"},
-        {"did": "did:aroha:feed-b", "endpoint": "http://feed-b/aroha/v1"},
+        {"did": "did:aroha:feed-a", "endpoint": "https://feed-a.example.com/aroha/v1"},
+        {"did": "did:aroha:feed-b", "endpoint": "https://feed-b.example.com/aroha/v1"},
     ],
     weights={"price": 0.5, "reputation": 0.3, "latency": 0.2},
 )
@@ -450,7 +453,7 @@ from aroha.bridges.langchain_bridge import aroha_tools_for_agent
 
 tools = await aroha_tools_for_agent(
     agents=[
-        {"did": "did:aroha:fx-agent", "endpoint": "http://fx/aroha/v1", "capabilities": ["convert"]},
+        {"did": "did:aroha:fx-agent", "endpoint": "https://fx.example.com/aroha/v1", "capabilities": ["convert"]},
     ],
     capability_ids=["convert"],
     orchestrator_did=identity["did"],
@@ -465,7 +468,7 @@ executor = AgentExecutor(agent=agent, tools=tools)
 
 ### CrewAI / AutoGen
 
-Bridges are available as stubs in `aroha.bridges.crewai_bridge` and `aroha.bridges.autogen_bridge`. Community contributions welcome.
+`aroha.bridges.crewai_bridge.aroha_tools_for_crew` (CrewAI ≥ 0.80) and `aroha.bridges.autogen_bridge.aroha_tools_for_autogen` (AutoGen 0.4+, `autogen-core`) build the same tools for those frameworks. See the [SDK README](https://github.com/ArohaLabs/aroha-protocol/blob/main/sdks/aroha-py/README.md#framework-bridges) for the inbound bridges (`from_chain`, `from_crew`, `from_runner`, `from_openai_client`).
 
 ---
 

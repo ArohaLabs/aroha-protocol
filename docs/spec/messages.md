@@ -258,7 +258,7 @@ See [Aroha 1.0 Appendix A](aroha-1.0.md#appendix-a--error-codes) for all 28 `Aro
 
 ### ArohaSatisfactionSignal
 
-Orchestrator → its own preference store. Post-saga satisfaction feedback for preference and reputation learning. It is **private**: an orchestrator MUST NOT send it to provider agents ([Aroha 1.0 §8.3](aroha-1.0.md#83-satisfaction-signals)).
+Orchestrator → its own preference store. Post-saga satisfaction feedback for preference and reputation learning. It is **private**: an orchestrator MUST NOT send it to provider agents ([Extensions §2.3](extensions.md#23-satisfaction-signals)).
 
 ```typescript
 // body

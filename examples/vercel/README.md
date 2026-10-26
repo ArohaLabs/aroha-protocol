@@ -29,8 +29,8 @@ npm run typecheck
 |----------|-------------|
 | `AROHA_AGENT_DID` | Your agent's DID, e.g. `did:aroha:my-vercel-agent` |
 | `AROHA_PRIVATE_KEY` | Base64 of the 32-byte Ed25519 private key (seed) |
-| `ORCHESTRATOR_DID` | DID of the orchestrator allowed to call this agent |
-| `ORCHESTRATOR_PUBLIC_KEY` | Base64 of that orchestrator's 32-byte Ed25519 public key |
+| `ORCHESTRATOR_DID` | DID of the calling agent allowed to call this agent |
+| `ORCHESTRATOR_PUBLIC_KEY` | Base64 of that caller's 32-byte Ed25519 public key |
 
 ### Generate a keypair
 

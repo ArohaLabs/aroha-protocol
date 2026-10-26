@@ -66,7 +66,7 @@ The market view behind this summary, with sources, is maintained privately by th
 
 ## Why this approach is efficient
 
-- **No new infrastructure for the common case.** A verifier needs the token and nothing else: `did:aroha:z` identifiers commit to their own key, so checking a chain makes no network call. Measured: a two-link chain (human → orchestrator → agent) verifies in **3.6 ms p50 / 4.4 ms p95** on a developer laptop ([B6](benchmark-methodology.md#b6-mandate-chain-verification-offline); indicative only until re-run on the controlled benchmark environment). Revocation adds one cached lookup or a push subscription.
+- **No new infrastructure for the common case.** A verifier needs the token and nothing else: `did:aroha:z` identifiers commit to their own key, so checking a chain makes no network call. Measured: a two-link chain (person → agent → agent) verifies in **3.6 ms p50 / 4.4 ms p95** on a developer laptop ([B6](benchmark-methodology.md#b6--mandate-chain-verification-offline); indicative only until re-run on the controlled benchmark environment). Revocation adds one cached lookup or a push subscription.
 - **No per-hop round trip to a central server.** Delegation happens by the delegating agent signing a narrower mandate, not by asking an authorization server for a new token at every hop.
 - **Adopt at the edge, not by migration.** One verify call in a handler, one wrapper around an MCP server, or the remote MCP connector. Existing agents, IdPs and frameworks stay.
 - **Standards over invention where they exist.** MCP authorization (RFC 9728, client ID metadata documents), SSF/CAEP security event tokens, A2A signed agent cards, OpenTelemetry. Aroha defines only what they do not: attenuating mandates and verifiable receipts.
@@ -77,13 +77,13 @@ What each framework, harness, agent and model integration covers, and how it is 
 
 | Group | Packages and apps | Status in the positioning |
 |---|---|---|
-| **Core: the four questions** | `aroha-core`, `aroha-credentials`, `aroha-delegation`, `aroha-policy`, `aroha-audit`, `aroha-bbs` (selective disclosure, unaudited), `apps/registry-server` (revocation, witness, SSF), `ArohaLabs/aroha-runtime` (kill switch, receipts, rooms), the conversation profile | The product |
+| **Core: the four questions** | `aroha-core`, `aroha-credentials`, `aroha-delegation`, `aroha-policy`, `aroha-audit`, `aroha-bbs` (selective disclosure, unaudited), `apps/registry-server` (revocation, witness, SSF), the Aroha runtime (kill switch, receipts, rooms; not in this repository), the conversation profile | The product |
 | **Adapters: meet people where they are** | `aroha-mcp-server`, `aroha-mcp-guard`, `aroha-mcp-bridge`, `aroha-a2a-bridge`, `aroha-langchain-bridge`, `aroha-composio-bridge`, `aroha-hermes-bridge`, `aroha-openclaw-bridge`, `aroha-telemetry`, `skills/`, Python / Go / Java SDKs | Supported; how adoption happens |
-| **Developer tooling** | `aroha-cli`, `create-aroha-agent`, `aroha-run`, `aroha-micro`, `aroha-evals`, `ArohaLabs/aroha-runtime` (UI and desktop shell), `apps/status` | Supported |
-| **Extensions: kept, not promoted** | In `ArohaLabs/aroha-extensions`: `aroha-orchestrator` (sagas), `aroha-settlement`, `aroha-commerce`, `aroha-reputation`. Here: `aroha-trust`, `aroha-preferences`, `aroha-cache`, `aroha-resilience`, `aroha-chaos`, `aroha-trusted-mesh`, `aroha-registry` discovery, `apps/ipfs-gateway`, `contracts/` | Maintained for existing users. Not part of how Aroha is described |
+| **Developer tooling** | `aroha-cli`, `create-aroha-agent`, `aroha-run`, `aroha-micro`, `aroha-evals`, the Aroha runtime (UI and desktop shell; not in this repository), `apps/status` | Supported |
+| **Extensions: kept, not promoted** | Published on npm, source not in this repository: `aroha-orchestrator` (sagas), `aroha-settlement`, `aroha-commerce`, `aroha-reputation`. Here: `aroha-trust`, `aroha-preferences`, `aroha-cache`, `aroha-resilience`, `aroha-chaos`, `aroha-trusted-mesh`, `aroha-registry` discovery, `apps/ipfs-gateway`, `contracts/` | Maintained for existing users. Not part of how Aroha is described |
 | **Examples** | `examples/*`, `aroha-gmail-mcp`, demos | Illustrations |
 
-No code was removed when this positioning was adopted. The documentation as it stood before is preserved on the branch `archive/pre-positioning-2026-10-19`.
+No code was removed when this positioning was adopted. The documentation as it stood before is preserved on the branch `archive/pre-positioning-2026-10-19` of the private development repository.
 
 ## Language to use and to avoid
 

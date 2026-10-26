@@ -21,7 +21,7 @@ Thank you for your interest in contributing. This guide covers everything from s
 
 ```bash
 git clone https://github.com/ArohaLabs/aroha-protocol.git
-cd aroha
+cd aroha-protocol
 npm install
 npm run build
 npm test
@@ -33,9 +33,9 @@ npm test
 
 ```
 packages/      Core protocol packages (@aroha-sdk/core, @aroha-sdk/cli, …)
-agents/        Reference agent implementations
+agents/        Reference provider agent (mock-provider-agent)
 apps/          Companion applications
-docs/          Specification, governance, and GTM docs
+docs/          Specification, governance, and documentation site
 scripts/       Demo scripts
 community/     Third-party ecosystem submissions
 ```
@@ -90,15 +90,14 @@ Branch prefix conventions:
 <type>(<scope>): <short description in imperative mood>
 
 # Types: feat, fix, docs, refactor, test, chore
-# Scopes: core, cli, credentials, registry, orchestrator, policy,
-#          settlement, conformance, ecosystem, mcp-bridge, a2a-bridge,
-#          langchain-bridge, telemetry, reputation
+# Scopes: core, cli, credentials, registry, policy, conformance,
+#          ecosystem, mcp-bridge, a2a-bridge, langchain-bridge, telemetry
 ```
 
 Examples:
 ```
 feat(core): add key rotation support to did:aroha identities
-fix(orchestrator): cancel idempotency when commit races cancel
+fix(credentials): refuse a child mandate that omits its parent's limit
 docs(conformance): add L3 saga test matrix rows
 ```
 
@@ -114,9 +113,9 @@ This adds a `Signed-off-by: Your Name <you@example.com>` trailer. The name and e
 
 The **DCO** check ([.github/workflows/dco.yml](.github/workflows/dco.yml)) runs on every pull request to `main` and fails if a commit made **after the DCO cut-off** lacks a sign-off whose email matches the commit author.
 
-**Cut-off.** No commit made before the DCO was introduced carries a sign-off, and history is not rewritten to add one. A commit is exempt when it is an ancestor of `7473e091839c8686c1f804f7d58de4504f391c38` (the tip of `fix/audit-remediation` when the check was introduced) **or** its committer date is before **2026-11-01T00:00:00Z**. Both values live in `dco.yml` (`DCO_EXEMPT_BASE`, `DCO_CUTOFF_DATE`); change them only together and only by owner decision.
+**Cut-off.** No commit made before the DCO was introduced carries a sign-off, and history is not rewritten to add one. A commit is exempt when it is an ancestor of `7473e091839c8686c1f804f7d58de4504f391c38` (the tip of `fix/audit-remediation` in the private development repository when the check was introduced; that commit is not in this repository's public history) **or** its committer date is before **2026-11-01T00:00:00Z**. Both values live in `dco.yml` (`DCO_EXEMPT_BASE`, `DCO_CUTOFF_DATE`); change them only together and only by owner decision.
 
-**Status:** the check is advisory. Required status checks are not available on this repository's plan, so merging a PR with a red DCO check is prevented only by the reviewer (manual process).
+**Status:** the check is advisory. DCO is not one of the required status checks in the `main` ruleset, so merging a PR with a red DCO check is prevented only by the reviewer (manual process).
 
 To fix a missing sign-off:
 
@@ -173,10 +172,10 @@ publishes nothing.
 | `java-v<version>` | Maven `com.aroha-labs:aroha-sdk` | `publish-maven.yml` (Release) | `sdks/java/pom.xml` project version |
 | `sdks/go/v<version>` | Go module `github.com/ArohaLabs/aroha-protocol/sdks/go` | `publish-go.yml` (tag push) | — (the Go toolchain reads the version from the tag) |
 
-**Legacy tags.** The repository also carries older tags — `v1.0.0` … `v1.3.0` (whole-repo
-versions) and `python-sdk-v1.1.2`, `python-sdk-v1.1.3`, `python-sdk-v1.4.0`. They predate this
-scheme, are not recognised by the gate or by any publish workflow, and are kept only as history. Do
-not create new tags in those forms.
+**Legacy tags.** Releases before this scheme used `v1.0.0` … `v1.3.0` (whole-repo versions) and
+`python-sdk-v1.1.2`, `python-sdk-v1.1.3`, `python-sdk-v1.4.0`. Those tags, and the 2.0.0 tags, were
+made in the private development repository; this public repository has no tags yet. The legacy forms
+are not recognised by the gate or by any publish workflow. Do not create new tags in those forms.
 
 ### The Release Quality Gate
 
@@ -209,6 +208,8 @@ CHANGELOG example:
    tag lines, open a PR, merge it.
 2. Create the tag on the merge commit and push it:
    `git tag "@aroha-sdk/core@1.10.0" && git push origin "@aroha-sdk/core@1.10.0"`.
+   The "release tags" ruleset restricts creating, updating and deleting tags in these forms;
+   only organisation admins (who bypass it) can push them.
    For `sdks/go/v*` the tag push starts the workflow (gate first).
 3. For npm, PyPI and Maven, publish a GitHub Release from that tag. The workflow runs the gate,
    then publishes. Manual re-runs take the tag as an input and must be started **from the tag ref**
@@ -218,27 +219,26 @@ npm specifics: a 403/404 from the registry now **fails** the job. The `first-pub
 (manual runs only) downgrades it to a warning, and exists solely for the first ever publish of a new
 package name. PyPI specifics: re-uploading an existing version is an error (no `skip-existing`).
 
-### The `release` environment (manual owner setting)
+### The `release` environment
 
-Every publish job runs in the GitHub environment **`release`**. On the repository's current plan
-(private, GitHub Free) environments cannot have required reviewers or environment-scoped secrets,
-so today the environment only labels the deployment — **release approval is a manual process, not
-an enforced control.** When the plan or visibility changes, the owner should, in Settings →
-Environments → `release`:
+Every publish job runs in the GitHub environment **`release`**. Since 2026-10-25 it requires approval
+from @projectmed99 or @rajganesan-aroha-labs before a publish job runs (verified 2026-10-26). Still to
+do, in Settings → Environments → `release`:
 
-1. add required reviewers (at least one maintainer other than the person tagging, once there is one);
+1. add a required reviewer other than the person tagging, once there is a second maintainer;
 2. restrict deployment to tags matching the patterns above;
-3. move `NPM_TOKEN` (and the Maven/Cloudflare secrets, when provisioned) from repository secrets to
-   `release` environment secrets.
+3. put `NPM_TOKEN` (and the Maven/Cloudflare secrets, when provisioned) in `release` environment
+   secrets rather than repository secrets.
 
 ### npm provenance and Trusted Publishing
 
 `npm publish --provenance` is **not** used: npm only accepts provenance for packages built from a
-public source repository, and this repository is private. Published npm packages therefore carry no
-provenance statement. Target once the repository is public — npm Trusted Publishing (OIDC):
+public source repository, and every version published so far was built while this repository was
+private. Published npm packages therefore carry no provenance statement. Target now that the
+repository is public — npm Trusted Publishing (OIDC):
 
 1. On npmjs.com, for each package (`@aroha-sdk/*`, `create-aroha-agent`): Settings → Trusted
-   Publisher → GitHub Actions; organisation `ArohaLabs`, repository `aroha`, workflow
+   Publisher → GitHub Actions; organisation `ArohaLabs`, repository `aroha-protocol`, workflow
    `publish-npm.yml`, environment `release`.
 2. Confirm npm CLI ≥ 11.5 on the runner (the workflow uses Node 24.x) — `id-token: write` is
    already granted to the publish job.
@@ -252,19 +252,16 @@ Until then `NPM_TOKEN` stays in use.
 
 | Secret | Exists? | Used by |
 |---|---|---|
-| `NPM_TOKEN` | yes | `publish-npm.yml` |
-| `VERCEL_TOKEN` | yes | no workflow references it (owner to document or delete) |
+| `NPM_TOKEN` | **no** — not yet set on this repository (verified 2026-10-26) | `publish-npm.yml` |
+| `VERCEL_TOKEN` | **no** — not yet set on this repository | no workflow references it (owner to document or delete) |
 | — (OIDC, no secret) | n/a | `publish-pypi.yml` (PyPI trusted publishing) |
 | `SONATYPE_USERNAME`, `SONATYPE_PASSWORD`, `GPG_PRIVATE_KEY`, `GPG_PASSPHRASE` | **no** | `publish-maven.yml` |
-| `APPLE_CERTIFICATE`, `APPLE_CERTIFICATE_PASSWORD`, `APPLE_SIGNING_IDENTITY`, `APPLE_TEAM_ID`, `APPLE_NOTARIZATION_APPLE_ID`, `APPLE_NOTARIZATION_PASSWORD` | **no** | `runtime-release.yml` (optional; without them macOS binaries are unsigned) |
 | `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` | **no** | `registry-migrations-check.yml` |
 
 **Maven Central publishing is not operational.** The `SONATYPE_*`/`GPG_*` secrets (and a Central
 Portal namespace for `com.aroha-labs`) have not been provisioned; `publish-maven.yml` fails fast
-with a clear message until the owner adds them. **Runtime binaries are unsigned** (Windows has no
-signing job; macOS signing needs the `APPLE_*` secrets) and the draft release notes say so. No build
-provenance attestation is produced — artifact attestations are not available for private
-repositories on this plan. See [docs/security/key-management.md](docs/security/key-management.md)
+with a clear message until the owner adds them. No build provenance attestation is produced —
+GitHub artifact attestations are not used. See [docs/security/key-management.md](docs/security/key-management.md)
 for custody and rotation of every secret.
 
 ---
@@ -284,7 +281,7 @@ If you're building a bridge, agent, or extension:
 
 **Do not open a public issue for security vulnerabilities.**
 
-Email the maintainer listed in [MAINTAINERS.md](MAINTAINERS.md). See [SECURITY.md](SECURITY.md) for the full policy, response SLAs, and the GitHub advisory route that will open once the repository is public.
+Use [GitHub private vulnerability reporting](https://github.com/ArohaLabs/aroha-protocol/security/advisories/new) or email contact@aroha-labs.com with `SECURITY` in the subject line. See [SECURITY.md](SECURITY.md) for the full policy and response SLAs.
 
 ---
 

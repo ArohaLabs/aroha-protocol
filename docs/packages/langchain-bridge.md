@@ -14,11 +14,10 @@
 You've already built agents in LangChain or another framework. You don't want to rewrite them. But you do want:
 
 - **Verifiable identity**: every inter-agent call is cryptographically signed
-- **Discovery**: other agents can find your tools without hardcoded URLs
-- **Atomic transactions**: your tools participate in saga reserve/commit/rollback
-- **RBAC**: role-based access control at the transport layer
+- **Discovery**: other agents can find your tools without hardcoded URLs (register the descriptors from Pattern 4)
+- **RBAC**: role-based access control at the transport layer (`@aroha-sdk/credentials` middleware on an `ArohaServer`)
 
-`@aroha-sdk/langchain-bridge` gives you all of this without touching your existing agent code.
+`@aroha-sdk/langchain-bridge` gives you signed calls in both directions without touching your existing agent code. The provider it creates answers `ArohaRequest` only; saga steps (`ArohaReserve` / `ArohaCommit` / `ArohaCancel`) are not handled by the bridge.
 
 ---
 
@@ -42,7 +41,7 @@ Wrap any Aroha capability as a LangChain tool. Your LangChain agent calls it lik
 import { arohaCapabilityToLangChainTool } from "@aroha-sdk/langchain-bridge";
 
 const flightSearchTool = arohaCapabilityToLangChainTool("search-flights", {
-  endpoint: "http://flight-agent.aroha.example/aroha/v1",
+  endpoint: "https://flight-agent.example/aroha/v1",
   agentDID: "did:aroha:flight-agent",
   callerDID: myDID,
   callerPrivateKey: myPrivateKey,
@@ -68,7 +67,7 @@ const agent = createToolCallingAgent({ tools: [flightSearchTool, ...otherTools] 
 import { arohaCapabilityToOpenAITool } from "@aroha-sdk/langchain-bridge";
 
 const hotelTool = arohaCapabilityToOpenAITool("search-hotels", {
-  endpoint: "http://hotel-agent.aroha.example/aroha/v1",
+  endpoint: "https://hotel-agent.example/aroha/v1",
   agentDID: "did:aroha:hotel-agent",
   callerDID: myDID,
   callerPrivateKey: myPrivateKey,
@@ -82,7 +81,7 @@ const hotelTool = arohaCapabilityToOpenAITool("search-hotels", {
 
 ### Pattern 3: Expose LangChain tools as a Aroha provider
 
-Your existing LangChain toolset becomes a Aroha agent. Other Aroha agents can discover it, call it with signed envelopes, and include it in sagas.
+Your existing LangChain toolset becomes a Aroha agent. Other Aroha agents can discover it and call it with signed envelopes (`ArohaRequest`).
 
 ```typescript
 import { langChainAgentToArohaProvider } from "@aroha-sdk/langchain-bridge";
@@ -111,12 +110,10 @@ import { langChainToolsToCapabilities } from "@aroha-sdk/langchain-bridge";
 const capabilities = langChainToolsToCapabilities(myTools);
 // [{ capabilityId, description, inputSchema }, ...]
 
-// Register with InMemoryRegistry or ArohaRegistry
-for (const cap of capabilities) {
-  await registry.register(agentDID, endpoint, pubKey, {
-    capabilityIds: capabilities.map((c) => c.capabilityId),
-  });
-}
+// Register with InMemoryRegistry (register(did, manifestCID, publicKey, options))
+await registry.register(agentDID, manifestCID, pubKey, {
+  capabilityIds: capabilities.map((c) => c.capabilityId),
+});
 ```
 
 ---
@@ -180,6 +177,6 @@ Any object that matches these shapes works. The OpenAI shape is checked in CI ag
 |---------|----------------|------------------------------|
 | Inter-agent auth | None — caller trusts any response | Ed25519 signed every message |
 | Discovery | Hardcoded URLs | Registry — find agents by capability |
-| Saga / rollback | Manual | Reserve → Commit → Cancel |
-| RBAC | None | Credential-based at transport layer |
-| Audit | No standard | SHA-256 chained `CommerceAuditLog` |
+| Saga / rollback | Manual | Not handled by the bridge (the provider answers `ArohaRequest` only) |
+| RBAC | None | Credential-based at transport layer (`@aroha-sdk/credentials` middleware) |
+| Audit | No standard | Not provided by the bridge — `@aroha-sdk/audit` gives a SHA-256 hash-chained log |

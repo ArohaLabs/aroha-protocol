@@ -34,7 +34,7 @@ const eligible = filterAgents(
   discoveredAgents,
   profile,
   "book-flight",
-  { minTrustLevel: 2 }
+  { userTrustLevel: 2, domain: "travel" }   // drops agents needing a higher trust level or priced above the domain budget
 );
 ```
 
@@ -52,7 +52,7 @@ const scores = scoreAgents(
   profile,
   "book-flight"
 );
-// scores: Map<agentDID, number>   — higher is better
+// scores: Record<agentDID, number>   — higher is better
 ```
 
 Pass `scores` to `AgentSelector.select()` to weight the fan-out winner selection.
@@ -69,12 +69,15 @@ import { applySatisfactionSignal } from "@aroha-sdk/preferences";
 const updatedProfile = applySatisfactionSignal(profile, {
   sagaId: "saga-abc",
   agentDID: "did:aroha:flight-agent",
+  capability: "book-flight",
   outcome: "satisfied",                          // "satisfied" | "neutral" | "dissatisfied"
   dimensions: {
     price:   "satisfied",
     quality: "neutral",
     speed:   "satisfied",
   },
+  withinSLA: true,
+  requiredCompensation: false,
 });
 ```
 

@@ -63,4 +63,4 @@ granted = effective_consent(consent_record)   # e.g. {"transcript_retention", "a
 - Take a signer's kind (person or agent) only from `Verification.kind`, which comes from the Key Event Log. Never take it from the object.
 - A consent record with a withdrawal by someone other than the subject needs the room record. Without it, verification fails by design.
 - Each function returns `Verification(ok, reason, kind)` and never raises on bad input. Treat `ok == False` as "do not act".
-- Check your build against the vectors: `pytest sdks/aroha-py/tests/test_conversation_vectors.py tests/test_mandate_vectors.py tests/test_task_mandate_vectors.py`.
+- Check your build against the vectors: `pytest sdks/aroha-py/tests/test_conversation_vectors.py sdks/aroha-py/tests/test_mandate_vectors.py sdks/aroha-py/tests/test_task_mandate_vectors.py`.

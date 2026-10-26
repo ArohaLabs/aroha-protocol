@@ -16,11 +16,11 @@ body:
     attributes:
       label: Area
       options:
-        - Protocol spec (Layer 0 — Identity)
-        - Protocol spec (Layer 1 — Envelopes)
+        - Protocol spec (Layer 0 — Transport)
+        - Protocol spec (Layer 1 — Identity)
         - Protocol spec (Layer 2 — Registry)
-        - Protocol spec (Layer 3 — Saga)
-        - Protocol spec (Layer 4 — Commerce)
+        - Protocol spec (Layer 3 — Messaging)
+        - Protocol extensions (sagas, preference context)
         - SDK / packages
         - CLI
         - Bridges (MCP / A2A / LangChain)

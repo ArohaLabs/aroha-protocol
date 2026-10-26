@@ -16,7 +16,7 @@ npm install --save-dev @aroha-sdk/chaos
 
 ## FaultInjector
 
-Wraps an agent endpoint handler and intercepts calls to inject configured faults.
+Wraps calls to an agent and either passes them through or injects the first matching fault.
 
 ```typescript
 import { FaultInjector } from "@aroha-sdk/chaos";
@@ -33,9 +33,13 @@ const injector = new FaultInjector({
   ],
 });
 
-// Wrap your handler
-const wrappedHandler = injector.wrap(originalHandler);
+// Run a call through the injector
+const reply = await injector.execute("did:aroha:payment-agent", "ArohaRequest", () =>
+  client.send(paymentEndpoint, requestEnvelope),
+);
 ```
+
+`injector.reset()` clears the attempt counters between test cases. Pass `randomSeed` to make `probability` draws reproducible.
 
 ---
 
@@ -89,28 +93,29 @@ interface FaultRule {
 
 ---
 
-## ChaosSaga
+## ChaosSagaRunner
 
-`ChaosSaga` runs a multi-step saga with fault injection at the orchestration level, verifying that LIFO compensation fires in the correct order.
+`ChaosSagaRunner` injects a failure at every step position of a saga in turn and checks that every earlier step was compensated (LIFO) and nothing else was. You supply the function that runs your saga with a given step forced to fail.
 
 ```typescript
-import { ChaosSaga } from "@aroha-sdk/chaos";
+import { ChaosSagaRunner, printChaosReport } from "@aroha-sdk/chaos";
 
-const result = await ChaosSaga.run({
-  steps: [
-    { agentDID: "did:aroha:flight-agent",  capability: "reserve-flight" },
-    { agentDID: "did:aroha:hotel-agent",   capability: "reserve-hotel" },
-    { agentDID: "did:aroha:payment-agent", capability: "charge" },
-  ],
-  injectFaultAt: 2,   // hotel-agent will fail
-  // Expected: flight compensation fires, saga reports saga_compensated
+const runner = new ChaosSagaRunner(async (steps, failAt) => {
+  // Run your saga with step `failAt` forced to fail; report what happened.
+  return runMySaga(steps, failAt); // → { success, failures, cancelledStepIds }
 });
 
-expect(result.compensationOrder).toEqual([
-  "did:aroha:flight-agent",   // last committed, first compensated
+const report = await runner.sweepFailures([
+  { agentDID: "did:aroha:flight-agent",  capability: "reserve-flight" },
+  { agentDID: "did:aroha:hotel-agent",   capability: "reserve-hotel" },
+  { agentDID: "did:aroha:payment-agent", capability: "charge" },
 ]);
-expect(result.sagaStatus).toBe("compensated");
+
+printChaosReport(report);
+expect(report.allPassed).toBe(true);
 ```
+
+`runner.injectFailureAt(steps, index)` runs a single targeted failure and returns that `ChaosRun`.
 
 ---
 

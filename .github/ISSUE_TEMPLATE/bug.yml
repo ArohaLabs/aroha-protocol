@@ -9,7 +9,7 @@ body:
     attributes:
       value: |
         Thanks for taking the time to report a bug. Please fill in as much detail as possible.
-        **Security vulnerabilities:** Do NOT use this form. Follow [SECURITY.md](https://github.com/ArohaLabs/aroha-protocol/blob/main/SECURITY.md) instead (private email to the maintainer).
+        **Security vulnerabilities:** Do NOT use this form. Follow [SECURITY.md](https://github.com/ArohaLabs/aroha-protocol/blob/main/SECURITY.md) instead (GitHub private vulnerability reporting, or email contact@aroha-labs.com with SECURITY in the subject).
 
   - type: dropdown
     id: package

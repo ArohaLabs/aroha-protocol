@@ -12,14 +12,14 @@ Aroha is designed to be owned by the industry, not by any single vendor. This do
 | Track | Status |
 |-------|--------|
 | Protocol specification | v1.0 draft — frozen |
-| W3C Community Group submission | Not yet proposed |
+| W3C Community Group submission | Not yet proposed — plan: join the existing Agent Identity Registry Protocol Community Group and offer `did:aroha` as input |
 | CNCF Sandbox proposal | Draft only, not submitted |
 | npm packages | Published under `@aroha-sdk/` scope (without npm provenance) |
 | License | Apache-2.0 |
-| Governance model | Meritocratic open governance (this document) — the review and approval rules below are a **manual process**; none is enforced by repository settings |
+| Governance model | Meritocratic open governance (this document) — a repository ruleset on `main` enforces one approving review from a code owner and the required CI checks (organisation admins can bypass); the other rules below are a **manual process** |
 | Maintainers | One maintainer (bus factor 1) — see [MAINTAINERS.md](../MAINTAINERS.md) |
 
-> **Enforcement status (2026-10-09):** the repository is private on GitHub's Free plan. Branch protection, required checks, required reviews, `CODEOWNERS` enforcement and tag protection are **not enforced — repository plan does not support it (owner decision: make public or upgrade)**. Where this document says a change "requires" an approval or a green check, read it as the project's policy, followed as a manual process. Canonical status: [trust.md](trust.md).
+> **Enforcement status (2026-10-25):** the repository is public. A ruleset on `main` requires a pull request with **one approving review from a code owner** (`CODEOWNERS` names the Core Maintainer, @projectmed99, for every path), the required CI and conformance status checks, and signed commits; a second ruleset restricts release tags. **Organisation admins can bypass both.** The DCO check and the spec comment period are not enforced by repository settings: where this document says a change "requires" them, read it as the project's policy, followed as a manual process. Canonical status: [trust.md](trust.md).
 
 ---
 
@@ -83,7 +83,7 @@ The Aroha protocol kernel (Layers 0–3) is frozen at v1.0. The target process f
 5. Merged to docs/spec/ with a numbered amendment
 ```
 
-Extension packages (`@aroha-sdk/settlement`, `@aroha-sdk/commerce`, etc.) follow a lighter process — one reviewer approval is the policy, since extensions don't affect the wire protocol. The approval is a manual process; it is not enforced by repository settings.
+Extension packages (`@aroha-sdk/settlement`, `@aroha-sdk/commerce`, etc., now developed outside this repository) follow a lighter process — one reviewer approval is the policy, since extensions don't affect the wire protocol.
 
 ---
 
@@ -100,7 +100,7 @@ We are actively seeking partnerships with:
 | **LangChain** | `@aroha-sdk/langchain-bridge` as an officially recommended integration | 90k+ LangChain GitHub stars — this is the fastest path to developer adoption |
 | **Databricks** | Aroha receipts as the audit record for Mosaic AI agent actions | Enterprise data platform + verifiable agent receipts = auditable enterprise agents |
 
-**Partnership contact:** email the maintainer listed in [MAINTAINERS.md](../MAINTAINERS.md).
+**Partnership contact:** email contact@aroha-labs.com.
 
 ---
 
@@ -113,7 +113,7 @@ We are actively seeking partnerships with:
 
 ### As an organisation
 - Implement Aroha 1.0 in your primary language SDK
-- Join the W3C Community Group (free, open to all)
+- Join the W3C Agent Identity Registry Protocol Community Group, which the project plans to join (no Aroha-specific Community Group exists)
 - Sponsor the CNCF Sandbox proposal process
 
 ### As a framework maintainer
@@ -159,7 +159,7 @@ Maintainers are responsible for code review, issue triage, release publication, 
 | Ecosystem Maintainer (vacant — covered by the Core Maintainer) | Community submissions, bridge PRs, ecosystem health | 5 business days |
 | Security Maintainer (vacant — covered by the Core Maintainer) | Vulnerability intake, threat model, audit coordination | 48-hour acknowledgement (best effort), 5 business days otherwise |
 
-**Current maintainers:** listed in [MAINTAINERS.md](../MAINTAINERS.md). Repository access is wider than the maintainer list (five accounts, two with admin and three with write access); see the "Access" section of MAINTAINERS.md. Reconciling access with roles is an owner decision.
+**Current maintainers:** listed in [MAINTAINERS.md](../MAINTAINERS.md). Repository access is wider than the maintainer list (five accounts, three with admin and two with write access); see the "Access" section of MAINTAINERS.md. Reconciling access with roles is an owner decision.
 
 ### Becoming a Maintainer
 
@@ -185,13 +185,13 @@ Maintainers who are inactive for 6 months are moved to Emeritus status. Emeritus
 5. Address review feedback. All CI checks must be green.
 6. A maintainer merges when approved.
 
-Steps 5–6 are a **manual process**: CI checks are not required checks and approvals are not required reviews, because the repository plan does not support branch protection (owner decision: make public or upgrade).
+Steps 5 and 6 are enforced by the `main` ruleset (required status checks, and one approving review from a code owner, who is the maintainer); organisation admins can bypass it.
 
 Full contributing guide: [CONTRIBUTING.md](../CONTRIBUTING.md).
 
 ### PR Requirements
 
-These are the project's merge policy, checked by the maintainer by hand. None is enforced by repository settings (see the enforcement status note above).
+These are the project's merge policy. Required CI checks and one code-owner approval are enforced by the `main` ruleset (admins can bypass); the rest is checked by the maintainer by hand (see the enforcement status note above).
 
 - [ ] CI passes (build, test, lint, typecheck)
 - [ ] At least 1 maintainer approval
@@ -205,7 +205,7 @@ These are the project's merge policy, checked by the maintainer by hand. None is
 <type>(<scope>): <short description>
 
 Types: feat, fix, docs, refactor, test, chore
-Scope: core, cli, credentials, registry, orchestrator, policy, settlement, conformance, ecosystem
+Scope: core, cli, credentials, registry, policy, conformance, ecosystem
 ```
 
 ---

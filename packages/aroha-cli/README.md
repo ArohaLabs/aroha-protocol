@@ -15,7 +15,7 @@ npx @aroha-sdk/cli <command>
 ```bash
 # Scaffold a new agent pre-wired for mandate verification
 aroha init my-agent
-# → prompts: name, DID, LLM provider, settlement adapter
+# → prompts: agent type (provider/orchestrator), port, capabilities
 # → writes src/mandate.ts: verifyMandateChain() back to AROHA_MANDATE_ROOT_DID
 
 # Zero-config defaults
@@ -42,11 +42,14 @@ Scaffold commands produce agents that verify the full mandate chain (`verifyMand
 
 ## API (commands)
 
-- `aroha init <name>` — scaffold a new mandate-aware agent.
-- `aroha convert --from mcp` — wrap an MCP server as an Aroha agent.
-- `aroha doctor [endpoint]` — check Node version, env vars, endpoint reachability, and signed round-trip.
+- `aroha init <name>` — scaffold a new mandate-aware agent (`--type`, `--port`, `--api-port`, `--capabilities`, `--yes`).
+- `aroha create-app [name]` — scaffold a multi-agent project.
+- `aroha convert --from <a2a|agntcy|mcp|langchain>` — wrap an existing agent as an Aroha agent.
+- `aroha add capability [id]` — add a capability to an existing agent (`--saga` for reserve/commit/cancel handlers).
+- `aroha create-bridge` — scaffold a bridge package (`--name`, `--sdk`, `--out`).
+- `aroha doctor [endpoint]` — check Node version (≥ 22), env vars, endpoint reachability, and signed round-trip.
 - `aroha dev` — start a local registry and developer dashboard.
-- `aroha publish` — publish the agent manifest to IPFS and register on the Hub.
+- `aroha telemetry [status|on|off]` — the CLI has no built-in telemetry endpoint and sends nothing unless you set `AROHA_TELEMETRY_ENDPOINT`.
 
 ## License
 

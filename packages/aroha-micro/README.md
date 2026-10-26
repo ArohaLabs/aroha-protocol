@@ -21,7 +21,7 @@ createAgent({ name: "greeter", port: 3001 })
 // → Agent listening on http://localhost:3001
 ```
 
-That's a complete, running Aroha agent. No DID setup, no key generation, no configuration file.
+That's a complete, running Aroha agent. No DID setup, no key generation, no configuration file: an ephemeral Ed25519 DID is generated on each start.
 
 ## Real-world example
 
@@ -46,37 +46,36 @@ createAgent({ name: "weather-agent", port: 3001 })
 // Run: npx tsx agent.ts  →  http://localhost:3001/aroha/v1  Ready
 ```
 
-## Production mode
+## Dev mode
 
-By default, agents run in `devMode: true` (signatures skipped, zero setup). Flip one flag for production:
+By default (`devMode: false`) every inbound message gets Ed25519 signature verification, nonce replay protection and expiry checks. For local development you can opt in to dev mode:
 
 ```typescript
 createAgent({
   name: "weather-agent",
   port: 3001,
-  devMode: false,           // ← the only change
-  privateKeyPath: "./keys/key-1.pem",
-  did: process.env.AROHA_AGENT_DID,
+  devMode: true,            // local development only
 })
   .on("get-weather", handler)
   .start();
 ```
 
-Your handler code is unchanged. `devMode: false` re-enables Ed25519 signature verification, nonce replay protection, and expiry checks.
+Dev mode skips inbound signature verification, answers `ArohaReserve` with an immediate `ArohaCommitAck`, registers the agent with a local `aroha dev` sandbox if one is running, and prints a banner. The server refuses to start in dev mode unless `NODE_ENV=development`. Your handler code is the same in both modes.
 
 ## API
 
 - `createAgent(opts)` — create a `MicroAgent` instance.
   - `opts.name` — agent display name.
-  - `opts.port` — port to listen on (default `3001`).
-  - `opts.devMode` — skip crypto validation locally (default `true`).
-  - `opts.did` — agent DID (required when `devMode: false`).
-  - `opts.privateKeyPath` — path to Ed25519 PEM key (required when `devMode: false`).
+  - `opts.port` — port to listen on (required).
+  - `opts.devMode` — skip inbound verification locally (default `false`).
+  - `opts.registryUrl` — registry URL (default `AROHA_REGISTRY_URL`, else the reference registry; in dev mode `http://localhost:3000`).
+  - `opts.endpoint` — public base URL of the agent (default `AGENT_ENDPOINT`, else `http://localhost:{port}`).
+  - `opts.host` — interface to bind (default `127.0.0.1`).
 
 - `.on(capability, handler)` — register a capability handler. Returns the agent for chaining.
-  - `handler(params)` — receives the request body and returns any JSON-serialisable value.
+  - `handler(params)` — receives the request's `params` and returns any JSON-serialisable value.
 
-- `.start()` — start the HTTP server. Returns `Promise<void>`.
+- `.start()` — start the HTTP server. Returns `Promise<void>`. `.stop()` shuts it down.
 
 > `createMicroAgent` is also exported as an alias for `createAgent`.
 

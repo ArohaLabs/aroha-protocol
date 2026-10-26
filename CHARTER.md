@@ -3,11 +3,11 @@
 
 # Aroha Protocol Community Group — W3C Charter
 
-**Status:** Draft — **not yet submitted.** No W3C Community Group has been proposed or formed; this document is a proposal draft.  
+**Status:** Draft — **not yet submitted.** No W3C Community Group has been proposed or formed; this document is a proposal draft. The current plan is instead to join the existing W3C *Agent Identity Registry Protocol Community Group* and offer `did:aroha` as input (see [docs/trust.md](docs/trust.md)).  
 **Proposed Group Name:** Aroha Protocol Community Group  
 **Proposed Short Name:** `aroha`  
 **Proposed W3C URL:** https://www.w3.org/community/aroha/  
-**Specification Repository:** https://github.com/ArohaLabs/aroha-spec  
+**Specification Repository:** https://github.com/ArohaLabs/aroha-protocol (`spec-public/`)  
 **Reference Implementation:** https://github.com/ArohaLabs/aroha-protocol  
 **Version:** 1.0 — 2026-07-01  
 
@@ -73,7 +73,7 @@ The following are explicitly out of scope for this CG:
 | Aroha Conformance Test Suite 1.0 | CG Note | Q4 2026 |
 | Aroha Protocol 1.1 (incremental) | CG Draft | Q1 2027 |
 
-The Aroha Core Specification is already in draft form at [`docs/spec/aroha-1.0.html`](docs/spec/aroha-1.0.html) formatted as a W3C ReSpec CG-DRAFT document.
+The Aroha Core Specification is already in draft form at [`docs/spec/aroha-1.0.html`](docs/spec/aroha-1.0.html) formatted as a W3C ReSpec CG-DRAFT document (published at https://www.aroha-labs.com/spec/aroha-1.0.html).
 
 ---
 
@@ -102,7 +102,7 @@ Participation is open to W3C Members and the public under the [W3C Community Con
 Visit https://www.w3.org/community/aroha/ and click "Join this Group".
 
 **Communication:**
-- GitHub Issues: https://github.com/ArohaLabs/aroha-spec/issues
+- GitHub Issues: https://github.com/ArohaLabs/aroha-protocol/issues
 - Mailing list: public-aroha@w3.org (proposed)
 - Weekly calls: Tuesdays 16:00 UTC (proposed)
 

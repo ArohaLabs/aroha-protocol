@@ -7,21 +7,20 @@
 
 ## Installation
 
-> **Unreleased.** No version of this module has been tagged (`sdks/go/vX.Y.Z`), and
-> `github.com/ArohaLabs/aroha-protocol` is a private repository, so `go get` cannot fetch it yet. Build from
-> a checkout with a `replace` directive:
+> **Not released yet.** No version of this module has been tagged (`sdks/go/vX.Y.Z`),
+> so there is no release to `go get`. Build from a checkout with a `replace` directive:
 >
 > ```bash
-> git clone https://github.com/ArohaLabs/aroha-protocol   # requires repository access
-> go mod edit -replace github.com/ArohaLabs/aroha-protocol/sdks/go=../aroha/sdks/go
+> git clone https://github.com/ArohaLabs/aroha-protocol
+> go mod edit -replace github.com/ArohaLabs/aroha-protocol/sdks/go=../aroha-protocol/sdks/go
 > go get github.com/ArohaLabs/aroha-protocol/sdks/go
 > ```
 >
-> Once the repository is public and a `sdks/go/vX.Y.Z` tag exists, plain
+> Once a `sdks/go/vX.Y.Z` tag exists, plain
 > `go get github.com/ArohaLabs/aroha-protocol/sdks/go@vX.Y.Z` will work.
 
-**Dependencies:** three modules — `filippo.io/edwards25519`, `github.com/google/uuid` and
-`golang.org/x/crypto` (plus their transitive requirements). No web framework.
+**Dependencies:** one module, `github.com/google/uuid`; Ed25519 and ECDH come from the
+standard library (`crypto/ed25519`, `crypto/ecdh`). No web framework.
 
 **Parity:** v2 mandate tokens (with chain verification), the hardened envelope rules and E-DID /
 Key Event Log verification are implemented and tested against the shared vectors, and
@@ -34,6 +33,7 @@ package main
 
 import (
     "context"
+    "crypto/ed25519"
     "fmt"
     "log"
 
@@ -60,7 +60,7 @@ func main() {
             return nil // add real key resolution
         },
         NonceRegistry: nonces,
-        OnMessage: func(envelope map[string]any, respond, stream transport.ResponderFn) {
+        OnMessage: func(envelope map[string]any, respond, stream func(map[string]any)) {
             fmt.Println("received:", envelope["type"])
         },
         DevMode: true, // refused unless AROHA_DEV_MODE=1; never in production
@@ -225,6 +225,10 @@ messages.TypeCancelAck    // "ArohaCancelAck"
 messages.TypeDelegate     // "ArohaDelegate"
 messages.TypeError        // "ArohaError"
 messages.TypeSatisfaction // "ArohaSatisfactionSignal"
+messages.TypeSpendingMandate   // "ArohaSpendingMandate"
+messages.TypeTaskMandate       // "ArohaTaskMandate"
+messages.TypeDispute           // "ArohaDispute"
+messages.TypeDisputeResolution // "ArohaDisputeResolution"
 ```
 
 ### Error Code Constants
@@ -252,6 +256,7 @@ messages.ErrServiceUnavailable      // "Aroha_SERVICE_UNAVAILABLE"
 // Generic
 messages.ErrInternalError           // "Aroha_INTERNAL_ERROR"
 messages.ErrInvalidParams           // "Aroha_INVALID_PARAMS"
+// … and 11 more (CSN, task-mandate enforcement, settlement); messages.ErrorCodes lists all 28
 ```
 
 ### `NonceRegistry`
@@ -388,11 +393,11 @@ selector := orchestrator.NewAgentSelector(client, id.DID, id.KeyID, id.PrivateKe
 result, err := selector.Select(
     "sentiment-analysis",
     map[string]any{"ticker": "BTC"},
-    []orchestrator.Candidate{
-        {DID: "did:aroha:feed-a", Endpoint: "http://feed-a/aroha/v1"},
-        {DID: "did:aroha:feed-b", Endpoint: "http://feed-b/aroha/v1"},
+    []map[string]any{
+        {"did": "did:aroha:feed-a", "endpoint": "https://feed-a.example.com/aroha/v1"},
+        {"did": "did:aroha:feed-b", "endpoint": "https://feed-b.example.com/aroha/v1"},
     },
-    orchestrator.SelectOptions{
+    &orchestrator.SelectOptions{
         Weights: map[string]float64{
             "price":      0.5,
             "reputation": 0.3,
@@ -541,7 +546,7 @@ intent, err := mandate.IssueIntent(
     "did:aroha:personal-agent",
     mandate.SpendingConstraints{SpendLimitUSD: 500, Currency: "USD"},
     userPrivKey,
-    3_600_000,
+    time.Hour,
 )
 
 cart, err := mandate.AttenuateToCart(
@@ -549,14 +554,13 @@ cart, err := mandate.AttenuateToCart(
     "did:aroha:shopping-orchestrator",
     mandate.SpendingConstraints{SpendLimitUSD: 79.99},
     personalAgentKey,
-    0,
+    nil, // nil = the parent's expiry
 )
 
-result, err := mandate.Verify(cart.Token, grantorPublicKey, "did:aroha:shopping-orchestrator")
-if result.Valid {
-    fmt.Println(result.Mandate.Constraints.SpendLimitUSD) // 79.99
+m, err := mandate.Verify(cart.Token, personalAgentPublicKey, "did:aroha:shopping-orchestrator")
+if err == nil {
+    fmt.Println(m.Constraints.SpendLimitUSD) // 79.99
 }
+// Verify checks one key; before moving money use mandate.VerifyMandateChain.
 ```
-
-**Default weights:** price 0.35 · reputation 0.30 · latency 0.15 · preference 0.15 · availability 0.05
 

@@ -20,7 +20,7 @@ A2A standardises how one agent discovers another (Agent Cards), sends it message
 
 Platform agent products (Amazon Bedrock Agents, Salesforce Agentforce, Microsoft Copilot Studio, Vertex AI agents) each add their own authorisation and orchestration on top, and those do not carry across vendors.
 
-**Aroha is complementary to A2A:** it adds authority (signed mandates and mandate chains), signed envelopes and sagas *on top of* A2A transport. `@aroha-sdk/a2a-bridge` maps Aroha requests to A2A messages and carries the Aroha mandate in A2A message metadata (`aroha.mandate`) and in an Agent Card extension declaration, so an A2A agent that does not understand Aroha can ignore it, and one that does can verify it.
+**Aroha is complementary to A2A:** it adds authority (signed mandates and mandate chains), signed envelopes and, as an optional extension, sagas *on top of* A2A transport. `@aroha-sdk/a2a-bridge` maps Aroha requests to A2A messages and carries the Aroha mandate in A2A message metadata (`aroha.mandate`) and in an Agent Card extension declaration, so an A2A agent that does not understand Aroha can ignore it, and one that does can verify it.
 
 ---
 
@@ -42,8 +42,8 @@ ArohaWrapper (A2A bridge)   ArohaWrapper (A2A bridge)   ArohaWrapper (A2A bridge
                                     │
                         ┌───────────┴───────────┐
                         │   InMemoryRegistry     │ (enterprise, air-gapped)
-                        │   Aroha Registry HTTP   │ (SaaS, managed)
-                        │   ArohaRegistry.sol     │ (public, trustless)
+                        │   Aroha Registry HTTP   │ (managed or self-hosted)
+                        │   ArohaRegistry.sol     │ (optional, on-chain)
                         └───────────────────────┘
 ```
 
@@ -51,7 +51,7 @@ Each cloud's agent keeps its existing reasoning framework (LangChain, Semantic K
 
 - A `did:aroha:` identity with an Ed25519 keypair
 - The ability to publish signed capability manifests
-- The ability to participate in cross-vendor atomic sagas
+- The ability to participate in cross-vendor atomic sagas (optional orchestration extension, `@aroha-sdk/orchestrator`)
 
 ---
 
@@ -66,7 +66,7 @@ The procurement agent (Azure) needs to:
 
 Without Aroha: three bespoke integrations, three different auth schemes, no atomic rollback if step 3 fails.
 
-With Aroha:
+With Aroha (sagas use the optional orchestration extension, [`@aroha-sdk/orchestrator`](spec/extensions.md)):
 ```typescript
 const result = await saga.execute([
   {
@@ -155,7 +155,7 @@ Same pattern — import `@aroha-sdk/core`, call `validateEnvelope()`, respond wi
 |---------|--------------|------|
 | Cross-cloud auth | OAuth 2.0 federation (complex) | Ed25519 DIDs (self-sovereign) |
 | Cross-cloud discovery | Hardcoded URLs | Registry-based capability lookup |
-| Cross-cloud atomic transactions | Not supported | Saga reserve/commit/cancel |
+| Cross-cloud atomic transactions | Not supported | Saga reserve/commit/cancel (optional extension) |
 | Vendor portability | Locked to cloud IAM | Portable keypair, any cloud |
-| Open governance | Vendor-controlled | W3C Community Group |
+| Open governance | Vendor-controlled | Open draft specification (Apache-2.0); joining an existing W3C Community Group is planned, not started |
 | Privacy / GDPR | Vendor data plane sees all | Signed envelopes, consent tokens |

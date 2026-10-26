@@ -2,6 +2,9 @@
 
 Module `github.com/ArohaLabs/aroha-protocol/sdks/go` · Go 1.22+ · one dependency (`github.com/google/uuid`).
 
+**Not released yet** (no `sdks/go/v*` tag): build from a checkout of this repository; see
+[Installation](../../docs/sdks/go.md#installation).
+
 Full reference: [`docs/sdks/go.md`](../../docs/sdks/go.md). This page lists the
 packages and how their wire formats are checked against the TypeScript
 reference.

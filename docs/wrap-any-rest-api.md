@@ -28,12 +28,12 @@ import type { ArohaEnvelope, ArohaRequestBody, ArohaResponseBody } from "@aroha-
 
 const PORT = Number(process.env.PORT ?? 3070);
 const ENDPOINT = `http://localhost:${PORT}/aroha/v1`;
-const { did, privateKey, publicKey, didDocument } = await generateDID("hubspot-agent", ENDPOINT);
+const { did, privateKey, publicKey, document: didDocument } = await generateDID("hubspot-agent", ENDPOINT);
 
-// ── 2. Registry (so orchestrators can discover this agent) ───────────────────
+// ── 2. Registry (so other agents can discover this agent) ───────────────────
 
 const registry = new InMemoryRegistry();
-await registry.register(did, ENDPOINT, publicKey, {
+await registry.register(did, MANIFEST_CID, publicKey, {   // MANIFEST_CID: CID of your published manifest
   capabilityIds: ["get-contact", "search-contacts", "create-contact"],
 });
 
@@ -87,7 +87,10 @@ async function onMessage(envelope: ArohaEnvelope, respond: (r: ArohaEnvelope) =>
 
 const server = new ArohaServer({
   agentDID: did, didDocument, port: PORT,
-  resolvePublicKey: (senderDID) => registry.resolvePublicKey(senderDID),
+  resolvePublicKey: async (senderDID) => {
+    const rec = await registry.resolveByDID(senderDID);
+    return rec ? new Uint8Array(Buffer.from(rec.publicKeyB64, "base64url")) : null;
+  },
   onMessage,
 });
 await server.start();
@@ -168,12 +171,15 @@ aroha create-bridge --name hubspot --sdk HubSpot -y
 cd aroha-hubspot-bridge
 # Implement handleCapability() in src/bridge.ts
 npm run build
+# The scaffold names the package @aroha-sdk/hubspot-bridge: rename it to a scope you own, then
 npm publish --access public
 ```
 
 ---
 
 ## Existing proxy agents
+
+Published on npm (1.0.0); their source is not in this repository.
 
 | Agent | Capabilities | Port |
 |-------|-------------|------|

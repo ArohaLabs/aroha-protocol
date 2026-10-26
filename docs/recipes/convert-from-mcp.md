@@ -119,7 +119,7 @@ case "ArohaRequest": {
   const mcpResult = await handleToolCall(mcpToolName, params);
   if (mcpResult.isError) {
     return buildEnvelope("ArohaError", agentDID, from,
-      { code: ArohaErrorCode.UpstreamError, message: mcpResult.content[0]?.text ?? "MCP error", retryable: true },
+      { code: ArohaErrorCode.ServiceUnavailable, message: mcpResult.content[0]?.text ?? "MCP error", retryable: true },
       correlationId, privateKey);
   }
 
@@ -178,8 +178,8 @@ import { ArohaDiscovery } from "@aroha-sdk/registry";
 const agents = await discovery.discover(["search-flights"]);
 const { tools, handleToolCall } = arohaAgentToMcpTools(
   agents[0],
-  orchestratorDID,
-  orchestratorPrivateKey,
+  myAgentDID,            // the calling agent's DID
+  myAgentPrivateKey,
   arohaClient,
   crypto.randomUUID()
 );

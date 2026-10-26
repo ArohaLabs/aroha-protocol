@@ -11,7 +11,7 @@
 
   <name>Aroha Java SDK</name>
   <description>Aroha Protocol — Java SDK for agent-to-agent discovery, cryptographic identity, and atomic transactions</description>
-  <url>https://aroha-labs.com</url>
+  <url>https://www.aroha-labs.com</url>
 
   <licenses>
     <license>
@@ -24,15 +24,17 @@
   <developers>
     <developer>
       <id>projectmed99</id>
-      <name>projectmed99</name>
+      <name>Rajagopal Ganesan</name>
+      <email>rajagopal.ganesan@aroha-labs.com</email>
+      <organization>Aroha Labs LLC</organization>
       <url>https://github.com/projectmed99</url>
     </developer>
   </developers>
 
   <scm>
-    <connection>scm:git:git://github.com/ArohaLabs/aroha-spec.git</connection>
-    <developerConnection>scm:git:ssh://github.com/ArohaLabs/aroha-spec.git</developerConnection>
-    <url>https://github.com/ArohaLabs/aroha-spec</url>
+    <connection>scm:git:git://github.com/ArohaLabs/aroha-protocol.git</connection>
+    <developerConnection>scm:git:ssh://github.com/ArohaLabs/aroha-protocol.git</developerConnection>
+    <url>https://github.com/ArohaLabs/aroha-protocol</url>
     <tag>v1.0.0</tag>
   </scm>
 

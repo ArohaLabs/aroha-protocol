@@ -16,7 +16,7 @@
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Node.js](https://img.shields.io/badge/node-%E2%89%A522-brightgreen)](https://nodejs.org)
 
-[Docs](https://aroha-labs.com/docs) · [Support matrix](docs/support-matrix.md) · [Local sandbox](docs/sandbox.md) · [Support](SUPPORT.md) · [Spec](docs/spec/aroha-1.0.md)
+[Docs](https://www.aroha-labs.com/docs/) · [Support matrix](docs/support-matrix.md) · [Local sandbox](docs/sandbox.md) · [Support](SUPPORT.md) · [Spec](docs/spec/aroha-1.0.md)
 
 </div>
 
@@ -105,7 +105,7 @@ Adapters (use Aroha from the stack you already run)
 ├── @aroha-sdk/a2a-bridge     A2A ↔ Aroha
 └── @aroha-sdk/langchain-bridge  LangChain / OpenAI functions ↔ Aroha
 
-Extensions (maintained, optional; developed in ArohaLabs/aroha-extensions)
+Extensions (maintained, optional; developed outside this repository)
 └── orchestrator (sagas) · settlement · commerce · reputation
 
 Tooling
@@ -215,8 +215,8 @@ contracts/              Solidity contracts (ArohaRegistry, ArohaEscrow, ArohaRep
 docs/                   MkDocs documentation site
 ```
 
-The Aroha runtime (desktop app) lives in [`ArohaLabs/aroha-runtime`](https://github.com/ArohaLabs/aroha-runtime). The saga, settlement,
-commerce and reputation extensions live in [`ArohaLabs/aroha-extensions`](https://github.com/ArohaLabs/aroha-extensions); they stay published on npm.
+The Aroha runtime (desktop app) is developed in a separate, private repository and has not been released. The saga, settlement,
+commerce and reputation extensions are also developed outside this repository; they stay published on npm.
 
 ---
 
@@ -233,7 +233,8 @@ Foundry and Python are only needed for the smart contract demo and MkDocs docs s
 
 ## Contributing
 
-Use [GitHub Issues](https://github.com/ArohaLabs/aroha-protocol/issues) for bugs, questions and ideas,
+Use [GitHub Issues](https://github.com/ArohaLabs/aroha-protocol/issues) for bugs and feature requests and
+[GitHub Discussions](https://github.com/ArohaLabs/aroha-protocol/discussions) for questions and ideas,
 or email the maintainer listed in [MAINTAINERS.md](MAINTAINERS.md).
 See [CONTRIBUTING.md](CONTRIBUTING.md) (commits need a DCO sign-off) and [SUPPORT.md](SUPPORT.md).
 For security issues, see [SECURITY.md](SECURITY.md).

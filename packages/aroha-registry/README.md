@@ -53,7 +53,11 @@ backend) for anything not covered here.
 - `resolveManifest(cid, opts?)` — fetch a manifest directly from IPFS by CID, **unverified**. Use `resolveAgent`/`listAgents` when you need a signature-checked manifest.
 
 Read operations (`resolveAgent`, `listAgents`) don't require `apiKey` — the
-registry's reads are public. Registering does.
+registry's reads are public. Registering does. Without `registryUrl` the
+functions use `AROHA_REGISTRY_URL`, else the reference registry deployment;
+a hosted registry service with API keys is not currently offered, so to
+register agents run your own registry (`createArohaRegistryServer()` from
+`@aroha-sdk/registry/server`) and pass its URL.
 
 ## License
 

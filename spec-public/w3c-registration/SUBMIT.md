@@ -9,27 +9,28 @@ https://github.com/w3c/did-extensions/tree/main/methods
 
 ## Steps
 
-**Precondition:** `ArohaLabs/aroha-spec` must be public first — the registry entry and the PR
-link to it, and the editors cannot review a private specification. Also confirm that the
+**Precondition:** the `specification` URL in `aroha.json` must point to the public
+specification (`ArohaLabs/aroha-protocol`, `docs/spec/did-method.md`) — it still names the private
+`ArohaLabs/aroha-spec` repository, which the editors cannot review. Also confirm that the
 `contactEmail` in `aroha.json` is a monitored mailbox.
 
 ```bash
 gh repo fork w3c/did-extensions --clone
 cd did-extensions
 git checkout -b register-did-aroha
-cp <this repo>/w3c-registration/aroha.json methods/aroha.json
+cp <this repo>/spec-public/w3c-registration/aroha.json methods/aroha.json
 git add methods/aroha.json
 git commit -m "Register the did:aroha method"
 git push -u origin register-did-aroha
 gh pr create --repo w3c/did-extensions \
   --title "Register the did:aroha method" \
-  --body-file <this repo>/w3c-registration/pr-body.md
+  --body-file <this repo>/spec-public/w3c-registration/pr-body.md
 ```
 
 ## PR body (pr-body.md content)
 
 Include, per the registry's PR template:
-1. Link to the spec: https://github.com/ArohaLabs/aroha-spec/blob/main/spec/did-method.md
+1. Link to the spec: https://github.com/ArohaLabs/aroha-protocol/blob/main/docs/spec/did-method.md
 2. The full self-assessment (paste self-assessment.md — the editors
    require a written self-assessment against DID Core §8 and the
    registration policies)
@@ -39,9 +40,9 @@ Include, per the registry's PR template:
 
 - Review is by the registry editors; turnaround is typically weeks, and
   editors commonly request clarifications on the Security/Privacy
-  sections — respond in-thread, update spec/did-method.md in the
-  aroha-spec repo (the registration links to it, so fixes don't require
-  a new PR).
+  sections — respond in-thread, update the did-method.md specification
+  (`spec-public/spec/` is the source; run `sync.sh`) — the registration
+  links to it, so fixes don't require a new PR.
 - The submission is public and under the LLC's name via the contact
   fields; the GitHub account submitting should be one you're happy to
   have publicly associated with the method.

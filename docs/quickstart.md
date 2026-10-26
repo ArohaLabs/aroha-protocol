@@ -21,14 +21,15 @@ No blockchain, no GPU, no API keys required.
 
 === "Existing MCP server"
 
-    Add one import to your MCP server:
+    Wrap your MCP tools:
 
     ```typescript
-    import { wrapMcp } from "@aroha-sdk/mcp-bridge";
+    import { wrapMcp, registryPublicKeyResolver } from "@aroha-sdk/mcp-bridge";
 
-    const agent = await wrapMcp(server.listTools(), {
+    const agent = await wrapMcp(tools, {
       name: "my-tools",
-      price: 0.01,  // optional: charge per call
+      resolvePublicKey: registryPublicKeyResolver(),       // who may call (required)
+      handlers: { "my-tool": async (args) => myTool(args) }, // one per tool name (required)
     });
     await agent.start();
     // Your MCP tools are now an Aroha agent at http://localhost:3001
@@ -70,8 +71,11 @@ my-booking-agent/
 ├── src/
 │   ├── server.ts      # ArohaServer setup
 │   ├── handlers.ts    # ← your business logic goes here
+│   ├── identity.ts    # loads (or generates) the agent's Ed25519 key
+│   ├── mandate.ts     # mandate chain verification
 │   └── manifest.ts    # capability definitions
-├── .env               # AROHA_AGENT_DID=did:aroha:my-booking-agent
+├── .env               # AROHA_AGENT_DID=did:aroha:my-booking-agent, AROHA_PRIVATE_KEY (filled on first run)
+├── README.md
 ├── package.json
 └── tsconfig.json
 ```
@@ -87,28 +91,28 @@ npm run dev
 Expected output:
 
 ```
-[my-booking-agent] DID: did:aroha:my-booking-agent
-[my-booking-agent] Endpoint: http://localhost:3001/aroha/v1
-[my-booking-agent] Capabilities: search-items, book-item
-[my-booking-agent] Ready ✓
+[my-booking-agent] Aroha endpoint : http://localhost:3001/aroha/v1
+[my-booking-agent] DID document  : http://localhost:3001/.well-known/aroha-agent.json
+[my-booking-agent] DID           : did:aroha:my-booking-agent
 ```
+
+On the first run the agent also generates a private key and saves it to `.env`.
 
 ### 3 — Implement your handlers
 
-Open `src/handlers.ts`. Each capability is a typed async function:
+Open `src/handlers.ts`. `handleMessage` dispatches on the envelope type. Read-only
+capabilities (`search-…`, `list-…`, `get-…`) have a `case` in `handleRequest`; the
+others (`book-item`) have a `case` in `handleReserve`, with `handleCommit` and
+`handleCancel` completing the saga. Replace each `// TODO` with your logic:
 
 ```typescript
-export const handlers: CapabilityHandlers = {
-  "search-items": async ({ query, limit = 10 }) => {
-    // Replace with your real data source
-    return { items: [{ id: "1", name: query, price: 99 }] };
-  },
-
-  "book-item": async ({ itemId, userId }) => {
-    // Replace with your booking logic
-    return { bookingId: crypto.randomUUID(), status: "confirmed" };
-  },
-};
+case "search-items": {
+  // TODO: replace with your business logic
+  const result = { items: [], message: "No results yet — implement search-items" };
+  return buildEnvelope("ArohaResponse", agentDID, from,
+    { capability, result },
+    correlationId, privateKey);
+}
 ```
 
 ### 4 — Test it
@@ -117,8 +121,8 @@ export const handlers: CapabilityHandlers = {
 # Check your agent's DID document
 curl http://localhost:3001/.well-known/aroha-agent.json
 
-# Send a test request (the CLI handles signing for you)
-npx @aroha-sdk/cli call http://localhost:3001 search-items '{"query":"flights"}'
+# Check the environment and that the endpoint answers
+npx @aroha-sdk/cli doctor http://localhost:3001
 ```
 
 ---
@@ -129,11 +133,11 @@ Want to see multi-agent sagas, payments, and rollback in action?
 
 ```bash
 git clone https://github.com/ArohaLabs/aroha-protocol
-cd aroha && npm install && npm run build
+cd aroha-protocol && npm install && npm run build
 npm run demo:vc
 ```
 
-This runs two scenarios (~35 seconds):
+This runs two scripted terminal scenarios with simulated agents (~35 seconds):
 
 !!! example "Scenario 1 — Travel Saga"
     PersonalAgent books a Tokyo trip atomically across FlightAgent and HotelAgent.
@@ -158,7 +162,7 @@ This runs two scenarios (~35 seconds):
 
     ---
 
-    Add one line to your existing MCP server to monetize it.
+    Expose your existing MCP tools as an Aroha agent.
 
     [MCP Quickstart →](quickstart-mcp.md)
 
@@ -174,7 +178,7 @@ This runs two scenarios (~35 seconds):
 
     ---
 
-    Try pre-built agents from the public Aroha sandbox.
+    Run a local sandbox registry and the pre-built mock agents.
 
     [Sandbox →](sandbox.md)
 
@@ -182,7 +186,7 @@ This runs two scenarios (~35 seconds):
 
     ---
 
-    Learn how the six protocol layers fit together.
+    Learn how the protocol layers fit together.
 
     [Architecture →](architecture.md)
 

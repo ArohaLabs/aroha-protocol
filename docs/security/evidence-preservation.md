@@ -5,7 +5,7 @@
 
 **Objective (defensive):** when an agent may have taken an unauthorized action, stop further actions, keep every record needed to reconstruct what happened, and show later that the records were not altered.
 **Owner:** @projectmed99 (sole named maintainer, per `MAINTAINERS.md`). **Last reviewed:** 2026-10-15.
-**Scope:** the Aroha runtime (`ArohaLabs/aroha-runtime`, the `aroha` binary) and agents that issue signed action receipts with `@aroha-sdk/core`. This is a manual process. No step below is automated unless it says so.
+**Scope:** the Aroha runtime (the `aroha` binary; its source is not in this repository) and agents that issue signed action receipts with `@aroha-sdk/core`. This is a manual process. No step below is automated unless it says so.
 
 Use it together with the [Incident Response Playbook](incident-response.md). That playbook covers triage, fixes and disclosure. This runbook covers the records.
 

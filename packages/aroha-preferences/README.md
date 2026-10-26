@@ -20,7 +20,7 @@ import {
 // Profiles are immutable values: every mutation returns a new profile
 let profile = createDefaultProfile(personalAgentDID);
 profile = setBudget(profile, "travel", 800, "NZD");
-profile = preferAgent(profile, "did:aroha:air-nz-agent");
+profile = preferAgent(profile, "did:aroha:example-air-agent");
 profile = blockAgent(profile, "did:aroha:spammy-agent");
 
 // Given agents discovered from the registry (DiscoveredAgent[] from @aroha-sdk/registry):
@@ -30,7 +30,7 @@ const scores = scoreAgents(eligible, profile, "book-flight"); // { [did]: 0–1 
 // After the saga completes, feed the outcome back
 profile = applySatisfactionSignal(profile, {
   sagaId: result.sagaId,
-  agentDID: "did:aroha:air-nz-agent",
+  agentDID: "did:aroha:example-air-agent",
   capability: "book-flight",
   outcome: "satisfied",
   dimensions: { price: "neutral", quality: "satisfied", speed: "satisfied" },

@@ -54,7 +54,9 @@ const client = new TracingArohaClient(new ArohaClient());
 const span = tracer.startSagaSpan(sagaId);
 client.setActiveSpan(span);
 
-// All subsequent client.send() calls automatically inject traceparent
+// Build the envelope through the client: the active span's traceparent is
+// added before signing, so it is covered by the envelope's signature
+const envelope = await client.buildEnvelope("ArohaRequest", myDid, agentDid, body, sagaId, privateKey);
 await client.send(agentEndpoint, envelope);
 
 const record = span.end();
@@ -112,12 +114,16 @@ span.end(): SpanRecord     // finish and capture duration
 
 ### `TracingArohaClient`
 
-Wraps `ArohaClient` — all methods are identical. The active span's `traceparent` is automatically injected into every outbound envelope.
+Wraps `ArohaClient` (`send`, `stream`, `fetchDIDDocument`) and adds `buildEnvelope`.
+
+Because `traceparent` is part of the signed envelope, it has to be set before signing. `buildEnvelope(...)` takes the same arguments as core's `buildEnvelope` and adds the active span's `traceparent` (an explicit `opts.traceparent` wins). `send()` never changes an envelope that already has a `proof`, because the receiver would then reject it; it adds the active span's `traceparent` only to unsigned trusted-mesh envelopes that don't already carry one.
 
 ```typescript
 const client = new TracingArohaClient(new ArohaClient());
-client.setActiveSpan(span);    // inject into all sends
-client.clearActiveSpan();      // stop injecting
+client.setActiveSpan(span);    // used by buildEnvelope() and for unsigned envelopes in send()
+const envelope = await client.buildEnvelope("ArohaRequest", myDid, agentDid, body, correlationId, privateKey);
+await client.send(agentEndpoint, envelope);
+client.clearActiveSpan();      // stop adding traceparent
 ```
 
 ### `createTracingMiddleware(tracer, onSpan?): ArohaMiddleware`

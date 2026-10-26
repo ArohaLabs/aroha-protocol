@@ -7,7 +7,7 @@
 
 import { type ArohaMiddleware } from "@aroha-sdk/core";
 import { type ArohaClient, type SendOptions } from "@aroha-sdk/core";
-import { type ArohaEnvelope, buildEnvelope } from "@aroha-sdk/core";
+import { type ArohaEnvelope, type BuildEnvelopeOptions, buildEnvelope } from "@aroha-sdk/core";
 import { type ArohaMessageType } from "@aroha-sdk/core";
 import { ArohaTracer, type Span } from "./tracer.js";
 
@@ -36,13 +36,21 @@ export function createTracingMiddleware(
 // ─── Tracing client wrapper ───────────────────────────────────────────────────
 
 /**
- * Wraps ArohaClient.send() to automatically inject the active span's
- * traceparent into every outbound envelope.
+ * Wraps ArohaClient so outbound envelopes carry the active span's traceparent.
+ *
+ * `traceparent` is part of the signed envelope (canonicalisation excludes only
+ * `proof`), so it has to be in place BEFORE signing. Build signed envelopes with
+ * `tracingClient.buildEnvelope(...)`, which passes the active span's
+ * traceparent to core's `buildEnvelope`. `send()` never modifies an envelope
+ * that already carries a `proof`: adding a field after signing would make the
+ * receiver reject it. Only unsigned (trusted-mesh) envelopes get a traceparent
+ * added in `send()`.
  *
  * Usage:
- *   const tracingClient = createTracingClient(client, tracer);
- *   const activeSpan = tracer.startSagaSpan(sagaId);
- *   tracingClient.setActiveSpan(activeSpan);
+ *   const tracingClient = new TracingArohaClient(new ArohaClient());
+ *   tracingClient.setActiveSpan(tracer.startSagaSpan(sagaId));
+ *   const envelope = await tracingClient.buildEnvelope(type, from, to, body, correlationId, privateKey);
+ *   await tracingClient.send(endpoint, envelope);
  */
 export class TracingArohaClient {
   private activeSpan?: Span;
@@ -57,13 +65,40 @@ export class TracingArohaClient {
     this.activeSpan = undefined;
   }
 
+  /**
+   * Build and sign an envelope with core's `buildEnvelope`, carrying the active
+   * span's traceparent so it is covered by the signature. An explicit
+   * `opts.traceparent` takes precedence over the active span.
+   */
+  async buildEnvelope<T extends ArohaMessageType>(
+    type: T,
+    from: string,
+    to: string,
+    body: Parameters<typeof buildEnvelope<T>>[3],
+    correlationId: string,
+    privateKey: Uint8Array,
+    opts: BuildEnvelopeOptions = {}
+  ): Promise<ArohaEnvelope<T>> {
+    const traceparent = opts.traceparent ?? this.activeSpan?.traceparent();
+    return buildEnvelope(type, from, to, body, correlationId, privateKey, {
+      ...opts,
+      ...(traceparent ? { traceparent } : {}),
+    });
+  }
+
+  /**
+   * Send an envelope. A signed envelope (one with a `proof`) is passed through
+   * unchanged; build it with `buildEnvelope()` above to trace it. An unsigned
+   * envelope without a traceparent gets the active span's traceparent.
+   */
   async send(
     endpoint: string,
     envelope: ArohaEnvelope,
     opts?: SendOptions
   ): Promise<ArohaEnvelope | null> {
     const traceparent = this.activeSpan?.traceparent();
-    const outbound = traceparent ? { ...envelope, traceparent } : envelope;
+    const canAdd = traceparent && !envelope.proof && !envelope.traceparent;
+    const outbound = canAdd ? { ...envelope, traceparent } : envelope;
     return this.inner.send(endpoint, outbound, opts);
   }
 

@@ -23,10 +23,11 @@ import { ArohaClient } from "@aroha-sdk/core";
 // Spans are handed to you on end(); export them to any backend you like
 const tracer = new ArohaTracer({ onSpanEnd: (record) => exportSpan(record) });
 
-// Orchestrator: every outbound envelope carries the active span's traceparent
+// Orchestrator: build envelopes through the client so the active span's traceparent is signed in
 const client = new TracingArohaClient(new ArohaClient());
 const sagaSpan = tracer.startSagaSpan("saga-123");
 client.setActiveSpan(sagaSpan);
+const requestEnvelope = await client.buildEnvelope("ArohaRequest", myDid, flightAgentDid, body, "saga-123", privateKey);
 await client.send(flightAgentEndpoint, requestEnvelope);
 sagaSpan.end();
 
@@ -52,7 +53,7 @@ whole chain can be stitched together in any trace backend.
 
 - `ArohaTracer({ onSpanEnd? })` — `startSagaSpan(sagaId)`, `startChildSpan(name, parentTraceparent)`, `startRunSpan(agentName, model, sessionId, parentTraceparent?, trust?)`.
 - `Span` — `end(genAi?) → SpanRecord`, `traceparent()`; `GenAiAttributes` uses `gen_ai.*` names.
-- `TracingArohaClient(client)` — injects `traceparent` into outbound envelopes (`setActiveSpan`, `clearActiveSpan`, `send`).
+- `TracingArohaClient(client)` — `setActiveSpan`, `clearActiveSpan`, `buildEnvelope`, `send`. `buildEnvelope(...)` takes the same arguments as core's `buildEnvelope` and signs the active span's `traceparent` into the envelope. `send()` passes signed envelopes through unchanged (adding a field after signing would make the receiver reject the envelope); it adds the `traceparent` only to unsigned trusted-mesh envelopes.
 - `createTracingMiddleware(tracer, onSpan?)` — `ArohaServer` middleware.
 - `SagaMetrics(sink)`, `consoleSink()`, `PrometheusBuffer`, `prometheusTextSink(buffer)`.
 - `OtlpHttpExporter({ endpoint, serviceName, … })` sends spans to an OTLP/HTTP collector (`/v1/traces`, JSON) using `fetch`. Pass `exporter.export` as `onSpanEnd`, and call `flush()` or `shutdown()` on exit. Export is best-effort: it never throws, the queue is bounded, and failures are counted in `stats`.

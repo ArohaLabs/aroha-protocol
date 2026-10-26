@@ -26,6 +26,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/). Version
   - Python: `aroha.stores.postgres` and `aroha.stores.redis`, with the extras `aroha[postgres]` and `aroha[redis]`.
   - One table/key layout for both languages: same migration lock, budget expiry (`expires_at_ms` / `expires`) honoured by both, checked by a CI job against Postgres 16 and Redis 7 that fails if any backend test is skipped.
 
+### Fixed
+
+- **`@aroha-sdk/telemetry`:** `TracingArohaClient.send()` added `traceparent` to envelopes after they were signed. `traceparent` is part of the signed envelope, so receivers rejected those envelopes. `send()` now passes signed envelopes through unchanged and adds `traceparent` only to unsigned trusted-mesh envelopes. The new `TracingArohaClient.buildEnvelope(...)` (same arguments as core's `buildEnvelope`) puts the active span's `traceparent` into the envelope before signing. Code that sent signed envelopes through `send()` and relied on tracing should build them with `buildEnvelope()` instead.
+
 ## [2.0.0] — 2026-10-19
 
 Release tags (the publish workflows act on these):

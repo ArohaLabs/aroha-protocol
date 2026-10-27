@@ -7,7 +7,7 @@
 
 **Cryptographically bounded authority for every agent in the chain.**
 
-> Aroha Mandates give orchestrators cryptographically enforceable control over every sub-agent they delegate to. No agent can exceed the scope it was granted.
+> Aroha Mandates let any agent that delegates keep cryptographically enforceable control over every agent it hands work to. No agent can exceed the scope it was granted.
 
 [![CI](https://github.com/ArohaLabs/aroha-protocol/actions/workflows/ci.yml/badge.svg)](https://github.com/ArohaLabs/aroha-protocol/actions/workflows/ci.yml)
 [![Conformance](https://github.com/ArohaLabs/aroha-protocol/actions/workflows/conformance.yml/badge.svg)](https://github.com/ArohaLabs/aroha-protocol/actions/workflows/conformance.yml)
@@ -29,28 +29,28 @@ import { generateKeyPair, generateDid } from "@aroha-sdk/core";
 import { issueIntentMandate, attenuateToPayment, verifyMandateChain } from "@aroha-sdk/credentials";
 
 const human = await generateKeyPair();
-const orchestrator = await generateKeyPair();
+const assistant = await generateKeyPair();
 const flightAgent = await generateKeyPair();
 // Content-addressed DIDs (did:aroha:z…) commit to their own public key,
 // so a verifier needs no registry lookup to check signatures.
 const humanDID = generateDid(human.publicKey);
-const orchestratorDID = generateDid(orchestrator.publicKey);
+const assistantDID = generateDid(assistant.publicKey);
 const flightAgentDID = generateDid(flightAgent.publicKey);
 
-// Human issues an intent mandate to the orchestrator ($500, 1 hour TTL)
+// Human issues an intent mandate to the assistant ($500, 1 hour TTL)
 const intent = await issueIntentMandate(
-  humanDID, orchestratorDID,
+  humanDID, assistantDID,
   { spendLimitUsd: 500, merchantCategory: "4511" }, // MCC 4511 = airlines
   human.privateKey,
   3_600_000,
 );
 
-// Orchestrator attenuates scope downward to the flight agent ($300 of the $500).
+// The assistant attenuates scope downward to the flight agent ($300 of the $500).
 // The child token embeds the signed chain back to the human.
 const payment = await attenuateToPayment(
   intent, flightAgentDID,
   { spendLimitUsd: 300, merchantCategory: "4511" },
-  orchestrator.privateKey,
+  assistant.privateKey,
 );
 
 // Flight agent verifies every link back to the human root before acting
@@ -81,8 +81,8 @@ Aroha answers four questions for every action: **who is acting, what were they a
 
 ## How it works
 
-1. **Human issues a mandate** — signs an `IntentMandate` with authorized actions, a spending cap, and a TTL. Cryptographically bound to the orchestrator's DID.
-2. **Orchestrator attenuates** — delegates a strict subset of that scope to the next agent. The new mandate is signed by the orchestrator. Scope narrows, never widens.
+1. **Human issues a mandate** — signs an `IntentMandate` with authorized actions, a spending cap, and a TTL. Cryptographically bound to the receiving agent's DID.
+2. **Any agent attenuates** — delegates a strict subset of that scope to the next agent, signed by the delegating agent. Scope narrows, never widens.
 3. **Every agent verifies** — before acting, an agent verifies the mandate chain back to its human origin, offline. A forged, altered, widened or expired link fails verification.
 4. **Revoke and prove** — the person can revoke at any time; the registry witness pushes the revocation to verifiers. Every allowed or refused action produces a signed receipt.
 5. **Deploy in your existing stack** — bridges for MCP, LangChain, A2A, and Composio. Mandate verification drops in in two lines.

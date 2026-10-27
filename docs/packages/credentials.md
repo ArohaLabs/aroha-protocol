@@ -171,7 +171,7 @@ import { attenuateToCart } from "@aroha-sdk/credentials";
 
 const cartMandate = await attenuateToCart(
   mandate,                            // parent intent mandate
-  "did:aroha:shopping-orchestrator",   // granteeDID
+  "did:aroha:shopping-agent",          // granteeDID
   {
     spendLimitUsd:    79.99,
     allowedMerchants: ["did:aroha:bookshop-agent"],
@@ -196,7 +196,7 @@ const paymentMandate = await attenuateToPayment(
     currency:      "USD",
     validUntil:    new Date(Date.now() + 60_000).toISOString(),
   },
-  orchestratorPrivKey
+  shoppingAgentPrivKey
 );
 ```
 

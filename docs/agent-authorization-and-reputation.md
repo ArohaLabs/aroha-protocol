@@ -96,8 +96,8 @@ The answer is **monotonic attenuation**, formalised in IETF draft `draft-niyikiz
 ```
 User signs:      Intent Mandate ($50, any restaurant, 4 hours)
                      │
-                     ▼  orchestrator derives:
-Orchestrator:    Attenuated Mandate ($50, Italian only, 2 hours)
+                     ▼  assistant derives:
+Assistant:       Attenuated Mandate ($50, Italian only, 2 hours)
                      │
                      ▼  sub-agent derives:
 Sub-agent:       Attenuated Mandate ($30, one specific restaurant, 30 min)

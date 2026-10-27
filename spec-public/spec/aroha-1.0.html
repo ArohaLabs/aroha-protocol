@@ -138,6 +138,14 @@
   <table class="simple">
     <thead><tr><th>Date</th><th>Change</th></tr></thead>
     <tbody>
+      <tr><td>2026-10-26</td>
+          <td>Appendix A: seven codes added for mandate-chain admission and
+              task-mandate binding — <code>Aroha_NO_MANDATE</code>,
+              <code>Aroha_CHAIN_INVALID</code>, <code>Aroha_UNTRUSTED_ROOT</code>,
+              <code>Aroha_ROOT_KEY_MISMATCH</code>, <code>Aroha_CHAIN_REJECTED</code>,
+              <code>Aroha_SCOPE_UNKNOWN</code>, <code>Aroha_CONTEXT_MISMATCH</code> —
+              previously sent by the reference code under a misspelled
+              <code>ARHOA_</code> prefix.</td></tr>
       <tr><td>2026-10-25</td>
           <td>Scope: the core specification now covers Layers 0–3 (Transport,
               Identity, Registry, Messaging). Orchestration (sagas) and
@@ -2304,12 +2312,26 @@ signal values:
           <td>Requester's and provider's settlement rails have nothing in common</td></tr>
       <tr><td><code>Aroha_COMMIT_DISPUTED</code></td><td>409</td>
           <td>Commit result disputed in the challenge window, or resolved against the provider</td></tr>
+      <tr><td><code>Aroha_NO_MANDATE</code></td><td>400</td>
+          <td>No delegation envelope, and the receiver requires a mandate chain (added 2026-10-26)</td></tr>
+      <tr><td><code>Aroha_CHAIN_INVALID</code></td><td>400</td>
+          <td>Root mandate token of the delegation envelope is malformed (added 2026-10-26)</td></tr>
+      <tr><td><code>Aroha_UNTRUSTED_ROOT</code></td><td>403</td>
+          <td>Root grantor of the mandate chain is not a trusted issuer (added 2026-10-26)</td></tr>
+      <tr><td><code>Aroha_ROOT_KEY_MISMATCH</code></td><td>403</td>
+          <td>Envelope's root key does not match the trusted key for the root grantor (added 2026-10-26)</td></tr>
+      <tr><td><code>Aroha_CHAIN_REJECTED</code></td><td>403</td>
+          <td>Mandate chain failed verification (added 2026-10-26)</td></tr>
+      <tr><td><code>Aroha_SCOPE_UNKNOWN</code></td><td>403</td>
+          <td>Receiver could not determine what the request does, so cannot check it against the mandate (added 2026-10-26)</td></tr>
+      <tr><td><code>Aroha_CONTEXT_MISMATCH</code></td><td>403</td>
+          <td>Request's room or principal differs from the task mandate's <code>roomId</code> / <code>onBehalfOf</code> (added 2026-10-26)</td></tr>
     </tbody>
   </table>
   <p>
     The <code>code</code> string in the <code>ArohaError</code> body is
     normative; the HTTP status is a recommendation for HTTP transports. The
-    first 17 codes are shared by every reference SDK; the remaining 11 are
+    first 17 codes are shared by every reference SDK; the remaining 18 are
     implemented in the TypeScript reference only, and a receiver MUST treat an
     unknown code as a generic, non-retryable error unless retryable says
     otherwise.

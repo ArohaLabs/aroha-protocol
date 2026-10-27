@@ -98,6 +98,15 @@ const (
 	// Settlement and disputes (design spec §8)
 	ErrSettlementRailMismatch ErrorCode = "Aroha_SETTLEMENT_RAIL_MISMATCH"
 	ErrCommitDisputed         ErrorCode = "Aroha_COMMIT_DISPUTED"
+
+	// Mandate-chain admission (delegation middleware)
+	ErrNoMandate       ErrorCode = "Aroha_NO_MANDATE"
+	ErrChainInvalid    ErrorCode = "Aroha_CHAIN_INVALID"
+	ErrUntrustedRoot   ErrorCode = "Aroha_UNTRUSTED_ROOT"
+	ErrRootKeyMismatch ErrorCode = "Aroha_ROOT_KEY_MISMATCH"
+	ErrChainRejected   ErrorCode = "Aroha_CHAIN_REJECTED"
+	ErrScopeUnknown    ErrorCode = "Aroha_SCOPE_UNKNOWN"
+	ErrContextMismatch ErrorCode = "Aroha_CONTEXT_MISMATCH"
 )
 
 // ErrorCodes lists every ArohaErrorCode value, in the TypeScript enum order.
@@ -111,6 +120,8 @@ var ErrorCodes = []ErrorCode{
 	ErrActionLimitExceeded, ErrComputeLimitExceeded, ErrReversibilityViolation, ErrHumanGateRequired,
 	ErrDataAccessViolation, ErrSandboxRequired, ErrDelegationDepthExceeded, ErrCapabilityNotPermitted,
 	ErrSettlementRailMismatch, ErrCommitDisputed,
+	ErrNoMandate, ErrChainInvalid, ErrUntrustedRoot, ErrRootKeyMismatch, ErrChainRejected,
+	ErrScopeUnknown, ErrContextMismatch,
 }
 
 // ErrorDocsURL returns the documentation URL for an error code.

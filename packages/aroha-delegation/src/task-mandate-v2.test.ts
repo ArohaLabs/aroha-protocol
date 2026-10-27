@@ -310,7 +310,7 @@ describe("createDelegationMiddleware enforces the leaf's constraints before the 
     const mw = createDelegationMiddleware({ did: SERVER, trustAnchors: { [A.did]: A.pub } });
     const reject = vi.fn();
     await mw(await envelopeFor(["research"], {}, undefined), reject);
-    expect(reject).toHaveBeenCalledWith(403, "ARHOA_SCOPE_UNKNOWN", expect.any(String));
+    expect(reject).toHaveBeenCalledWith(403, "Aroha_SCOPE_UNKNOWN", expect.any(String));
   });
 
   it("counts actionLimits per mandate", async () => {

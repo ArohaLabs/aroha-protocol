@@ -104,11 +104,12 @@ function extractFromEnvelope(envelope: ArohaEnvelope): DelegationEnvelope | null
 const verifiedByEnvelope = new WeakMap<ArohaEnvelope, ChainVerificationResult>();
 
 // Constraint violations go out as their spec Appendix A code (Aroha_*).
-// Codes with no canonical counterpart keep their previous string.
+// Every code enforceScope returns has one; MANDATE_INVALID (in the type, never
+// returned by checkTaskConstraints) would mean the chain is not acceptable.
 const CANONICAL_CODES = new Set<string>(Object.values(ArohaErrorCode));
 function violationCode(code: string): string {
   const canonical = `Aroha_${code}`;
-  return CANONICAL_CODES.has(canonical) ? canonical : `ARHOA_${code}`;
+  return CANONICAL_CODES.has(canonical) ? canonical : ArohaErrorCode.ChainRejected;
 }
 
 /** Read the verified mandate chain result for an envelope, once createDelegationMiddleware has run. Undefined if no chain was sent and require:false. */
@@ -127,7 +128,7 @@ export function createDelegationMiddleware(options: DelegationMiddlewareOptions)
     const delegationEnvelope = extractFromEnvelope(envelope);
     if (!delegationEnvelope) {
       if (require) {
-        reject(400, "ARHOA_NO_MANDATE", "Missing delegation envelope (body.context.aroha) — this server requires a mandate chain");
+        reject(400, ArohaErrorCode.NoMandate, "Missing delegation envelope (body.context.aroha) — this server requires a mandate chain");
       }
       return;
     }
@@ -136,13 +137,13 @@ export function createDelegationMiddleware(options: DelegationMiddlewareOptions)
     try {
       rootGrantor = parseTaskMandateToken(delegationEnvelope.chain[0]).mandate.grantor;
     } catch {
-      reject(400, "ARHOA_CHAIN_INVALID", "Malformed root mandate token");
+      reject(400, ArohaErrorCode.ChainInvalid, "Malformed root mandate token");
       return;
     }
 
     const untrusted = await checkRootTrust(rootGrantor, delegationEnvelope.rootKeyB64, options);
     if (untrusted) {
-      const code = untrusted.startsWith("Untrusted") ? "ARHOA_UNTRUSTED_ROOT" : "ARHOA_ROOT_KEY_MISMATCH";
+      const code = untrusted.startsWith("Untrusted") ? ArohaErrorCode.UntrustedRoot : ArohaErrorCode.RootKeyMismatch;
       reject(403, code, untrusted);
       return;
     }
@@ -156,7 +157,7 @@ export function createDelegationMiddleware(options: DelegationMiddlewareOptions)
       },
     );
     if (!result.valid) {
-      reject(403, "ARHOA_CHAIN_REJECTED", `Mandate chain rejected: ${result.reason}`);
+      reject(403, ArohaErrorCode.ChainRejected, `Mandate chain rejected: ${result.reason}`);
       return;
     }
 
@@ -164,11 +165,11 @@ export function createDelegationMiddleware(options: DelegationMiddlewareOptions)
     try {
       scope = options.requestScope ? await options.requestScope(envelope) : defaultScope(envelope);
     } catch (err) {
-      reject(403, "ARHOA_SCOPE_UNKNOWN", `Could not determine the request scope: ${(err as Error).message}`);
+      reject(403, ArohaErrorCode.ScopeUnknown, `Could not determine the request scope: ${(err as Error).message}`);
       return;
     }
     if (!scope) {
-      reject(403, "ARHOA_SCOPE_UNKNOWN", "Request scope could not be determined (no capability); refusing to run outside the mandate");
+      reject(403, ArohaErrorCode.ScopeUnknown, "Request scope could not be determined (no capability); refusing to run outside the mandate");
       return;
     }
     const violation = enforceScope(result.mandates!, scope, counter);

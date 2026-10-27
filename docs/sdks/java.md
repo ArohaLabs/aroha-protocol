@@ -283,7 +283,7 @@ ErrorCode.SERVICE_UNAVAILABLE       // "Aroha_SERVICE_UNAVAILABLE"
 // Generic
 ErrorCode.INTERNAL_ERROR            // "Aroha_INTERNAL_ERROR"
 ErrorCode.INVALID_PARAMS            // "Aroha_INVALID_PARAMS"
-// … and 11 more (CSN, task-mandate enforcement, settlement); ErrorCode.ALL holds all 28
+// … and 18 more (CSN, task-mandate enforcement, settlement, mandate-chain admission); ErrorCode.ALL holds all 35
 ```
 
 !!! warning "Wire format"

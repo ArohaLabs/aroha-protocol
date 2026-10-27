@@ -4,8 +4,8 @@
 import { describe, it, expect, beforeAll, vi } from "vitest";
 import * as ed from "@noble/ed25519";
 import { issueTaskMandate } from "@aroha-sdk/credentials";
-import type { ArohaEnvelope } from "@aroha-sdk/core";
-import { createDelegationMiddleware, getVerifiedMandate } from "./server-middleware.js";
+import { ArohaErrorCode, type ArohaEnvelope } from "@aroha-sdk/core";
+import { createDelegationMiddleware, getVerifiedMandate, type DelegationMiddlewareOptions } from "./server-middleware.js";
 import { DELEGATION_CONTEXT_KEY, type DelegationEnvelope } from "./chain.js";
 
 const A = { did: "did:aroha:test:root" };
@@ -130,5 +130,44 @@ describe("createDelegationMiddleware", () => {
 
     expect(getVerifiedMandate(envelope1)).toBeDefined();
     expect(getVerifiedMandate(envelope2)).toBeUndefined();
+  });
+});
+
+describe("createDelegationMiddleware rejection codes", () => {
+  const CANONICAL = new Set<string>(Object.values(ArohaErrorCode));
+
+  async function rejectionOf(options: Partial<DelegationMiddlewareOptions>, envelope: ArohaEnvelope) {
+    const middleware = createDelegationMiddleware({ did: SERVER.did, trustAnchors: { [A.did]: aPub }, ...options });
+    const reject = vi.fn();
+    await middleware(envelope, reject);
+    expect(reject).toHaveBeenCalledTimes(1);
+    const [status, code] = reject.mock.calls[0] as [number, string];
+    return { status, code };
+  }
+  const withChain = async (chain?: string[], capability?: string) => {
+    const delegation = await makeDelegationEnvelope();
+    if (chain) delegation.chain = chain;
+    return makeEnvelope({ [DELEGATION_CONTEXT_KEY]: delegation }, capability);
+  };
+
+  it("sends a canonical ArohaErrorCode, with an unchanged HTTP status, on every rejection path", async () => {
+    const otherPub = await ed.getPublicKeyAsync(ed.utils.randomPrivateKey());
+    const roomBound = await issueTaskMandate(A.did, SERVER.did, ["research"], { roomId: "room-1" }, aKey, 3_600_000);
+    const forSomeoneElse = await issueTaskMandate(A.did, "did:aroha:test:other", ["research"], {}, aKey, 3_600_000);
+    const cases: Array<[string, () => Promise<{ status: number; code: string }>, number, ArohaErrorCode]> = [
+      ["no chain", async () => rejectionOf({}, makeEnvelope()), 400, ArohaErrorCode.NoMandate],
+      ["malformed root", async () => rejectionOf({}, await withChain(["not-a-real-token"])), 400, ArohaErrorCode.ChainInvalid],
+      ["untrusted root", async () => rejectionOf({ trustAnchors: { "did:aroha:test:nobody": aPub } }, await withChain()), 403, ArohaErrorCode.UntrustedRoot],
+      ["root key mismatch", async () => rejectionOf({ trustAnchors: { [A.did]: otherPub } }, await withChain()), 403, ArohaErrorCode.RootKeyMismatch],
+      ["chain rejected", async () => rejectionOf({}, await withChain([forSomeoneElse.token])), 403, ArohaErrorCode.ChainRejected],
+      ["no capability", async () => rejectionOf({}, await withChain(undefined, "")), 403, ArohaErrorCode.ScopeUnknown],
+      ["requestScope throws", async () => rejectionOf({ requestScope: () => { throw new Error("boom"); } }, await withChain()), 403, ArohaErrorCode.ScopeUnknown],
+      ["room-bound mandate", async () => rejectionOf({}, await withChain([roomBound.token])), 403, ArohaErrorCode.ContextMismatch],
+    ];
+    for (const [name, run, status, code] of cases) {
+      const got = await run();
+      expect({ name, ...got }).toEqual({ name, status, code });
+      expect(CANONICAL.has(got.code), `${name}: ${got.code}`).toBe(true);
+    }
   });
 });

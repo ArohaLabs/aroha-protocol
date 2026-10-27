@@ -449,7 +449,7 @@ signature).
 | Spending mandates v2 | Wire-identical; every vector in `packages/aroha-credentials/test-vectors/mandate-v2.json` passes (payloads, signatures, verdicts); live round trips both ways when node + built packages are available |
 | Envelopes | Same validation order and rules; byte-identical canonical form; live round trips both ways |
 | E-DIDs / KELs (`aroha.kel`) | Verification ported (inception/rotate/recover/revoke/anchor, controller seals, stale/duplicity store); reproduces the L0-KEL-01 pinned vector. Issuing helpers included |
-| Message types / error codes | All 19 types, all 28 `ArohaErrorCode` values |
+| Message types / error codes | All 19 types, all 35 `ArohaErrorCode` values |
 | Task mandates v2 (`aroha.task_mandate`) | Wire-identical; every vector in `packages/aroha-credentials/test-vectors/task-mandate-v2.json` passes (payloads, signatures, verdicts, reasons, narrowing reasons, violation codes and messages); live round trips both ways |
 | Not ported | Redemption store (`redeemPaymentMandate`) and ledger allocation when issuing or attenuating (the spending ledger used by `verify_http_spend_request` is ported — see Durable stores), multi-hop task-chain verifier (`verifyTaskMandateChain` in `@aroha-sdk/delegation`), task receipts |
 

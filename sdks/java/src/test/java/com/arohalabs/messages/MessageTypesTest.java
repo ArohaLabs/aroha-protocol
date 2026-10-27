@@ -23,7 +23,7 @@ class MessageTypesTest {
     @Test
     void counts() {
         assertEquals(19, MessageTypes.ALL.size());
-        assertEquals(28, MessageTypes.ErrorCode.ALL.size());
+        assertEquals(35, MessageTypes.ErrorCode.ALL.size());
         assertEquals("https://aroha-labs.com/docs/errors#Aroha_FORBIDDEN",
             MessageTypes.ErrorCode.docsUrl(MessageTypes.ErrorCode.FORBIDDEN));
     }

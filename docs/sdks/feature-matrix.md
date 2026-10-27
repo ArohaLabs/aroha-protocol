@@ -17,7 +17,7 @@ registry client are now in all four SDKs, with task-mandate vectors
 (`task-mandate-v2.json`, `task-mandate-v2-cases.json`) and live interop in both
 directions against TypeScript. Not yet outside TypeScript: multi-hop task-chain
 verification (`@aroha-sdk/delegation`), task receipts and disputes. All four
-SDKs define the same 19 message types and 28 error codes. `did:aroha-web` in Python, Go and Java is a port of the
+SDKs define the same 19 message types and 35 error codes. `did:aroha-web` in Python, Go and Java is a port of the
 TypeScript resolver, checked against a TypeScript-generated vector. Each SDK's
 README is the source of truth at a given commit.
 
@@ -55,7 +55,7 @@ The **19** message types, with identical wire strings in all four SDKs:
 
 ## Error codes
 
-The **28** codes, with identical wire strings in all four SDKs (`Aroha_` prefix
+The **35** codes, with identical wire strings in all four SDKs (`Aroha_` prefix
 except where noted):
 `UNAUTHORIZED`, `FORBIDDEN`, `INVALID_SIGNATURE`, `EXPIRED_MESSAGE`,
 `REPLAY_DETECTED`, `UNKNOWN_CAPABILITY`, `TRUST_LEVEL_INSUFFICIENT`,
@@ -65,7 +65,9 @@ except where noted):
 `ACTION_LIMIT_EXCEEDED`, `COMPUTE_LIMIT_EXCEEDED`, `REVERSIBILITY_VIOLATION`,
 `HUMAN_GATE_REQUIRED`, `DATA_ACCESS_VIOLATION`, `SANDBOX_REQUIRED`,
 `DELEGATION_DEPTH_EXCEEDED`, `CAPABILITY_NOT_PERMITTED`,
-`SETTLEMENT_RAIL_MISMATCH`, `COMMIT_DISPUTED`.
+`SETTLEMENT_RAIL_MISMATCH`, `COMMIT_DISPUTED`, `NO_MANDATE`, `CHAIN_INVALID`,
+`UNTRUSTED_ROOT`, `ROOT_KEY_MISMATCH`, `CHAIN_REJECTED`, `SCOPE_UNKNOWN`,
+`CONTEXT_MISMATCH`.
 
 Treat a code you have no constant for (from a newer peer) as a generic error.
 

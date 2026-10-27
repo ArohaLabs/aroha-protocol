@@ -767,6 +767,21 @@ export enum ArohaErrorCode {
   SettlementRailMismatch   = "Aroha_SETTLEMENT_RAIL_MISMATCH",
   /** Buyer disputed the commit result during the challenge window, or the arbiter resolved against the provider (design spec §8.2/§8.3). @see {@link DOCS}#Aroha_COMMIT_DISPUTED */
   CommitDisputed           = "Aroha_COMMIT_DISPUTED",
+
+  /** Request carries no delegation envelope, and the server requires a mandate chain. */
+  NoMandate                = "Aroha_NO_MANDATE",
+  /** Root mandate token in the delegation envelope is malformed. */
+  ChainInvalid             = "Aroha_CHAIN_INVALID",
+  /** Root grantor of the mandate chain is not a trusted issuer. */
+  UntrustedRoot            = "Aroha_UNTRUSTED_ROOT",
+  /** Envelope's root key does not match the trusted key for the root grantor. */
+  RootKeyMismatch          = "Aroha_ROOT_KEY_MISMATCH",
+  /** Mandate chain failed verification (signature, expiry, revocation, narrowing, grantee or depth). */
+  ChainRejected            = "Aroha_CHAIN_REJECTED",
+  /** Server could not determine what the request does, so cannot check it against the mandate. */
+  ScopeUnknown             = "Aroha_SCOPE_UNKNOWN",
+  /** Request's room or principal differs from the mandate's roomId / onBehalfOf binding. */
+  ContextMismatch          = "Aroha_CONTEXT_MISMATCH",
 }
 
 /** Returns the docs URL for a given error code. */

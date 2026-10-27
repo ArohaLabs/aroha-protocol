@@ -53,6 +53,7 @@ contract ArohaReputation {
 
     ArohaRegistry public registry;
     address public owner;
+    address public pendingOwner;
 
     mapping(bytes32 => OutcomeRecord[]) private _outcomes;
     mapping(bytes32 => uint32)          private _scores;
@@ -66,10 +67,13 @@ contract ArohaReputation {
         uint8 qualityStars,
         uint32 newScore
     );
+    event OwnershipTransferStarted(address indexed previousOwner, address indexed newOwner);
+    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
     // ── Errors ────────────────────────────────────────────────────────────────
 
     error Unauthorized();
+    error ZeroAddress();
     error DuplicateSaga(bytes32 sagaId, bytes32 agentDID);
     error InvalidQualityStars(uint8 stars);
 
@@ -84,7 +88,8 @@ contract ArohaReputation {
 
     /**
      * Record the outcome of a saga step for one participant agent.
-     * Only callable by the contract owner (the deployer).
+     * Only callable by the contract owner (the deployer, unless ownership
+     * has been transferred via transferOwnership/acceptOwnership).
      *
      * @param sagaId      The saga correlation ID (bytes32)
      * @param agentDID     The participant agent's DID hash
@@ -133,6 +138,26 @@ contract ArohaReputation {
         registry.updateReputation(agentDID, newScore);
 
         emit OutcomeRecorded(agentDID, sagaId, outcome, qualityStars, newScore);
+    }
+
+    // ── Ownership (two-step) ──────────────────────────────────────────────────
+
+    /**
+     * Start transferring ownership. Takes effect only when `newOwner` calls
+     * acceptOwnership(); calling again replaces the pending owner.
+     */
+    function transferOwnership(address newOwner) external {
+        if (msg.sender != owner) revert Unauthorized();
+        if (newOwner == address(0)) revert ZeroAddress();
+        pendingOwner = newOwner;
+        emit OwnershipTransferStarted(owner, newOwner);
+    }
+
+    function acceptOwnership() external {
+        if (msg.sender != pendingOwner) revert Unauthorized();
+        emit OwnershipTransferred(owner, msg.sender);
+        owner = msg.sender;
+        pendingOwner = address(0);
     }
 
     // ── Views ─────────────────────────────────────────────────────────────────

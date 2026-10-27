@@ -61,7 +61,7 @@ const ESCROW_ABI = [
   "function getEscrow(bytes32 sagaId) external view returns (tuple(bytes32 sagaId, address payer, uint256 totalAmount, uint256 releasedAmount, uint8 state, uint256 createdAt, uint256 expiresAt))",
 ];
 const REPUTATION_ABI = [
-  "function recordOutcome(bytes32 sagaId, bytes32 agentDID, uint8 outcome) external",
+  "function recordOutcome(bytes32 sagaId, bytes32 agentDID, uint8 outcome, uint8 qualityStars) external",
   "function getScore(bytes32 agentDID) external view returns (uint32)",
 ];
 
@@ -203,12 +203,12 @@ async function chainEscrowRelease(sid) {
     pushActivity("chain", "escrow", "⛓ ArohaEscrow.sol",
       `release(saga:${sid.slice(0, 8)}) → ERROR: ${e.message.slice(0, 60)}`);
   }
-  // Reputation — record SUCCESS (enum 0) for each agent
+  // Reputation — record SUCCESS (enum 0), unrated (qualityStars 0), for each agent
   try {
     const sagaRep = ethers.keccak256(ethers.toUtf8Bytes(sid));
     for (const agent of [flight, hotel, payment]) {
       const agentDID = ethers.keccak256(ethers.toUtf8Bytes(agent.did));
-      await (await chain.reputation.recordOutcome(sagaRep, agentDID, 0)).wait();
+      await (await chain.reputation.recordOutcome(sagaRep, agentDID, 0, 0)).wait();
     }
     const flightScore  = await chain.reputation.getScore(ethers.keccak256(ethers.toUtf8Bytes(flight.did)));
     const hotelScore   = await chain.reputation.getScore(ethers.keccak256(ethers.toUtf8Bytes(hotel.did)));

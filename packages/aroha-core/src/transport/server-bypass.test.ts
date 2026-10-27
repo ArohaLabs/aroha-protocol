@@ -8,7 +8,8 @@
  */
 
 import { describe, it, expect, afterEach, vi } from "vitest";
-import type { IncomingMessage } from "http";
+import type { IncomingMessage, Server } from "http";
+import type { AddressInfo } from "net";
 import { generateDID } from "../identity/did.js";
 import { buildEnvelope, buildUnsignedEnvelope } from "../messages/envelope.js";
 import { ArohaServer, type ArohaServerOptions } from "./server.js";
@@ -19,24 +20,25 @@ afterEach(async () => {
   vi.restoreAllMocks();
 });
 
-function freePort(): number {
-  return 19000 + Math.floor(Math.random() * 1000);
+/** The port the OS assigned to a server started with port: 0. */
+function boundPort(s: ArohaServer): number {
+  return ((s as unknown as { server: Server }).server.address() as AddressInfo).port;
 }
 
 async function startServer(extra: Partial<ArohaServerOptions>) {
   const me = await generateDID("bypass-recv", "http://127.0.0.1");
-  const port = freePort();
   const seen: string[] = [];
   server = new ArohaServer({
     agentDID: me.did,
     didDocument: me.document,
-    port,
+    port: 0,
     resolvePublicKey: async () => new Uint8Array(32),
     onMessage: async (env, respond) => { seen.push(env.from); respond(env); },
     ...extra,
   });
   vi.spyOn(console, "log").mockImplementation(() => {});
   await server.start();
+  const port = boundPort(server);
   const post = (body: unknown) => fetch(`http://127.0.0.1:${port}/aroha/v1`, {
     method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body),
   });
@@ -79,7 +81,7 @@ describe("ArohaServer signature bypass", () => {
   it("T7: bypassSignatureFor alone is refused at construction", async () => {
     const me = await generateDID("bypass-legacy", "http://127.0.0.1");
     expect(() => new ArohaServer({
-      agentDID: me.did, didDocument: me.document, port: freePort(),
+      agentDID: me.did, didDocument: me.document, port: 0,
       resolvePublicKey: async () => null, onMessage: async () => {},
       bypassSignatureFor: () => true,
     })).toThrow(/refused on its own/);

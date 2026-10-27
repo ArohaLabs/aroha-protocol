@@ -14,6 +14,8 @@ import { describe, it, expect, afterEach, vi } from "vitest";
 import { generateDID } from "../identity/did.js";
 import { buildEnvelope } from "../messages/envelope.js";
 import { ArohaServer, type ArohaServerOptions } from "./server.js";
+import type { Server } from "http";
+import type { AddressInfo } from "net";
 
 let server: ArohaServer | undefined;
 afterEach(async () => {
@@ -21,20 +23,25 @@ afterEach(async () => {
   vi.restoreAllMocks();
 });
 
+/** The port the OS assigned to a server started with port: 0. */
+function boundPort(s: ArohaServer): number {
+  return ((s as unknown as { server: Server }).server.address() as AddressInfo).port;
+}
+
 async function startServer(extra: Partial<ArohaServerOptions>) {
   const me = await generateDID("ttl-recv", "http://127.0.0.1");
   const sender = await generateDID("ttl-send", "http://127.0.0.1");
-  const port = 20000 + Math.floor(Math.random() * 1000);
   server = new ArohaServer({
     agentDID: me.did,
     didDocument: me.document,
-    port,
+    port: 0,
     resolvePublicKey: async (did) => (did === sender.did ? sender.publicKey : null),
     onMessage: async (env, respond) => { respond(env); },
     ...extra,
   });
   vi.spyOn(console, "log").mockImplementation(() => {});
   await server.start();
+  const port = boundPort(server);
   const post = (body: unknown) => fetch(`http://127.0.0.1:${port}/aroha/v1`, {
     method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body),
   });

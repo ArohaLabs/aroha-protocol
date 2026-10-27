@@ -19,7 +19,7 @@
     "@aroha-sdk/credentials": "^2.0.0",
     "@aroha-sdk/registry": "^2.0.0",
     "@aroha-sdk/trust": "^0.1.1",
-    "@noble/hashes": "^1.4.0",
+    "@noble/hashes": "^2.4.0",
     "hono": "^4.4.0"
   },
   "devDependencies": {

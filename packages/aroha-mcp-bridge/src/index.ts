@@ -19,6 +19,7 @@
  */
 
 import {
+  buildDIDDocument,
   buildEnvelope,
   validateEnvelope,
   NonceRegistry,
@@ -631,10 +632,30 @@ export async function wrapMcp(
       // same lifetime ArohaServer gives it.
       const nonceRegistry = new NonceRegistry();
 
+      // Built with core's buildDIDDocument so the verificationMethod (and the
+      // authentication/assertionMethod/keyAgreement refs) are in exactly the
+      // form extractPublicKey reads. Without it no resolver could get the key
+      // the bridge signs its replies with (`${did}#key-1`).
+      const coreDoc = buildDIDDocument(
+        did.replace(/^did:aroha:/, ""), await ed.getPublicKeyAsync(privateKey), endpoint, new Date().toISOString()
+      );
+      // buildDIDDocument always mints did:aroha:<id>; re-point its key refs at
+      // `did` in case an override uses another method.
+      const rebase = (ref: string) => (ref.startsWith(`${coreDoc.id}#`) ? did + ref.slice(coreDoc.id.length) : ref);
       const didDocument = {
-        "@context": ["https://www.w3.org/ns/did/v1"],
+        ...coreDoc,
         id: did,
-        service: [{ id: `${did}#aroha`, type: "ArohaAgent", serviceEndpoint: endpoint }],
+        verificationMethod: coreDoc.verificationMethod.map((vm) => ({ ...vm, id: rebase(vm.id), controller: did })),
+        authentication: coreDoc.authentication.map(rebase),
+        assertionMethod: coreDoc.assertionMethod.map(rebase),
+        keyAgreement: coreDoc.keyAgreement.map(rebase),
+        // The original ArohaAgent entry stays; core's ArohaEndpoint entry is
+        // what extractEndpoint looks for. Its id gets its own fragment because
+        // `${did}#aroha` is already taken and service ids must be unique.
+        service: [
+          { id: `${did}#aroha`, type: "ArohaAgent", serviceEndpoint: endpoint },
+          ...coreDoc.service.map((s) => ({ ...s, id: `${did}#aroha-endpoint` })),
+        ],
       };
 
       const server = createServer(async (req, res) => {

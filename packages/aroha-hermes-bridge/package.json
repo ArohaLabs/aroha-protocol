@@ -31,11 +31,11 @@
     "@aroha-sdk/core": "^2.0.0",
     "@aroha-sdk/mcp-bridge": "^3.0.0",
     "@aroha-sdk/registry": "^2.0.0",
-    "@modelcontextprotocol/sdk": "^1.0.0"
+    "@modelcontextprotocol/sdk": "^1.32.2"
   },
   "devDependencies": {
     "typescript": "^5.4.5",
-    "vitest": "^5.0.3",
+    "vitest": "^5.0.5",
     "@types/node": "^20.14.0"
   },
   "license": "Apache-2.0",

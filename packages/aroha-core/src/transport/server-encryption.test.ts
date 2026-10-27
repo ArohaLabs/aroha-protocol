@@ -14,6 +14,8 @@ import { buildEnvelope } from "../messages/envelope.js";
 import { sealEnvelope } from "./seal.js";
 import { ArohaServer } from "./server.js";
 import type { ArohaRequestBody } from "../messages/types.js";
+import type { Server } from "http";
+import type { AddressInfo } from "net";
 
 ed.etc.sha512Sync = (...m: Parameters<typeof sha512>) => sha512(...m);
 
@@ -31,22 +33,21 @@ async function keypair() {
   return { privateKey, publicKey: await ed.getPublicKeyAsync(privateKey) };
 }
 
-function freePort(): number {
-  // Fixed, well-out-of-the-way range for this test file's short-lived servers.
-  return 18000 + Math.floor(Math.random() * 1000);
+/** The port the OS assigned to a server started with port: 0. */
+function boundPort(s: ArohaServer): number {
+  return ((s as unknown as { server: Server }).server.address() as AddressInfo).port;
 }
 
 describe("ArohaServer requireEncryption (spec §6.1 — mandatory off-TLS encryption)", () => {
   it("accepts a properly sealed envelope, unseals it, and dispatches the real plaintext to onMessage", async () => {
     const recipient = await generateDID("recipient-agent", "http://127.0.0.1/recipient");
     const sender = await keypair();
-    const port = freePort();
 
     let receivedBody: ArohaRequestBody | undefined;
     server = new ArohaServer({
       agentDID: recipient.did,
       didDocument: recipient.document,
-      port,
+      port: 0,
       requireEncryption: true,
       privateKey: recipient.privateKey,
       resolvePublicKey: async () => sender.publicKey,
@@ -56,6 +57,7 @@ describe("ArohaServer requireEncryption (spec §6.1 — mandatory off-TLS encryp
       },
     });
     await server.start();
+    const port = boundPort(server);
 
     const body: ArohaRequestBody = { capability: "book-flight", params: { origin: "JFK" } };
     const envelope = await buildEnvelope("ArohaRequest", "did:aroha:sender", recipient.did, body, "corr-1", sender.privateKey);
@@ -74,19 +76,19 @@ describe("ArohaServer requireEncryption (spec §6.1 — mandatory off-TLS encryp
   it("rejects a plaintext (unsealed) envelope on a requireEncryption listener", async () => {
     const recipient = await generateDID("recipient-agent-2", "http://127.0.0.1/recipient");
     const sender = await keypair();
-    const port = freePort();
 
     let dispatched = false;
     server = new ArohaServer({
       agentDID: recipient.did,
       didDocument: recipient.document,
-      port,
+      port: 0,
       requireEncryption: true,
       privateKey: recipient.privateKey,
       resolvePublicKey: async () => sender.publicKey,
       onMessage: async () => { dispatched = true; },
     });
     await server.start();
+    const port = boundPort(server);
 
     const body: ArohaRequestBody = { capability: "book-flight", params: {} };
     const envelope = await buildEnvelope("ArohaRequest", "did:aroha:sender", recipient.did, body, "corr-1", sender.privateKey);
@@ -108,19 +110,19 @@ describe("ArohaServer requireEncryption (spec §6.1 — mandatory off-TLS encryp
     const recipient = await generateDID("recipient-agent-3", "http://127.0.0.1/recipient");
     const wrongRecipient = await keypair();
     const sender = await keypair();
-    const port = freePort();
 
     let dispatched = false;
     server = new ArohaServer({
       agentDID: recipient.did,
       didDocument: recipient.document,
-      port,
+      port: 0,
       requireEncryption: true,
       privateKey: recipient.privateKey, // the REAL recipient's key
       resolvePublicKey: async () => sender.publicKey,
       onMessage: async () => { dispatched = true; },
     });
     await server.start();
+    const port = boundPort(server);
 
     const body: ArohaRequestBody = { capability: "book-flight", params: {} };
     const envelope = await buildEnvelope("ArohaRequest", "did:aroha:sender", recipient.did, body, "corr-1", sender.privateKey);
@@ -142,7 +144,7 @@ describe("ArohaServer requireEncryption (spec §6.1 — mandatory off-TLS encryp
     expect(() => new ArohaServer({
       agentDID: recipient.did,
       didDocument: recipient.document,
-      port: freePort(),
+      port: 0,
       requireEncryption: true,
       resolvePublicKey: async () => null,
       onMessage: async () => {},
@@ -152,13 +154,12 @@ describe("ArohaServer requireEncryption (spec §6.1 — mandatory off-TLS encryp
   it("an ordinary (requireEncryption unset) server still accepts a plaintext envelope — no behavior change for TLS-fronted deployments", async () => {
     const recipient = await generateDID("recipient-agent-5", "http://127.0.0.1/recipient");
     const sender = await keypair();
-    const port = freePort();
 
     let dispatched = false;
     server = new ArohaServer({
       agentDID: recipient.did,
       didDocument: recipient.document,
-      port,
+      port: 0,
       resolvePublicKey: async () => sender.publicKey,
       onMessage: async (_env, respond) => {
         dispatched = true;
@@ -166,6 +167,7 @@ describe("ArohaServer requireEncryption (spec §6.1 — mandatory off-TLS encryp
       },
     });
     await server.start();
+    const port = boundPort(server);
 
     const body: ArohaRequestBody = { capability: "book-flight", params: {} };
     const envelope = await buildEnvelope("ArohaRequest", "did:aroha:sender", recipient.did, body, "corr-1", sender.privateKey);
@@ -186,7 +188,6 @@ describe("ArohaServer resolvePrivateKey (multi-agent listener)", () => {
     const agentA = await generateDID("multi-agent-a", "http://127.0.0.1/a");
     const agentB = await generateDID("multi-agent-b", "http://127.0.0.1/b");
     const sender = await keypair();
-    const port = freePort();
 
     const keysByDID = new Map<string, Uint8Array>([
       [agentA.did, agentA.privateKey],
@@ -197,7 +198,7 @@ describe("ArohaServer resolvePrivateKey (multi-agent listener)", () => {
     server = new ArohaServer({
       agentDID: agentA.did, // the listener's own "primary" identity for its well-known doc; irrelevant to routing
       didDocument: agentA.document,
-      port,
+      port: 0,
       requireEncryption: true,
       resolvePrivateKey: (recipientDID) => keysByDID.get(recipientDID),
       resolvePublicKey: async () => sender.publicKey,
@@ -207,6 +208,7 @@ describe("ArohaServer resolvePrivateKey (multi-agent listener)", () => {
       },
     });
     await server.start();
+    const port = boundPort(server);
 
     // A request sealed for agent B — the listener holds agent A's key too, but must not use it here.
     const bodyForB: ArohaRequestBody = { capability: "chat", params: { message: "hi B" } };
@@ -239,19 +241,19 @@ describe("ArohaServer resolvePrivateKey (multi-agent listener)", () => {
     const agentA = await generateDID("multi-agent-c", "http://127.0.0.1/c");
     const sender = await keypair();
     const stranger = await generateDID("multi-agent-stranger", "http://127.0.0.1/stranger");
-    const port = freePort();
 
     let dispatched = false;
     server = new ArohaServer({
       agentDID: agentA.did,
       didDocument: agentA.document,
-      port,
+      port: 0,
       requireEncryption: true,
       resolvePrivateKey: (recipientDID) => (recipientDID === agentA.did ? agentA.privateKey : undefined),
       resolvePublicKey: async () => sender.publicKey,
       onMessage: async () => { dispatched = true; },
     });
     await server.start();
+    const port = boundPort(server);
 
     const body: ArohaRequestBody = { capability: "chat", params: {} };
     const envelope = await buildEnvelope("ArohaRequest", "did:aroha:sender", stranger.did, body, "corr-1", sender.privateKey);
@@ -271,7 +273,7 @@ describe("ArohaServer resolvePrivateKey (multi-agent listener)", () => {
     expect(() => new ArohaServer({
       agentDID: "did:aroha:x",
       didDocument: { "@context": [], id: "did:aroha:x", verificationMethod: [] } as never,
-      port: 19999,
+      port: 0,
       requireEncryption: true,
       resolvePrivateKey: () => undefined,
       resolvePublicKey: async () => null,

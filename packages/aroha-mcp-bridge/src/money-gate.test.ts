@@ -7,6 +7,7 @@
  * TTL options. Real server, real signed requests, real mandate chains.
  */
 
+import { createServer } from "node:net";
 import { describe, it, expect, beforeAll, vi } from "vitest";
 import * as ed from "@noble/ed25519";
 import { sha512 } from "@noble/hashes/sha512";
@@ -25,7 +26,17 @@ ed.etc.sha512Sync = (...m: Parameters<typeof sha512>) => sha512(...m);
 const BRIDGE_DID = "did:aroha:gate-agent";
 const CALLER_DID = "did:aroha:gate-caller";
 const HUMAN_DID = "did:aroha:gate-human";
-let nextPort = 35761;
+/** A port the OS reports free right now (wrapMcp takes a fixed port and does not report the bound one). */
+function freePort(): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const srv = createServer();
+    srv.once("error", reject);
+    srv.listen(0, "127.0.0.1", () => {
+      const { port } = srv.address() as { port: number };
+      srv.close(() => resolve(port));
+    });
+  });
+}
 
 let callerPriv: Uint8Array, callerPub: Uint8Array, humanPriv: Uint8Array, humanPub: Uint8Array;
 beforeAll(async () => {
@@ -41,7 +52,7 @@ const tool: McpToolDefinition = { name: "aroha_quote", description: "q", inputSc
 const free: McpToolDefinition = { name: "aroha_ping", description: "p", inputSchema: { type: "object", properties: {} } };
 
 async function start(extra: Partial<WrapMcpOptions>) {
-  const port = nextPort++;
+  const port = await freePort();
   vi.spyOn(console, "log").mockImplementation(() => {});
   const agent = await wrapMcp([tool, free], {
     name: "gate", port, did: BRIDGE_DID, resolvePublicKey: resolver,
@@ -84,7 +95,7 @@ async function paymentChain(limit: number) {
 describe("wrapMcp root policy", () => {
   it("refuses to start with requireMandate and no expectedRoot / trustedRoots / kelSource", async () => {
     const agent = await wrapMcp([tool], {
-      name: "gate", port: nextPort++, did: BRIDGE_DID, resolvePublicKey: resolver, requireMandate: true,
+      name: "gate", port: await freePort(), did: BRIDGE_DID, resolvePublicKey: resolver, requireMandate: true,
       handlers: { aroha_quote: async () => ({ content: [] }) },
     });
     await expect(agent.start()).rejects.toThrow(/no root policy/);
@@ -92,7 +103,7 @@ describe("wrapMcp root policy", () => {
 
   it("refuses requirePersonRoot without a kelSource", async () => {
     const agent = await wrapMcp([tool], {
-      name: "gate", port: nextPort++, did: BRIDGE_DID, resolvePublicKey: resolver, requireMandate: true,
+      name: "gate", port: await freePort(), did: BRIDGE_DID, resolvePublicKey: resolver, requireMandate: true,
       requirePersonRoot: true, handlers: { aroha_quote: async () => ({ content: [] }) },
     });
     await expect(agent.start()).rejects.toThrow(/kelSource/);
@@ -168,7 +179,7 @@ describe("wrapMcp priced calls", () => {
 
   it("does not run the tool when the redemption store fails", async () => {
     const handler = vi.fn(async () => ({ content: [{ type: "text" as const, text: "x" }] }));
-    const port = nextPort++;
+    const port = await freePort();
     const agent = await wrapMcp([tool], {
       name: "gate", port, did: BRIDGE_DID, resolvePublicKey: resolver, requireMandate: true, expectedRoot: HUMAN_DID,
       price: 1, handlers: { aroha_quote: handler },
@@ -186,7 +197,7 @@ describe("wrapMcp priced calls", () => {
 
   it("advertises per-capability prices", async () => {
     const agent = await wrapMcp([tool, free], {
-      name: "gate", port: nextPort++, did: BRIDGE_DID, resolvePublicKey: resolver, capabilityPrices: { quote: 2 },
+      name: "gate", port: await freePort(), did: BRIDGE_DID, resolvePublicKey: resolver, capabilityPrices: { quote: 2 },
       handlers: { aroha_quote: async () => ({ content: [] }), aroha_ping: async () => ({ content: [] }) },
     });
     expect(agent.capabilities.find((c) => c.id === "quote")?.pricing).toEqual({ model: "per-call", priceUsd: 2 });

@@ -11,6 +11,7 @@
  * unverifiable calls and charges priced ones.
  */
 
+import { createServer } from "node:net";
 import { describe, it, expect, vi, beforeAll, afterAll } from "vitest";
 import * as ed from "@noble/ed25519";
 import { sha512 } from "@noble/hashes/sha512";
@@ -28,7 +29,18 @@ import { wrapMcp, type McpToolDefinition, type WrapMcpOptions } from "./index.js
 ed.etc.sha512Sync = (...m: Parameters<typeof sha512>) => sha512(...m);
 
 const BRIDGE_DID = "did:aroha:governed-bridge";
-let nextPort = 36871;
+
+/** A port the OS reports free right now (wrapMcp takes a fixed port and does not report the bound one). */
+function freePort(): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const srv = createServer();
+    srv.once("error", reject);
+    srv.listen(0, "127.0.0.1", () => {
+      const { port } = srv.address() as { port: number };
+      srv.close(() => resolve(port));
+    });
+  });
+}
 
 const tool: McpToolDefinition = { name: "aroha_quote", description: "q", inputSchema: { type: "object", properties: {} } };
 const handlers = { aroha_quote: async () => ({ content: [{ type: "text" as const, text: "quoted" }] }) };
@@ -58,7 +70,7 @@ afterAll(() => { vi.restoreAllMocks(); });
 
 function governedOpts(extra: Partial<WrapMcpOptions> = {}): WrapMcpOptions {
   return {
-    name: "gov", port: nextPort++, did: BRIDGE_DID, resolvePublicKey: resolver, handlers,
+    name: "gov", port: 0, did: BRIDGE_DID, resolvePublicKey: resolver, handlers,
     governed: true, kelSource, isRevoked: notRevoked, trustedRoots: [alice.did], redemption: durableStore(), price: 1,
     ...extra,
   };
@@ -101,7 +113,7 @@ describe("wrapMcp governed: a running bridge", () => {
   }
 
   it("requires a mandate even though requireMandate was not set, and charges a valid person-rooted one", async () => {
-    const opts = governedOpts();
+    const opts = governedOpts({ port: await freePort() });
     const agent = await wrapMcp([tool], opts);
     const { stop } = await agent.start();
     try {
@@ -113,7 +125,7 @@ describe("wrapMcp governed: a running bridge", () => {
   });
 
   it("refuses when the revocation source is unreachable (no fail-open)", async () => {
-    const opts = governedOpts({ isRevoked: async () => { throw new Error("registry down"); } });
+    const opts = governedOpts({ port: await freePort(), isRevoked: async () => { throw new Error("registry down"); } });
     const agent = await wrapMcp([tool], opts);
     const { stop } = await agent.start();
     try {
@@ -125,7 +137,7 @@ describe("wrapMcp governed: a running bridge", () => {
 
   it("refuses a chain rooted in a person who is not pinned", async () => {
     const mallory = await incept({ kind: "person" });
-    const opts = governedOpts({ trustedRoots: [mallory.did] });
+    const opts = governedOpts({ port: await freePort(), trustedRoots: [mallory.did] });
     const agent = await wrapMcp([tool], opts);
     const { stop } = await agent.start();
     try {

@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Aroha Labs
 // SPDX-License-Identifier: Apache-2.0
 
+import { createServer } from "node:net";
 import { describe, it, expect, vi, beforeAll } from "vitest";
 import { mcpToolsToArohaCapabilities, arohaAgentToMcpTools, wrapMcp, type McpToolDefinition } from "./index.js";
 import type { DiscoveredAgent } from "@aroha-sdk/registry";
@@ -211,7 +212,17 @@ describe("arohaAgentToMcpTools", () => {
 // with a REAL keypair, and asserts on ACTUAL behaviour — not on a mock
 // standing in for the transport.
 
-let nextPort = 34561; // sequential, distinct per test to avoid EADDRINUSE across parallel runs
+/** A port the OS reports free right now (wrapMcp takes a fixed port and does not report the bound one). */
+function freePort(): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const srv = createServer();
+    srv.once("error", reject);
+    srv.listen(0, "127.0.0.1", () => {
+      const { port } = srv.address() as { port: number };
+      srv.close(() => resolve(port));
+    });
+  });
+}
 
 const CALLER_DID = "did:aroha:test-caller";
 const GRANTOR_DID = "did:aroha:test-grantor";
@@ -264,7 +275,7 @@ describe("wrapMcp", () => {
   it("start() throws if a tool has no matching handler", async () => {
     const agent = await wrapMcp([makeMcpTool("aroha_search")], {
       name: "no-handlers-test",
-      port: nextPort++,
+      port: await freePort(),
       did: "did:aroha:test-agent",
         resolvePublicKey: testResolver(),
       handlers: {}, // deliberately empty — "search" has no entry
@@ -273,7 +284,7 @@ describe("wrapMcp", () => {
   });
 
   it("actually invokes the real handler and returns ITS result, not a placeholder", async () => {
-    const port = nextPort++;
+    const port = await freePort();
     const handler = vi.fn(async (args: Record<string, unknown>) => ({
       content: [{ type: "text" as const, text: `real result for ${args.query}` }],
     }));
@@ -307,7 +318,7 @@ describe("wrapMcp", () => {
   });
 
   it("routes multiple tools to their own distinct handlers, not to each other", async () => {
-    const port = nextPort++;
+    const port = await freePort();
     const searchHandler = vi.fn(async () => ({ content: [{ type: "text" as const, text: "search-output" }] }));
     const bookHandler = vi.fn(async () => ({ content: [{ type: "text" as const, text: "book-output" }] }));
 
@@ -335,7 +346,7 @@ describe("wrapMcp", () => {
   });
 
   it("a handler reporting isError becomes an ArohaError response, not a 200", async () => {
-    const port = nextPort++;
+    const port = await freePort();
     const failingHandler = vi.fn(async () => ({
       content: [{ type: "text" as const, text: "tool-specific failure detail" }],
       isError: true,
@@ -361,7 +372,7 @@ describe("wrapMcp", () => {
   });
 
   it("still 404s for a capability with no matching tool at all (pre-existing behaviour, unchanged)", async () => {
-    const port = nextPort++;
+    const port = await freePort();
     const agent = await wrapMcp([makeMcpTool("aroha_search")], {
       name: "unknown-capability-test",
       port,
@@ -393,7 +404,7 @@ describe("wrapMcp", () => {
     }
 
     it("rejects a request from a sender resolvePublicKey doesn't know", async () => {
-      const port = nextPort++;
+      const port = await freePort();
       const { stop } = await startAgent(port);
       try {
         const { status } = await postSigned(port, "search", {}, { from: "did:aroha:nobody-registered" });
@@ -402,7 +413,7 @@ describe("wrapMcp", () => {
     });
 
     it("rejects a request signed by the wrong key while claiming a known DID", async () => {
-      const port = nextPort++;
+      const port = await freePort();
       const { stop } = await startAgent(port);
       try {
         // Signs with grantorPriv but claims to be CALLER_DID — a forged sender.
@@ -413,7 +424,7 @@ describe("wrapMcp", () => {
     });
 
     it("rejects a replayed request (same nonce twice)", async () => {
-      const port = nextPort++;
+      const port = await freePort();
       const { stop } = await startAgent(port);
       try {
         const envelope = await buildEnvelope(
@@ -431,7 +442,7 @@ describe("wrapMcp", () => {
     });
 
     it("accepts a validly signed, unexpired, fresh-nonce request end to end", async () => {
-      const port = nextPort++;
+      const port = await freePort();
       const { stop } = await startAgent(port);
       try {
         const { status } = await postSigned(port, "search", {});
@@ -458,7 +469,7 @@ describe("wrapMcp", () => {
     }
 
     it("rejects a request with no mandate at all", async () => {
-      const port = nextPort++;
+      const port = await freePort();
       const { stop } = await startAgent(port);
       try {
         const { status, body } = await postSigned(port, "search", {});
@@ -470,7 +481,7 @@ describe("wrapMcp", () => {
     });
 
     it("accepts a valid mandate granting the caller", async () => {
-      const port = nextPort++;
+      const port = await freePort();
       const { stop } = await startAgent(port);
       try {
         const { token } = await issueIntentMandate(
@@ -485,7 +496,7 @@ describe("wrapMcp", () => {
       // GRANTOR_DID is a namespaced DID, so the key of the chain's ROOT link
       // can only come from resolvePublicKey — this proves the bridge hands
       // its resolver to the chain walk, not just to the leaf signature.
-      const port = nextPort++;
+      const port = await freePort();
       const { stop } = await startAgent(port);
       try {
         const root = await issueIntentMandate(
@@ -500,7 +511,7 @@ describe("wrapMcp", () => {
     });
 
     it("rejects a mandate granted to a DIFFERENT agent than the caller", async () => {
-      const port = nextPort++;
+      const port = await freePort();
       const { stop } = await startAgent(port);
       try {
         const { token } = await issueIntentMandate(
@@ -512,7 +523,7 @@ describe("wrapMcp", () => {
     });
 
     it("rejects a mandate whose grantor doesn't resolve to a known key", async () => {
-      const port = nextPort++;
+      const port = await freePort();
       const { stop } = await startAgent(port);
       try {
         const unknownGrantorKey = ed.utils.randomPrivateKey();
@@ -525,7 +536,7 @@ describe("wrapMcp", () => {
     });
 
     it("rejects a mandate signed by a key other than its claimed grantor", async () => {
-      const port = nextPort++;
+      const port = await freePort();
       const { stop } = await startAgent(port);
       try {
         // Claims GRANTOR_DID (which resolves to grantorPub) but is actually
@@ -539,7 +550,7 @@ describe("wrapMcp", () => {
     });
 
     it("does not require a mandate when requireMandate is unset (default false)", async () => {
-      const port = nextPort++;
+      const port = await freePort();
       const agent = await wrapMcp([makeMcpTool("aroha_search")], {
         name: `no-mandate-required-${port}`,
         port,
@@ -558,7 +569,7 @@ describe("wrapMcp", () => {
 
 describe("wrapMcp request hardening (M9)", () => {
   it("refuses a body over maxBodyBytes with 413 before verification", async () => {
-    const port = nextPort++;
+    const port = await freePort();
     const resolver = vi.fn(testResolver());
     const agent = await wrapMcp([makeMcpTool("aroha_search")], {
       name: "cap-test", port, did: "did:aroha:test-agent", maxBodyBytes: 512,
@@ -578,7 +589,7 @@ describe("wrapMcp request hardening (M9)", () => {
   });
 
   it("passes proof.verificationMethod to resolvePublicKey", async () => {
-    const port = nextPort++;
+    const port = await freePort();
     const calls: Array<[string, string | undefined]> = [];
     const agent = await wrapMcp([makeMcpTool("aroha_search")], {
       name: "vm-test", port, did: "did:aroha:test-agent",
@@ -599,7 +610,7 @@ describe("wrapMcp DID document", () => {
   // The served document used to carry no verificationMethod, so core's
   // resolver (extractPublicKey) could not get the key the bridge signs with.
   it("publishes the bridge's own signing key in the form core's extractPublicKey reads", async () => {
-    const port = nextPort++;
+    const port = await freePort();
     const bridgePriv = ed.utils.randomPrivateKey();
     const bridgePub = await ed.getPublicKeyAsync(bridgePriv);
     const agent = await wrapMcp([makeMcpTool("aroha_search")], {

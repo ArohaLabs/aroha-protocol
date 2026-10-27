@@ -8,6 +8,7 @@
  * agent, the tool, the arguments and a single-use nonce.
  */
 
+import { createServer } from "node:net";
 import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
 import * as ed from "@noble/ed25519";
 import { sha512 } from "@noble/hashes/sha512";
@@ -21,8 +22,20 @@ ed.etc.sha512Sync = (...m: Parameters<typeof sha512>) => sha512(...m);
 const BRIDGE_DID = "did:aroha:wire-agent";
 const HOLDER_DID = "did:aroha:wire-caller";
 const HUMAN_DID = "did:aroha:wire-human";
-const PORT = 35871;
 
+/** A port the OS reports free right now (wrapMcp takes a fixed port and does not report the bound one). */
+function freePort(): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const srv = createServer();
+    srv.once("error", reject);
+    srv.listen(0, "127.0.0.1", () => {
+      const { port } = srv.address() as { port: number };
+      srv.close(() => resolve(port));
+    });
+  });
+}
+
+let port: number;
 let holderPriv: Uint8Array, holderPub: Uint8Array, humanPriv: Uint8Array, humanPub: Uint8Array;
 let token: string;
 let stop: () => void;
@@ -43,9 +56,10 @@ beforeAll(async () => {
   token = (await issueIntentMandate(HUMAN_DID, HOLDER_DID, { spendLimitUsd: 10, currency: "USD" }, humanPriv, 600_000)).token;
   vi.spyOn(console, "log").mockImplementation(() => {});
   vi.spyOn(console, "warn").mockImplementation(() => {});
+  port = await freePort();
   const agent = await wrapMcp([tool], {
     name: "wire",
-    port: PORT,
+    port,
     did: BRIDGE_DID,
     resolvePublicKey: resolver,
     requireMandate: true,
@@ -60,7 +74,7 @@ afterAll(() => stop?.());
 
 async function client(mode: "modern" | "legacy"): Promise<Client> {
   const c = new Client({ name: "stock", version: "1" }, { versionNegotiation: mode === "modern" ? { mode: { pin: "2026-07-28" } } : { mode: "legacy" } });
-  await c.connect(new StreamableHTTPClientTransport(new URL(`http://127.0.0.1:${PORT}/mcp`)));
+  await c.connect(new StreamableHTTPClientTransport(new URL(`http://127.0.0.1:${port}/mcp`)));
   return c;
 }
 
@@ -117,7 +131,7 @@ describe("wrapMcp MCP-on-the-wire mode", () => {
 
   it("refuses to serve MCP without a mandate gate on a non-loopback host", async () => {
     const agent = await wrapMcp([tool], {
-      name: "open", port: PORT + 1, host: "0.0.0.0", resolvePublicKey: async () => null, mcp: {},
+      name: "open", port: await freePort(), host: "0.0.0.0", resolvePublicKey: async () => null, mcp: {},
       handlers: { search: async () => ({ content: [{ type: "text", text: "" }] }) },
     });
     await expect(agent.start()).rejects.toThrow(/no caller authentication/);

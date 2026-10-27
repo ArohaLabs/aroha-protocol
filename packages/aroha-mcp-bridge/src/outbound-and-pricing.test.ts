@@ -8,6 +8,7 @@
  *   verifies the provider's response envelope when given a key resolver.
  */
 
+import { createServer } from "node:net";
 import { describe, it, expect, vi, beforeAll } from "vitest";
 import * as ed from "@noble/ed25519";
 import { sha512 } from "@noble/hashes/sha512";
@@ -20,23 +21,33 @@ ed.etc.sha512Sync = (...m: Parameters<typeof sha512>) => sha512(...m);
 const tool: McpToolDefinition = { name: "aroha_quote", description: "q", inputSchema: { type: "object", properties: {} } };
 const handlers = { aroha_quote: async () => ({ content: [{ type: "text" as const, text: "quoted" }] }) };
 const noKeys: PublicKeyResolver = async () => null;
-let nextPort = 37981;
+/** A port the OS reports free right now (wrapMcp takes a fixed port and does not report the bound one). */
+function freePort(): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const srv = createServer();
+    srv.once("error", reject);
+    srv.listen(0, "127.0.0.1", () => {
+      const { port } = srv.address() as { port: number };
+      srv.close(() => resolve(port));
+    });
+  });
+}
 
 describe("wrapMcp: a price is never advertised without a way to charge it", () => {
   it("refuses to start with a priced tool and requireMandate off", async () => {
-    const a = await wrapMcp([tool], { name: "p", port: nextPort++, resolvePublicKey: noKeys, handlers, price: 0.5 });
+    const a = await wrapMcp([tool], { name: "p", port: await freePort(), resolvePublicKey: noKeys, handlers, price: 0.5 });
     await expect(a.start()).rejects.toThrow(/aroha_quote have a price but requireMandate is off/);
-    const b = await wrapMcp([tool], { name: "p", port: nextPort++, resolvePublicKey: noKeys, handlers, capabilityPrices: { quote: 2 } });
+    const b = await wrapMcp([tool], { name: "p", port: await freePort(), resolvePublicKey: noKeys, handlers, capabilityPrices: { quote: 2 } });
     await expect(b.start()).rejects.toThrow(/allowUnchargedPricing/);
   });
 
   it("starts with allowUnchargedPricing: true, and with free tools as before", async () => {
     vi.spyOn(console, "log").mockImplementation(() => {});
     const a = await wrapMcp([tool], {
-      name: "p", port: nextPort++, resolvePublicKey: noKeys, handlers, price: 0.5, allowUnchargedPricing: true,
+      name: "p", port: await freePort(), resolvePublicKey: noKeys, handlers, price: 0.5, allowUnchargedPricing: true,
     });
     (await a.start()).stop();
-    const b = await wrapMcp([tool], { name: "p", port: nextPort++, resolvePublicKey: noKeys, handlers });
+    const b = await wrapMcp([tool], { name: "p", port: await freePort(), resolvePublicKey: noKeys, handlers });
     (await b.start()).stop();
   });
 });

@@ -78,6 +78,7 @@ AROHA_MANDATE_ROOT_DID=
 /** Persistent identity loader. Shared with the create-app orchestrator template. */
 export function identityTs(): string {
   return `import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { parseEnv } from "node:util";
 import * as ed from "@noble/ed25519";
 import { buildDIDDocument, type AgentKeyPair } from "@aroha-sdk/core";
 
@@ -114,12 +115,15 @@ function envLines(): string[] {
   return existsSync(ENV_FILE) ? readFileSync(ENV_FILE, "utf8").split(/\\r?\\n/) : [];
 }
 
-/** The last non-empty AROHA_PRIVATE_KEY=... value in .env, if any. */
+/**
+ * The last non-empty AROHA_PRIVATE_KEY value in .env, if any. Each line goes
+ * through Node's dotenv parser (as \`node --env-file\` reads it), so quotes,
+ * \`export \` and inline # comments are handled.
+ */
 function readKeyFromEnvFile(): string | undefined {
   const values = envLines()
-    .filter((l) => l.startsWith(\`\${KEY_VAR}=\`))
-    .map((l) => l.slice(KEY_VAR.length + 1).trim())
-    .filter((v) => v.length > 0);
+    .map((l) => parseEnv(l)[KEY_VAR])
+    .filter((v): v is string => !!v);
   return values.at(-1);
 }
 

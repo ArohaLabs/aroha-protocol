@@ -3,6 +3,7 @@
 
 import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
+import { parseEnv } from "node:util";
 import { extractPublicKey, type DIDDocument } from "@aroha-sdk/core/identity";
 
 // ─── Colours ──────────────────────────────────────────────────────────────────
@@ -48,13 +49,12 @@ function checkEnv(): { did: string | null; hasKey: boolean; ok: boolean } {
     return { did: null, hasKey: false, ok: true }; // missing .env is a warning, not a failure
   }
 
-  const envRaw = readFileSync(envPath, "utf8");
-  const lines = envRaw.split("\n");
-  const get = (key: string) =>
-    lines.find((l) => l.startsWith(`${key}=`))?.split("=").slice(1).join("=").trim() ?? null;
+  // Node's built-in dotenv parser (the one behind `node --env-file`): strips
+  // matching quotes, `export `, inline `# comments`, whitespace and CR.
+  const env = parseEnv(readFileSync(envPath, "utf8"));
 
-  const did = get("AROHA_AGENT_DID");
-  const key = get("AROHA_PRIVATE_KEY");
+  const did = env.AROHA_AGENT_DID || null;
+  const key = env.AROHA_PRIVATE_KEY ?? null;
 
   let ok = true;
   if (!did) {

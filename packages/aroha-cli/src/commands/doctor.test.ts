@@ -96,3 +96,25 @@ describe("aroha doctor — DID document check", () => {
     expect(out).toContain("serves an agent manifest, not a DID document");
   });
 });
+
+describe("aroha doctor — .env parsing", () => {
+  const plainEnv = `AROHA_AGENT_DID=${DID}\nAROHA_PRIVATE_KEY=x\n`;
+  afterEach(() => writeFileSync(join(dir, ".env"), plainEnv));
+
+  // Each .env names the same DID the stub serves, written in a common style.
+  it.each([
+    ["double quotes", `AROHA_AGENT_DID="${DID}"\nAROHA_PRIVATE_KEY="x"\n`],
+    ["single quotes", `AROHA_AGENT_DID='${DID}'\nAROHA_PRIVATE_KEY='x'\n`],
+    ["CRLF line endings", `AROHA_AGENT_DID=${DID}\r\nAROHA_PRIVATE_KEY=x\r\n`],
+    ["quotes and CRLF", `AROHA_AGENT_DID="${DID}"\r\nAROHA_PRIVATE_KEY=x\r\n`],
+    ["export prefix, spaces and an inline comment", `export AROHA_AGENT_DID = ${DID}  # this agent\nAROHA_PRIVATE_KEY=x\n`],
+  ])("reads AROHA_AGENT_DID written with %s", async (_style, env) => {
+    writeFileSync(join(dir, ".env"), env);
+    const { document } = await generateDID("doctor-test", `${endpoint}/aroha/v1`);
+    wellKnownBody = document;
+    const { out, exitCode } = await doctor();
+    expect(out).toContain(`AROHA_AGENT_DID=${DID}`);
+    expect(out).not.toContain("does not match");
+    expect(exitCode).toBeUndefined();
+  });
+});

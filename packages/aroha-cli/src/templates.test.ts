@@ -1,12 +1,12 @@
 // Copyright (c) 2026 Aroha Labs
 // SPDX-License-Identifier: Apache-2.0
 
-import { describe, it, expect } from "vitest";
-import { readFileSync, readdirSync, existsSync } from "node:fs";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { readFileSync, readdirSync, existsSync, mkdtempSync, writeFileSync, rmSync } from "node:fs";
 import { join, dirname } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { AROHA_SDK_RANGES, TOOLCHAIN } from "./templates/versions.js";
-import { providerTemplate } from "./templates/provider.js";
+import { providerTemplate, identityTs } from "./templates/provider.js";
 import { createAppTemplate } from "./templates/create-app.js";
 import { orchestratorTemplate } from "./templates/orchestrator.js";
 import { bridgePackageJson } from "./templates/bridge.js";
@@ -168,5 +168,40 @@ describe("template security defaults (T3/P5)", () => {
       ...providerTemplate({ name: "demo", port: 4002, capabilities: ["x"] }).values(),
     ].join("\n");
     expect(outputs).not.toMatch(/registry\.aroha-labs\.com|ipfs\.aroha-labs\.com|workers\.dev/);
+  });
+});
+
+describe("generated src/identity.ts", () => {
+  const KEY = "11".repeat(32);
+  let tmp: string;
+  let prevCwd: string;
+  let prevKey: string | undefined;
+
+  beforeEach(() => {
+    // Inside the package (not os.tmpdir) so the module's imports resolve.
+    tmp = mkdtempSync(join(PACKAGES_DIR, "aroha-cli", ".identity-test-"));
+    writeFileSync(join(tmp, "identity.ts"), identityTs());
+    prevCwd = process.cwd();
+    prevKey = process.env.AROHA_PRIVATE_KEY;
+    delete process.env.AROHA_PRIVATE_KEY;
+    process.chdir(tmp);
+  });
+
+  afterEach(() => {
+    process.chdir(prevCwd);
+    if (prevKey !== undefined) process.env.AROHA_PRIVATE_KEY = prevKey;
+    rmSync(tmp, { recursive: true, force: true });
+  });
+
+  it.each([
+    ["double quotes and CRLF", `AROHA_PRIVATE_KEY="${KEY}"\r\n`],
+    ["single quotes", `AROHA_PRIVATE_KEY='${KEY}'\n`],
+    ["export prefix and an inline comment", `export AROHA_PRIVATE_KEY=${KEY} # dev key\n`],
+  ])("reads AROHA_PRIVATE_KEY written with %s", async (_style, env) => {
+    writeFileSync(join(tmp, ".env"), env);
+    const { loadOrCreateIdentity } = await import(pathToFileURL(join(tmp, "identity.ts")).href);
+    const identity = await loadOrCreateIdentity("identity-test", "http://127.0.0.1:1/aroha/v1");
+    expect(Buffer.from(identity.privateKey).toString("hex")).toBe(KEY);
+    expect(readFileSync(join(tmp, ".env"), "utf8")).toBe(env); // no new key appended
   });
 });

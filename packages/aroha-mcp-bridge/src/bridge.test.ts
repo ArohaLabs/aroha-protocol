@@ -4,8 +4,8 @@
 import { describe, it, expect, vi, beforeAll } from "vitest";
 import { mcpToolsToArohaCapabilities, arohaAgentToMcpTools, wrapMcp, type McpToolDefinition } from "./index.js";
 import type { DiscoveredAgent } from "@aroha-sdk/registry";
-import type { ArohaEnvelope, ArohaClient, PublicKeyResolver } from "@aroha-sdk/core";
-import { buildEnvelope } from "@aroha-sdk/core";
+import type { ArohaEnvelope, ArohaClient, DIDDocument, PublicKeyResolver } from "@aroha-sdk/core";
+import { buildEnvelope, extractEndpoint, extractPublicKey } from "@aroha-sdk/core";
 import { issueIntentMandate, attenuateToCart } from "@aroha-sdk/credentials";
 import * as ed from "@noble/ed25519";
 import { sha512 } from "@noble/hashes/sha512";
@@ -591,6 +591,51 @@ describe("wrapMcp request hardening (M9)", () => {
       expect(status).toBe(200);
       expect(calls[0][0]).toBe(CALLER_DID);
       expect(calls[0][1]).toMatch(new RegExp(`^${CALLER_DID}#`));
+    } finally { stop(); }
+  });
+});
+
+describe("wrapMcp DID document", () => {
+  // The served document used to carry no verificationMethod, so core's
+  // resolver (extractPublicKey) could not get the key the bridge signs with.
+  it("publishes the bridge's own signing key in the form core's extractPublicKey reads", async () => {
+    const port = nextPort++;
+    const bridgePriv = ed.utils.randomPrivateKey();
+    const bridgePub = await ed.getPublicKeyAsync(bridgePriv);
+    const agent = await wrapMcp([makeMcpTool("aroha_search")], {
+      name: "doc-test", port, did: "did:aroha:test-agent", privateKey: bridgePriv,
+      resolvePublicKey: testResolver(),
+      handlers: { aroha_search: async () => ({ content: [{ type: "text" as const, text: "ok" }] }) },
+    });
+    const { stop } = await agent.start();
+    try {
+      const res = await fetch(`http://127.0.0.1:${port}/.well-known/aroha-agent.json`);
+      expect(res.status).toBe(200);
+      const doc = await res.json() as DIDDocument & { did: string; endpoint: string; capabilities: unknown[] };
+
+      expect(doc.id).toBe("did:aroha:test-agent");
+      const key = extractPublicKey(doc);
+      expect(key.length).toBe(32);
+      expect(key).toEqual(bridgePub);
+      expect(doc.authentication).toEqual([doc.verificationMethod[0].id]);
+      expect(doc.assertionMethod).toEqual([doc.verificationMethod[0].id]);
+
+      // The key id the bridge stamps on its signed replies resolves to the same key.
+      const { status, body } = await postSigned(port, "search", { query: "q" });
+      expect(status).toBe(200);
+      expect(extractPublicKey(doc, body.proof?.verificationMethod)).toEqual(bridgePub);
+
+      // Existing fields are kept.
+      expect(doc.did).toBe("did:aroha:test-agent");
+      expect(doc.endpoint).toBe(`http://localhost:${port}`);
+      expect(doc.capabilities).toHaveLength(1);
+      expect(doc.service).toContainEqual(
+        { id: "did:aroha:test-agent#aroha", type: "ArohaAgent", serviceEndpoint: `http://localhost:${port}` }
+      );
+
+      // Core's extractEndpoint finds the ArohaEndpoint service entry.
+      expect(extractEndpoint(doc)).toBe(`http://localhost:${port}`);
+      expect(new Set(doc.service.map((s) => s.id)).size).toBe(doc.service.length);
     } finally { stop(); }
   });
 });

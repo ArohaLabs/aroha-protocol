@@ -97,7 +97,7 @@ When `agent.start()` is called:
 3. An HTTP server starts on `opts.port` (default `3001`), bound to `127.0.0.1` unless you set `opts.host`
 4. `start()` throws if any tool has no entry in `handlers`
 5. Your tools are served at two endpoints:
-   - `GET /.well-known/aroha-agent.json` — DID document + capability list
+   - `GET /.well-known/aroha-agent.json` — DID document (with the bridge's Ed25519 key as `verificationMethod` `<did>#key-1` and an `ArohaEndpoint` service pointing at the bridge's endpoint) + capability list
    - `POST /aroha/v1` — signed ArohaRequest envelope handler
 
 ## Test your wrapped agent

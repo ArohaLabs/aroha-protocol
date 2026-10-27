@@ -68,13 +68,17 @@ interface MicroAgentOptions {
 
 Outside dev mode, an `ArohaReserve` is answered with an `ArohaError` — implement sagas with `ArohaServer` directly.
 
-Outside dev mode, the agent by default resolves only its own (ephemeral) DID's public key, so envelopes from any other sender are rejected (`401`, `Unknown sender DID`). To accept signed requests from other agents, pass `resolvePublicKey` (a `PublicKeyResolver` from `@aroha-sdk/core`, the same option `ArohaServer` takes, e.g. `kelKeyResolver(...)` or your own lookup):
+Outside dev mode, the agent by default resolves only its own (ephemeral) DID's public key, so envelopes from any other sender are rejected (`401`, `Unknown sender DID`). To accept signed requests from other agents, pass `resolvePublicKey` (a `PublicKeyResolver`, core's type re-exported by `@aroha-sdk/micro`; the same option `ArohaServer` takes, e.g. `kelKeyResolver(...)` or your own lookup):
 
 ```typescript
+import { createAgent, type PublicKeyResolver } from "@aroha-sdk/micro";
+
+const resolvePublicKey: PublicKeyResolver = async (senderDid) => trustedPeers.get(senderDid) ?? null;
+
 createAgent({
   name: "weather-agent",
   port: 3001,
-  resolvePublicKey: async (senderDid) => trustedPeers.get(senderDid) ?? null,
+  resolvePublicKey,
 });
 ```
 

@@ -62,14 +62,18 @@ createAgent({
 
 Dev mode skips inbound signature verification, answers `ArohaReserve` with an immediate `ArohaCommitAck`, registers the agent with a local `aroha dev` sandbox if one is running, and prints a banner. The server refuses to start in dev mode unless `NODE_ENV=development`. Your handler code is the same in both modes.
 
-Outside dev mode, the agent by default resolves only its own (ephemeral) DID's public key, so envelopes from any other sender are rejected as `Unknown sender DID` (401). To accept signed requests from other agents, pass `resolvePublicKey` — any `PublicKeyResolver` from `@aroha-sdk/core`, the same option `ArohaServer` takes:
+Outside dev mode, the agent by default resolves only its own (ephemeral) DID's public key, so envelopes from any other sender are rejected as `Unknown sender DID` (401). To accept signed requests from other agents, pass `resolvePublicKey` — any `PublicKeyResolver` (core's type, re-exported by this package), the same option `ArohaServer` takes:
 
 ```typescript
+import { createAgent, type PublicKeyResolver } from "@aroha-sdk/micro";
+
+// Return the sender's Ed25519 public key, or null to reject it.
+const resolvePublicKey: PublicKeyResolver = async (senderDid) => trustedPeers.get(senderDid) ?? null;
+
 createAgent({
   name: "weather-agent",
   port: 3001,
-  // Return the sender's Ed25519 public key, or null to reject it.
-  resolvePublicKey: async (senderDid) => trustedPeers.get(senderDid) ?? null,
+  resolvePublicKey,
 })
   .on("get-weather", handler)
   .start();

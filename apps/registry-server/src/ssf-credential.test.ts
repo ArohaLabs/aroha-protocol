@@ -40,8 +40,14 @@ describe("SSF push credential sealing", () => {
   it("refuses a tampered ciphertext", async () => {
     const env = { REGISTRY_SIGNING_KEY: SEED_A };
     const sealed = await sealPushCredential(env, "s", SECRET);
-    const last = sealed.slice(-2);
-    const tampered = sealed.slice(0, -2) + (last === "AA" ? "AB" : "AA");
+    // Flip a bit of the decoded ciphertext. Rewriting the last base64url
+    // characters is not enough: the final character's low bits are padding,
+    // so some rewrites decode to the same bytes and the value still opens.
+    const cut = sealed.lastIndexOf(":") + 1;
+    const ct = Buffer.from(sealed.slice(cut), "base64url");
+    ct[0] ^= 0x01;
+    const tampered = sealed.slice(0, cut) + ct.toString("base64url");
+    expect(tampered).not.toBe(sealed);
     expect((await openPushCredential(env, "s", tampered)).value).toBeNull();
   });
 

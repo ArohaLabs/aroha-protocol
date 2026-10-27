@@ -14,7 +14,7 @@ annotated-types==0.8.0
 anyio==4.15.1
 async-timeout==5.0.1 ; python_full_version < '3.11.3'
 base58==2.1.1
-certifi==2026.7.22
+certifi==2026.10.18
 cffi==2.1.1 ; platform_python_implementation != 'PyPy'
 click==8.5.0
 colorama==0.4.6 ; sys_platform == 'win32'

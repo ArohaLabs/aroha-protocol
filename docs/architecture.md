@@ -135,8 +135,12 @@ Optional; not part of the core protocol (see [positioning](positioning.md)).
 contracts/
 ├── ArohaRegistry.sol    Agent registration, capability indexing, staking
 ├── ArohaEscrow.sol      Atomic escrow per saga (open → split → release)
-└── ArohaReputation.sol  EMA-based reputation scores written by escrow oracle
+└── ArohaReputation.sol  EMA-based reputation scores recorded by the contract owner
 ```
+
+Only the `ArohaReputation` owner (the deploying address) can call `recordOutcome`; the
+escrow contract does not write scores. Ownership moves in two steps: the owner calls
+`transferOwnership(newOwner)`, then `newOwner` calls `acceptOwnership()`.
 
 ---
 

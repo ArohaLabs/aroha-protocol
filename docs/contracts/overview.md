@@ -212,13 +212,22 @@ Exponential Moving Average: `score = 0.85 × score + 0.15 × signal` (scores 0�
 enum SagaOutcome { SUCCESS, FAILURE, COMPENSATED, DISPUTE_LOST }
 
 // Record the outcome of a saga step for one agent (one record per sagaId per agent).
-// Only the contract owner (the deploying address); other callers revert with Unauthorized()
+// Only the contract owner (the deploying address until ownership is transferred);
+// other callers revert with Unauthorized()
 function recordOutcome(
     bytes32 sagaId,
     bytes32 agentDID,          // DID hash
     SagaOutcome outcome,
     uint8   qualityStars       // 0 = unrated, 1–5; applied only to SUCCESS
 ) external
+
+// Two-step ownership transfer. Owner only; newOwner == address(0) reverts ZeroAddress().
+// Sets pendingOwner and emits OwnershipTransferStarted; calling again replaces it.
+function transferOwnership(address newOwner) external
+
+// Only pendingOwner (others revert Unauthorized()). Makes the caller the owner,
+// clears pendingOwner and emits OwnershipTransferred.
+function acceptOwnership() external
 
 // Get current reputation score (0–10000; 5000 if no outcome recorded)
 function getScore(bytes32 agentDID) external view returns (uint32)

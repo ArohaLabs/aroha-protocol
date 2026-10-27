@@ -16,6 +16,7 @@
 
 | Date | Change |
 |------|--------|
+| 2026-10-26 | Appendix A: seven codes added for mandate-chain admission and task-mandate binding — `Aroha_NO_MANDATE`, `Aroha_CHAIN_INVALID`, `Aroha_UNTRUSTED_ROOT`, `Aroha_ROOT_KEY_MISMATCH`, `Aroha_CHAIN_REJECTED`, `Aroha_SCOPE_UNKNOWN`, `Aroha_CONTEXT_MISMATCH` — previously sent by the reference code under a misspelled `ARHOA_` prefix. |
 | 2026-10-25 | Scope: the core specification now covers Layers 0–3 (Transport, Identity, Registry, Messaging). §7 (orchestration, sagas) and §8 (preference context) moved unchanged to the [extensions document](extensions.md); §7 and §8 keep their numbers as pointers. §11 conformance items 4 and 5 now apply to implementations that adopt those extensions. |
 | 2026-10-19 | New §6.9 Mandate Presentation: the holder proof that keeps a mandate from being a bearer token, with the MCP binding (`_meta["aroha/mandate"]`, previously defined only by the reference code) and a new plain-HTTP binding (`Aroha-Mandate` header) with vectors in `packages/aroha-credentials/test-vectors/http-presentation-v1.json`. §6.5: a body that carries `mandateType` is a task mandate and is refused as a spending mandate. |
 | 2026-10-15 | New §12 Conversation and Memory Profile: signed rooms and membership epochs, person invitations with per-event signed consent records, turn signatures, the person-DID signing rule and speaker-kind resolution, the memory record, signed action receipts v1/v2 (outcome, denied receipts, `presentedHash`), and `ArohaDisclosure` (optional envelope field, §6.1). New §6.6 task-mandate token v2 (with `onBehalfOf` and `roomId`), §6.7 signed revocation status, §6.8 governed verifier profile — previously defined only by the reference code. Schemas in `spec-public/schemas/`, vectors in `spec-public/vectors/conversation-v1.json`. |
@@ -839,8 +840,15 @@ An `ArohaDisclosure` states that a message comes from an AI agent and names the 
 | `Aroha_CAPABILITY_NOT_PERMITTED` | 403 | Capability not in the mandate's allowed list |
 | `Aroha_SETTLEMENT_RAIL_MISMATCH` | 409 | Requester's and provider's settlement rails have nothing in common |
 | `Aroha_COMMIT_DISPUTED` | 409 | Commit result disputed in the challenge window, or resolved against the provider |
+| `Aroha_NO_MANDATE` | 400 | No delegation envelope, and the receiver requires a mandate chain (added 2026-10-26) |
+| `Aroha_CHAIN_INVALID` | 400 | Root mandate token of the delegation envelope is malformed (added 2026-10-26) |
+| `Aroha_UNTRUSTED_ROOT` | 403 | Root grantor of the mandate chain is not a trusted issuer (added 2026-10-26) |
+| `Aroha_ROOT_KEY_MISMATCH` | 403 | Envelope's root key does not match the trusted key for the root grantor (added 2026-10-26) |
+| `Aroha_CHAIN_REJECTED` | 403 | Mandate chain failed verification (added 2026-10-26) |
+| `Aroha_SCOPE_UNKNOWN` | 403 | Receiver could not determine what the request does, so cannot check it against the mandate (added 2026-10-26) |
+| `Aroha_CONTEXT_MISMATCH` | 403 | Request's room or principal differs from the task mandate's `roomId` / `onBehalfOf` (added 2026-10-26) |
 
-The `code` string in the `ArohaError` body is normative; the HTTP status is a recommendation for HTTP transports. The first 17 codes are shared by every reference SDK; the remaining 11 are implemented in the TypeScript reference only, and a receiver MUST treat an unknown code as a generic, non-retryable error unless `retryable` says otherwise.
+The `code` string in the `ArohaError` body is normative; the HTTP status is a recommendation for HTTP transports. The first 17 codes are shared by every reference SDK; the remaining 18 are implemented in the TypeScript reference only, and a receiver MUST treat an unknown code as a generic, non-retryable error unless `retryable` says otherwise.
 
 ---
 

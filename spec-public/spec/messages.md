@@ -251,7 +251,7 @@ Provider → Orchestrator. Typed error response.
 }
 ```
 
-See [Aroha 1.0 Appendix A](aroha-1.0.md#appendix-a--error-codes) for all 28 `ArohaErrorCode` values.
+See [Aroha 1.0 Appendix A](aroha-1.0.md#appendix-a--error-codes) for all 35 `ArohaErrorCode` values.
 
 ---
 

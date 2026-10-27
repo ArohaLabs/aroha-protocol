@@ -85,9 +85,10 @@ def test_all_19_message_types_build():
 
 def test_error_codes_match_typescript_enum():
     values = {c.value for c in ArohaErrorCode}
-    assert len(values) == 28  # ArohaErrorCode in aroha-core/src/messages/types.ts
+    assert len(values) == 35  # ArohaErrorCode in aroha-core/src/messages/types.ts
     for v in ("CSN_NO_STRUCTURAL_MATCH", "Aroha_ACTION_LIMIT_EXCEEDED", "Aroha_COMMIT_DISPUTED",
-              "Aroha_SETTLEMENT_RAIL_MISMATCH", "Aroha_CAPABILITY_NOT_PERMITTED"):
+              "Aroha_SETTLEMENT_RAIL_MISMATCH", "Aroha_CAPABILITY_NOT_PERMITTED",
+              "Aroha_NO_MANDATE", "Aroha_CONTEXT_MISMATCH"):
         assert v in values
 
 

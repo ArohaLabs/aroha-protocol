@@ -256,7 +256,7 @@ messages.ErrServiceUnavailable      // "Aroha_SERVICE_UNAVAILABLE"
 // Generic
 messages.ErrInternalError           // "Aroha_INTERNAL_ERROR"
 messages.ErrInvalidParams           // "Aroha_INVALID_PARAMS"
-// … and 11 more (CSN, task-mandate enforcement, settlement); messages.ErrorCodes lists all 28
+// … and 18 more (CSN, task-mandate enforcement, settlement, mandate-chain admission); messages.ErrorCodes lists all 35
 ```
 
 ### `NonceRegistry`

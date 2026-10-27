@@ -105,7 +105,16 @@ public final class MessageTypes {
         public static final String SETTLEMENT_RAIL_MISMATCH  = "Aroha_SETTLEMENT_RAIL_MISMATCH";
         public static final String COMMIT_DISPUTED           = "Aroha_COMMIT_DISPUTED";
 
-        /** Every wire value of the TypeScript {@code ArohaErrorCode} enum (28). */
+        // Mandate-chain admission (delegation middleware)
+        public static final String NO_MANDATE                = "Aroha_NO_MANDATE";
+        public static final String CHAIN_INVALID             = "Aroha_CHAIN_INVALID";
+        public static final String UNTRUSTED_ROOT            = "Aroha_UNTRUSTED_ROOT";
+        public static final String ROOT_KEY_MISMATCH         = "Aroha_ROOT_KEY_MISMATCH";
+        public static final String CHAIN_REJECTED            = "Aroha_CHAIN_REJECTED";
+        public static final String SCOPE_UNKNOWN             = "Aroha_SCOPE_UNKNOWN";
+        public static final String CONTEXT_MISMATCH          = "Aroha_CONTEXT_MISMATCH";
+
+        /** Every wire value of the TypeScript {@code ArohaErrorCode} enum (35). */
         public static final Set<String> ALL = Set.of(
             UNAUTHORIZED, FORBIDDEN,
             INVALID_SIGNATURE, EXPIRED_MESSAGE, REPLAY_DETECTED, UNKNOWN_CAPABILITY, TRUST_LEVEL_INSUFFICIENT,
@@ -115,7 +124,9 @@ public final class MessageTypes {
             CSN_NO_STRUCTURAL_MATCH,
             ACTION_LIMIT_EXCEEDED, COMPUTE_LIMIT_EXCEEDED, REVERSIBILITY_VIOLATION, HUMAN_GATE_REQUIRED,
             DATA_ACCESS_VIOLATION, SANDBOX_REQUIRED, DELEGATION_DEPTH_EXCEEDED, CAPABILITY_NOT_PERMITTED,
-            SETTLEMENT_RAIL_MISMATCH, COMMIT_DISPUTED
+            SETTLEMENT_RAIL_MISMATCH, COMMIT_DISPUTED,
+            NO_MANDATE, CHAIN_INVALID, UNTRUSTED_ROOT, ROOT_KEY_MISMATCH, CHAIN_REJECTED,
+            SCOPE_UNKNOWN, CONTEXT_MISMATCH
         );
 
         /** Base of the error reference (TS {@code DOCS}). */

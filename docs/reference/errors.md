@@ -81,6 +81,20 @@ These are the canonical wire values. Every SDK uses the same strings — a `Aroh
 | `Aroha_SANDBOX_REQUIRED` | 403 | — | Code execution attempted outside a declared sandbox |
 | `Aroha_DELEGATION_DEPTH_EXCEEDED` | 403 | — | Delegation chain depth exceeds `maxDelegationDepth` |
 | `Aroha_CAPABILITY_NOT_PERMITTED` | 403 | — | Capability not in the mandate's allowed list |
+| `Aroha_CONTEXT_MISMATCH` | 403 | — | Request's room or principal differs from the mandate's `roomId` / `onBehalfOf` binding |
+
+### Mandate-chain admission
+
+Sent by `@aroha-sdk/delegation`'s `createDelegationMiddleware` before the handler runs.
+
+| Code | HTTP equivalent | `retryable` | Description |
+|------|----------------|-------------|-------------|
+| `Aroha_NO_MANDATE` | 400 | — | No delegation envelope, and the server requires a mandate chain |
+| `Aroha_CHAIN_INVALID` | 400 | — | Root mandate token is malformed |
+| `Aroha_UNTRUSTED_ROOT` | 403 | — | Root grantor is not a trusted issuer |
+| `Aroha_ROOT_KEY_MISMATCH` | 403 | — | Envelope's root key does not match the trusted key for the root grantor |
+| `Aroha_CHAIN_REJECTED` | 403 | — | Mandate chain failed verification (signature, expiry, revocation, narrowing, grantee or depth) |
+| `Aroha_SCOPE_UNKNOWN` | 403 | — | Server could not determine what the request does, so did not admit it |
 
 ### Settlement
 

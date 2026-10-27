@@ -3,7 +3,7 @@
 
 # Polyglot SDKs
 
-Aroha ships first-party SDKs for TypeScript, Python, Go, and Java. They share the same **envelope format**, the 19 message types and the 28 error codes, so a `ArohaError` envelope produced by a Java agent is parsed by a Python consumer with no translation layer. They do **not** share the full protocol surface yet: TypeScript is the reference, Python is beta, and Go and Java are partial. See the **[SDK feature matrix](feature-matrix.md)** for exactly what each SDK implements.
+Aroha ships first-party SDKs for TypeScript, Python, Go, and Java. They share the same **envelope format**, the 19 message types and the 35 error codes, so a `ArohaError` envelope produced by a Java agent is parsed by a Python consumer with no translation layer. They do **not** share the full protocol surface yet: TypeScript is the reference, Python is beta, and Go and Java are partial. See the **[SDK feature matrix](feature-matrix.md)** for exactly what each SDK implements.
 
 ## SDK Comparison
 
@@ -25,7 +25,7 @@ The layers below exist in every SDK unless noted. Details and gaps are in the [f
 | **Layer 0** | `transport` | HTTP server + client, DID Document endpoint |
 | **Layer 1** | `identity` | `did:aroha:` DID generation, Ed25519 keypairs, multibase encoding |
 | **Layer 2** | registry client (`@aroha-sdk/registry`, `aroha.hub`, Go `registry`, Java `ArohaRegistryClient`) | Capability registration and discovery |
-| **Layer 3** | `messages` | Envelope builder, validator, nonce registry. 19 message types and 28 error codes in every SDK |
+| **Layer 3** | `messages` | Envelope builder, validator, nonce registry. 19 message types and 35 error codes in every SDK |
 | **Orchestration extension** | `orchestrator` | Saga engine (Reserve → Commit → Cancel), agent fan-out selector — an extension, not part of the core specification ([extensions](../spec/extensions.md)) |
 
 ## Wire Guarantees

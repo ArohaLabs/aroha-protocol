@@ -289,8 +289,8 @@ func TestTypesAndErrorCodes(t *testing.T) {
 	if !messages.IsMessageType("ArohaDisputeResolution") || messages.IsMessageType("ArohaNope") {
 		t.Error("IsMessageType")
 	}
-	if len(messages.ErrorCodes) != 28 {
-		t.Errorf("%d error codes, want 28 (27 Aroha_* + CSN_NO_STRUCTURAL_MATCH)", len(messages.ErrorCodes))
+	if len(messages.ErrorCodes) != 35 {
+		t.Errorf("%d error codes, want 35 (34 Aroha_* + CSN_NO_STRUCTURAL_MATCH)", len(messages.ErrorCodes))
 	}
 	seen := map[messages.ErrorCode]bool{}
 	for _, c := range messages.ErrorCodes {

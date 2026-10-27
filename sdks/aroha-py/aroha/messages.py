@@ -124,6 +124,15 @@ class ArohaErrorCode(str, Enum):
     SETTLEMENT_RAIL_MISMATCH  = "Aroha_SETTLEMENT_RAIL_MISMATCH"
     COMMIT_DISPUTED           = "Aroha_COMMIT_DISPUTED"
 
+    # Mandate-chain admission (delegation middleware)
+    NO_MANDATE                = "Aroha_NO_MANDATE"
+    CHAIN_INVALID             = "Aroha_CHAIN_INVALID"
+    UNTRUSTED_ROOT            = "Aroha_UNTRUSTED_ROOT"
+    ROOT_KEY_MISMATCH         = "Aroha_ROOT_KEY_MISMATCH"
+    CHAIN_REJECTED            = "Aroha_CHAIN_REJECTED"
+    SCOPE_UNKNOWN             = "Aroha_SCOPE_UNKNOWN"
+    CONTEXT_MISMATCH          = "Aroha_CONTEXT_MISMATCH"
+
 
 # ── Nonce Registry ─────────────────────────────────────────────────────────────
 

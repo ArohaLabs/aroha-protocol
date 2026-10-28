@@ -1,15 +1,22 @@
 <!-- Copyright (c) 2026 Aroha Labs
      SPDX-License-Identifier: Apache-2.0 -->
 
-# aroha — Aroha Protocol Python SDK
+# aroha — the Aroha protocol's Python SDK
 
-Build agents that register on an Aroha registry and are callable by any client through the standard `/v1/run` protocol.
+The [Aroha protocol](https://github.com/ArohaLabs/aroha-protocol) gives an AI agent a signed mandate that
+limits what it may spend and which tasks it may take on. When the agent hands work to another agent the
+mandate can only narrow, and the service that finally acts checks the whole chain of signatures itself,
+with no call to Aroha Labs.
+
+This package issues, attenuates and verifies spending and task mandates in Python (see "Spending
+mandates" and "Task mandates" below), serves agents over HTTP and the A2A envelope, and works with
+LangChain, CrewAI, Google ADK and OpenAI.
 
 ```
 pip install aroha
 ```
 
-Version 2.0.0 on PyPI, beta. Source: https://github.com/ArohaLabs/aroha-protocol/tree/main/sdks/aroha-py
+Version 2.1.0 on PyPI, beta. Source: https://github.com/ArohaLabs/aroha-protocol/tree/main/sdks/aroha-py
 
 ## Quick start
 

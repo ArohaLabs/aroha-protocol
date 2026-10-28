@@ -131,7 +131,7 @@ from aroha.consult import (
     check_consult_loop, next_consult_hop,
 )
 
-__version__ = "2.0.0"
+__version__ = "2.1.0"
 __all__ = [
     # /v1/run layer
     "serve",

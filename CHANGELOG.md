@@ -24,7 +24,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/). Version
 
 - **Durable stores** for presentation nonces, enrollment (challenges and bindings) and the spending ledger, so replay protection and running totals survive restarts and are shared between processes:
   - `@aroha-sdk/store-postgres` (`migrate`, `PostgresNonceStore`, `PostgresEnrollmentStore`, `PostgresSpendingLedger`) and `@aroha-sdk/store-redis` (`RedisNonceStore`, `RedisEnrollmentStore`, `RedisSpendingLedger`; ioredis). Not yet published.
-  - Python: `aroha.stores.postgres` and `aroha.stores.redis`, with the extras `aroha[postgres]` and `aroha[redis]`.
+  - Python: `aroha.stores.postgres` and `aroha.stores.redis` (released in PyPI `aroha` 2.1.0, below).
   - One table/key layout for both languages: same migration lock, budget expiry (`expires_at_ms` / `expires`) honoured by both, checked by a CI job against Postgres 16 and Redis 7 that fails if any backend test is skipped.
 
 ### Fixed
@@ -42,6 +42,19 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/). Version
 - **`@aroha-sdk/micro`:** the package entry did not export `PublicKeyResolver`, the type of `createAgent`'s `resolvePublicKey` option, so callers had to import it from `@aroha-sdk/core`. It is now re-exported (type-only) from `@aroha-sdk/micro`. Not wire-visible.
 - **`@aroha-sdk/cli`:** `aroha doctor` read `.env` line by line and kept quotes, so `AROHA_AGENT_DID="did:aroha:..."` (or single quotes, or a trailing `# comment`) was reported as not matching the served DID document, and an `export `-prefixed or indented line was reported as not set. It now parses `.env` with Node's built-in `util.parseEnv` (the parser behind `node --env-file`). If a key appears twice, the last value now wins (before, the first). The `src/identity.ts` that the provider and `create-app` templates generate had the same problem with `AROHA_PRIVATE_KEY` (a quoted key failed with "must be 64 hex characters"; an `export`-prefixed one was ignored and a new key generated). It now reads each line with `util.parseEnv` too (generated projects require Node ≥22). Not wire-visible.
 - **`@aroha-sdk/mcp-bridge` (wire-visible, additive):** the DID document `wrapMcp()` serves at `/.well-known/aroha-agent.json` had no `verificationMethod`, so core's resolver (`extractPublicKey`) could not get the key the bridge signs its replies with, and `aroha doctor` failed it. It is now built with core's `buildDIDDocument`: it adds the bridge's Ed25519 key as `verificationMethod` `<did>#key-1` (the id its envelope proofs already name), with `authentication`, `assertionMethod`, `keyAgreement`, `created`, `updated` and the Ed25519-2020 `@context`. It also adds an `ArohaEndpoint` service entry (`<did>#aroha-endpoint`, pointing at the bridge's endpoint) so core's `extractEndpoint` finds it. Existing fields (`did`, `capabilities`, `endpoint`, `id`) and the existing `ArohaAgent` service entry are unchanged.
+
+## [Python 2.1.0] — 2026-10-28
+
+Release tag: python-v2.1.0 — PyPI `aroha` 2.1.0. Only the Python SDK is released; the npm packages above stay unreleased.
+
+### Added
+
+- **Durable stores:** `aroha.stores.postgres` and `aroha.stores.redis` (nonces, enrollment and the spending ledger, shared between processes and kept across restarts), with the extras `aroha[postgres]` (`psycopg[binary]>=3.1`) and `aroha[redis]` (`redis>=5`). Same table/key layout as the TypeScript stores.
+- **`ArohaErrorCode`:** seven mandate-chain admission codes from Appendix A: `NO_MANDATE`, `CHAIN_INVALID`, `UNTRUSTED_ROOT`, `ROOT_KEY_MISMATCH`, `CHAIN_REJECTED`, `SCOPE_UNKNOWN` and `CONTEXT_MISMATCH`.
+
+### Changed
+
+- **PyPI page:** the package description and README now describe the SDK as it is (spending and task mandates, A2A transport, framework bridges); the old text described token-budget model routing. `Repository`, `Documentation`, `Changelog` and `Issues` links point at `ArohaLabs/aroha-protocol` and the live docs.
 
 ## [2.0.0] — 2026-10-19
 

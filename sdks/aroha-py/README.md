@@ -16,7 +16,7 @@ LangChain, CrewAI, Google ADK and OpenAI.
 pip install aroha
 ```
 
-Version 2.0.0 on PyPI, beta. Source: https://github.com/ArohaLabs/aroha-protocol/tree/main/sdks/aroha-py
+Version 2.1.0 on PyPI, beta. Source: https://github.com/ArohaLabs/aroha-protocol/tree/main/sdks/aroha-py
 
 ## Quick start
 

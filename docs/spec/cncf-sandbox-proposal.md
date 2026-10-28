@@ -142,7 +142,7 @@ Python: published on PyPI as `aroha` 2.0.0 (beta). Go and Java: partial implemen
 ### Specification
 
 - `docs/spec/aroha-1.0.html` — W3C ReSpec format, unofficial draft, served at https://www.aroha-labs.com/spec/aroha-1.0.html
-- `docs/spec/did-aroha-method-1.0.html` — `did:aroha:` DID method spec in W3C ReSpec format, served at https://www.aroha-labs.com/spec/did-aroha-method-1.0.html; `did:aroha` is not registered in the W3C DID method registry
+- `docs/spec/did-aroha-method-1.0.html` — `did:aroha:` DID method spec in W3C ReSpec format, served at https://www.aroha-labs.com/spec/did-aroha-method-1.0.html; `did:aroha` is not yet registered in the W3C DID method registry (registration request [w3c/did-extensions#766](https://github.com/w3c/did-extensions/pull/766) is under review)
 - `CHARTER.md` — draft W3C Community Group charter, not submitted
 
 ---

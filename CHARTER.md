@@ -90,7 +90,7 @@ The Aroha Protocol builds directly on W3C standards and IETF RFCs. The Community
 
 | Standard | Relationship |
 |---|---|
-| W3C DID Core 1.0 | Aroha DIDs are intended to be conformant DID methods; `did:aroha:` and `did:aroha-web:` are not yet registered and will be submitted to the DID Method Registry |
+| W3C DID Core 1.0 | Aroha DIDs are intended to be conformant DID methods; neither is registered yet. `did:aroha:` was submitted to the DID Method Registry on 2026-10-27 ([w3c/did-extensions#766](https://github.com/w3c/did-extensions/pull/766), under review); `did:aroha-web:` has not been submitted |
 | W3C Verifiable Credentials Data Model 2.0 | Aroha credential issuance uses the VC Data Model for credential structure |
 | W3C JSON-LD 1.1 | Envelope context and credential context use JSON-LD |
 | W3C Trace Context (traceparent) | `@aroha-sdk/telemetry` implements W3C Trace Context |
@@ -188,7 +188,7 @@ Current conformant implementations known to the CG:
 | Agent2Agent Protocol (A2A, Google) | Bridge: `@aroha-sdk/a2a-bridge` maps A2A tasks to Aroha saga steps. Aroha adds escrow settlement and LIFO compensation. |
 | LangChain / LangGraph | Bridge: `@aroha-sdk/langchain-bridge`. Aroha provides the inter-agent transport; LangChain remains the intra-agent orchestration framework. |
 | W3C Verifiable Credentials | Aroha uses VC Data Model 2.0 for credential issuance (`@aroha-sdk/credentials`). Aroha does not replace VCs — it carries them. |
-| W3C DID Core | Aroha defines two DID methods (`did:aroha:`, `did:aroha-web:`). They are **not yet registered** with the W3C DID Method Registry; registration is planned. |
+| W3C DID Core | Aroha defines two DID methods (`did:aroha:`, `did:aroha-web:`). Neither is **registered yet** with the W3C DID Method Registry. `did:aroha:` has been submitted ([w3c/did-extensions#766](https://github.com/w3c/did-extensions/pull/766), under review); `did:aroha-web:` is planned. |
 | DIDComm v2 (DIF) | Aroha envelopes are structurally similar to DIDComm messages. Interoperability is a goal for a future extension specification. |
 | OpenID for Verifiable Credentials (OID4VC) | Compatible: Aroha `@aroha-sdk/credentials` can issue OID4VC-compatible credentials. |
 

@@ -54,7 +54,7 @@ Repository access: five accounts hold access (three admin, two write); only one 
 | Protocol specification | ✅ v1.0 published (draft-quality; changes go through the spec process) | [aroha-1.0.md](spec/aroha-1.0.md) |
 | W3C Community Group | ⬜ Not yet proposed | [CHARTER.md](https://github.com/ArohaLabs/aroha-protocol/blob/main/CHARTER.md) is a draft; nothing has been submitted to W3C |
 | W3C Agent Identity Registry Protocol CG | ⬜ Not joined — **owner to join** | An existing CG (proposed 2026-04-24) whose scope covers an agent DID method, agent credentials and revocation. Joining it, and submitting `did:aroha` and the KEL as input, replaces proposing a separate CG. Owner: @projectmed99. Target: 2026-11-30. |
-| `did:aroha` DID method | 🔄 Specified, **not registered** in the W3C DID Method Registry | [did-method.md](spec/did-method.md) |
+| `did:aroha` DID method | 🔄 Specified; registration requested on 2026-10-27 ([w3c/did-extensions#766](https://github.com/w3c/did-extensions/pull/766)), under review — **not registered** until it is merged | [did-method.md](spec/did-method.md) |
 | CNCF Sandbox proposal | ⬜ Draft only, not submitted | [cncf-sandbox-proposal.md](spec/cncf-sandbox-proposal.md) |
 | npm packages | ✅ Published (without npm provenance — see [Release integrity](#release-integrity)); release `npm-v2026.10.19` (2026-10-19) published 32 packages, including `@aroha-sdk/core` and `@aroha-sdk/credentials` 2.0.0 | `@aroha-sdk/*` on npmjs.com; stability tiers in [COMPATIBILITY.md](https://github.com/ArohaLabs/aroha-protocol/blob/main/COMPATIBILITY.md) |
 | TypeScript SDK | ✅ Reference implementation | `@aroha-sdk/core`, `@aroha-sdk/credentials`, `@aroha-sdk/registry` |

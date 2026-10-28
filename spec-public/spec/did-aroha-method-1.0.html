@@ -111,9 +111,11 @@
     <strong>This is an unofficial draft.</strong> It has not been submitted to
     any standards body. It is not a W3C document: no W3C Community Group has
     been proposed for it, and it is not a W3C Standard nor on the W3C Standards
-    Track. The <code>did:aroha</code> method is <strong>not registered</strong>
-    in the W3C DID Method Registry; a registration entry has been prepared (see
-    <a href="#did-spec-registries-entry"></a>) but not submitted.
+    Track. The <code>did:aroha</code> method is <strong>not yet registered</strong>
+    in the W3C DID Method Registry: a registration request
+    (<a href="https://github.com/w3c/did-extensions/pull/766">w3c/did-extensions#766</a>,
+    opened 2026-10-27) is awaiting review by the registry editors. The submitted
+    entry is reproduced in <a href="#did-spec-registries-entry"></a>.
   </p>
   <p>
     The Markdown version of this document (<code>did-method.md</code>) is the
@@ -1071,19 +1073,21 @@ Examples:
 
 <!-- ═══════════════════════════════ APPENDIX B — REGISTRY ENTRY -->
 <section id="did-spec-registries-entry" class="appendix informative">
-  <h2>W3C DID Method Registry Entry (prepared, not submitted)</h2>
+  <h2>W3C DID Method Registry Entry (submitted, under review)</h2>
   <p>
-    The following entry has been prepared for the
+    The following entry was submitted to the
     <a href="https://www.w3.org/TR/did-spec-registries/">W3C DID Specification
-    Registries</a>. <strong>It has not been submitted</strong>, and
-    <code>did:aroha</code> is not registered. The <code>status</code> value is
-    the one the registry assigns when an entry is accepted.
+    Registries</a> in
+    <a href="https://github.com/w3c/did-extensions/pull/766">w3c/did-extensions#766</a>.
+    <strong>It has not been accepted yet</strong>, and <code>did:aroha</code> is
+    not registered. The <code>status</code> value is the one the registry assigns
+    when an entry is accepted.
   </p>
   <pre class="json" title="DID Method Registry Entry">
 {
   "name": "aroha",
   "status": "registered",
-  "verifiableDataRegistry": "Aroha Registry (HTTPS service with content-addressed IPFS manifests)",
+  "verifiableDataRegistry": "None required for the E-form and z-form (self-certifying identifiers; E-form keys rotate through a key event log). The named form resolves through an Aroha Registry instance (HTTPS; any party may operate one), with capability manifests content-addressed on IPFS.",
   "contactName": "Rajagopal Ganesan",
   "contactEmail": "contact@aroha-labs.com",
   "contactWebsite": "https://www.aroha-labs.com",

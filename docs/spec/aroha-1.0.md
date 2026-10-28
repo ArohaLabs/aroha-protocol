@@ -4,7 +4,7 @@
 # Aroha Protocol
 ## Specification Version 1.0
 
-**Status:** Draft — not yet submitted to any standards body. No W3C Community Group has been proposed; `did:aroha` is not registered in the W3C DID Method Registry.  
+**Status:** Draft — not yet submitted to any standards body. No W3C Community Group has been proposed; `did:aroha` is not yet registered in the W3C DID Method Registry; a registration request ([w3c/did-extensions#766](https://github.com/w3c/did-extensions/pull/766)) is under review.  
 **Date:** 2026-07-27  
 **Authors:** Aroha Working Group  
 **HTML version:** [aroha-1.0.html](aroha-1.0.html) (W3C ReSpec format)  

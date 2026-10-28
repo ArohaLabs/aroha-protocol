@@ -1,11 +1,18 @@
 <!-- Copyright (c) 2026 Aroha Labs
      SPDX-License-Identifier: Apache-2.0 -->
 
-# DID method registration — prepared, not submitted
+# DID method registration — submitted, under review
 
 This directory holds the material for registering `did:aroha` in the W3C DID Extensions
-registry (`w3c/did-extensions`). **Nothing here has been submitted yet**: no pull request has
-been opened against the registry, and `did:aroha` does not appear in it.
+registry (`w3c/did-extensions`). It was submitted on 2026-10-27 as
+[w3c/did-extensions#766](https://github.com/w3c/did-extensions/pull/766), which is **awaiting
+review by the registry editors**. Until that pull request is merged, `did:aroha` is not
+registered and does not appear in the registry.
+
+`aroha.json` matches the entry in the pull request, including the 2026-10-28 revision of
+`verifiableDataRegistry` (no registry for the E-form and z-form; the named form resolves
+through an Aroha Registry instance). `pr-body.md` and `self-assessment.md` are the drafts the
+pull request was written from.
 
 | File | What it is |
 |------|------------|

@@ -15,6 +15,7 @@
 [![npm](https://img.shields.io/npm/v/@aroha-sdk/mcp-bridge?label=%40aroha-sdk%2Fmcp-bridge&color=0F6E56)](https://www.npmjs.com/package/@aroha-sdk/mcp-bridge)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Node.js](https://img.shields.io/badge/node-%E2%89%A522-brightgreen)](https://nodejs.org)
+[![M8ven Score](https://m8ven.ai/badge/mcp/arohalabs-aroha-protocol-k1njlz?v=4c750af3e93a058514929b87e1ac420a)](https://m8ven.ai/mcp/arohalabs-aroha-protocol-k1njlz?s=readme)
 
 [Docs](https://www.aroha-labs.com/docs/) · [Support matrix](docs/support-matrix.md) · [Local sandbox](docs/sandbox.md) · [Support](SUPPORT.md) · [Spec](docs/spec/aroha-1.0.md)
 

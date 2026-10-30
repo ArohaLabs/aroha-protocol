@@ -53,6 +53,23 @@ describe("the tool list", () => {
     const draft = TOOLS.find((t) => t.name === "gmail_create_draft")!;
     expect(draft.description).toMatch(/never sends/i);
   });
+
+  it("sets all four annotation hints on every tool, as booleans", () => {
+    // A missing hint reads as "unknown" to clients, and some directories
+    // reject tools without them.
+    for (const tool of TOOLS) {
+      for (const hint of ["readOnlyHint", "destructiveHint", "idempotentHint", "openWorldHint"] as const) {
+        expect(typeof tool.annotations[hint], `${tool.name}.${hint}`).toBe("boolean");
+      }
+    }
+  });
+
+  it("marks only the draft tool as writing, and nothing as destructive", () => {
+    for (const tool of TOOLS) {
+      expect(tool.annotations.readOnlyHint, tool.name).toBe(tool.name !== "gmail_create_draft");
+      expect(tool.annotations.destructiveHint, tool.name).toBe(false);
+    }
+  });
 });
 
 describe("runTool", () => {

@@ -21,7 +21,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import * as ed from "@noble/ed25519";
-import { sha512 } from "@noble/hashes/sha512";
+import { sha512 } from "@noble/hashes/sha2.js";
 import { buildEnvelope, type ArohaEnvelope } from "@aroha-sdk/core/messages";
 import { generateDid } from "@aroha-sdk/core/identity";
 import { loadConfig } from "./config.js";

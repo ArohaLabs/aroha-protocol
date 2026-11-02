@@ -24,9 +24,9 @@
  */
 
 import * as ed from "@noble/ed25519";
-import { sha256 } from "@noble/hashes/sha256";
-import { sha512 } from "@noble/hashes/sha512";
-import { bytesToHex, randomBytes } from "@noble/hashes/utils";
+import { sha256 } from "@noble/hashes/sha2.js";
+import { sha512 } from "@noble/hashes/sha2.js";
+import { bytesToHex, randomBytes } from "@noble/hashes/utils.js";
 import { canonicalizeJcs } from "../crypto/jcs.js";
 
 // noble/ed25519 v2 requires sha512 sync

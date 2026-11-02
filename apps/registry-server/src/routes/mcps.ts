@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { Hono } from "hono";
-import { keccak_256 } from "@noble/hashes/sha3";
+import { keccak_256 } from "@noble/hashes/sha3.js";
 import { authMiddleware, adminMiddleware, optionalAuthMiddleware } from "../auth.js";
 import type { McpRow } from "../repository.js";
 import type { HonoEnv } from "../index.js";

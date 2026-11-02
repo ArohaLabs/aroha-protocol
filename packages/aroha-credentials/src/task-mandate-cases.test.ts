@@ -14,7 +14,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import * as ed from "@noble/ed25519";
-import { sha512 } from "@noble/hashes/sha512";
+import { sha512 } from "@noble/hashes/sha2.js";
 import type { ArohaTaskMandateBody } from "@aroha-sdk/core";
 import {
   checkTaskConstraints,

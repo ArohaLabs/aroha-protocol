@@ -37,9 +37,9 @@
  */
 
 import * as ed from "@noble/ed25519";
-import { sha256 } from "@noble/hashes/sha256";
-import { sha512 } from "@noble/hashes/sha512";
-import { bytesToHex } from "@noble/hashes/utils";
+import { sha256 } from "@noble/hashes/sha2.js";
+import { sha512 } from "@noble/hashes/sha2.js";
+import { bytesToHex } from "@noble/hashes/utils.js";
 import { canonicalizeJcs } from "@aroha-sdk/credentials/mandates";
 
 ed.etc.sha512Sync = (...m: Parameters<typeof sha512>) => sha512(...m);

@@ -14,8 +14,8 @@
  */
 
 import { x25519, edwardsToMontgomeryPub, edwardsToMontgomeryPriv } from "@noble/curves/ed25519";
-import { randomBytes, concatBytes } from "@noble/hashes/utils";
-import { sha256 } from "@noble/hashes/sha256";
+import { randomBytes, concatBytes } from "@noble/hashes/utils.js";
+import { sha256 } from "@noble/hashes/sha2.js";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

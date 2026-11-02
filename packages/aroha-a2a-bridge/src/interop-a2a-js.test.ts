@@ -18,7 +18,7 @@ import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import express from "express";
 import * as ed from "@noble/ed25519";
-import { sha512 } from "@noble/hashes/sha512";
+import { sha512 } from "@noble/hashes/sha2.js";
 import { generateDid } from "@aroha-sdk/core";
 import { issueIntentMandate, verifyMandateChain } from "@aroha-sdk/credentials";
 import {

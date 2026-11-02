@@ -36,8 +36,8 @@
  */
 
 import * as ed from "@noble/ed25519";
-import { sha256 } from "@noble/hashes/sha256";
-import { sha512 } from "@noble/hashes/sha512";
+import { sha256 } from "@noble/hashes/sha2.js";
+import { sha512 } from "@noble/hashes/sha2.js";
 import { canonicalizeJcs } from "../crypto/jcs.js";
 
 ed.etc.sha512Sync = (...m: Parameters<typeof sha512>) => sha512(...m);

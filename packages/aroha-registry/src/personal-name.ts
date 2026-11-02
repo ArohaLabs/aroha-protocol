@@ -51,7 +51,7 @@
  * platform with no Node built-ins and fails if that ever stops being true.
  */
 
-import { scrypt } from "@noble/hashes/scrypt";
+import { scrypt } from "@noble/hashes/scrypt.js";
 import { inceptionDigestFromDid, isContentAddressedDid, fromMultibase } from "@aroha-sdk/core/identity";
 import { WORDLIST } from "./wordlist.js";
 

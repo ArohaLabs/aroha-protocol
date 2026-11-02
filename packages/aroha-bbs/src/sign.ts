@@ -17,7 +17,7 @@ import {
   H2S_DST, createGenerators, calculateDomain, hashToScalar, messagesToScalars,
   serialize, i2osp, os2ip, type G1Point, type G2Point,
 } from "./ciphersuite.js";
-import { concatBytes } from "@noble/hashes/utils";
+import { concatBytes } from "@noble/hashes/utils.js";
 
 export interface Signature {
   A: G1Point;

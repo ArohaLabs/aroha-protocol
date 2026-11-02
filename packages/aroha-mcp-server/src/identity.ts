@@ -21,7 +21,7 @@ import { homedir } from "node:os";
 import { join, dirname } from "node:path";
 import { randomBytes } from "node:crypto";
 import * as ed from "@noble/ed25519";
-import { sha512 } from "@noble/hashes/sha512";
+import { sha512 } from "@noble/hashes/sha2.js";
 import { generateDid } from "@aroha-sdk/core/identity";
 
 ed.etc.sha512Sync = (...m: Parameters<typeof sha512>) => sha512(...m);

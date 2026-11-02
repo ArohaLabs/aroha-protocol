@@ -39,7 +39,7 @@
  */
 
 import { Hono, type Context } from "hono";
-import { sha256 } from "@noble/hashes/sha256";
+import { sha256 } from "@noble/hashes/sha2.js";
 import { adminMiddleware, optionalAuthMiddleware } from "../auth.js";
 import { discoveryIpLimiter } from "../middleware/rate-limit.js";
 import type { HonoEnv } from "../index.js";

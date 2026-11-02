@@ -13,7 +13,7 @@
 
 import { describe, it, expect, beforeAll, afterEach, vi } from "vitest";
 import * as ed from "@noble/ed25519";
-import { sha512 } from "@noble/hashes/sha512";
+import { sha512 } from "@noble/hashes/sha2.js";
 import { incept, revokeKelSelf, ArohaErrorCode, type KelEvent, type KelSource, type ArohaEnvelope, type TaskConstraints } from "@aroha-sdk/core";
 import { issueTaskMandate, attenuateTaskMandate, type SignedTaskMandate } from "@aroha-sdk/credentials";
 import type { ArohaAgent } from "@aroha-sdk/run";

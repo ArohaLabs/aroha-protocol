@@ -3,7 +3,7 @@
 
 import { describe, it, expect } from "vitest";
 import * as ed from "@noble/ed25519";
-import { sha512 } from "@noble/hashes/sha512";
+import { sha512 } from "@noble/hashes/sha2.js";
 import { CredentialRegistry, buildRevokeProof, verifyRevokeProof } from "./registry.js";
 import { issueHumanCredential, serializeCredential } from "./credentials.js";
 import { ArohaRole } from "./types.js";

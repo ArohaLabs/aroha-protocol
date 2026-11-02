@@ -24,7 +24,7 @@
  */
 
 import { Hono } from "hono";
-import { keccak_256 } from "@noble/hashes/sha3";
+import { keccak_256 } from "@noble/hashes/sha3.js";
 import { checkAdmin, logAdminUnconfigured, ADMIN_UNCONFIGURED_MESSAGE } from "../secrets.js";
 import type { HonoEnv } from "../index.js";
 

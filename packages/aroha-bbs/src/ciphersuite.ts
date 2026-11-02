@@ -14,8 +14,8 @@
  */
 
 import { bls12_381 as bls } from "@noble/curves/bls12-381";
-import { sha256 } from "@noble/hashes/sha256";
-import { concatBytes } from "@noble/hashes/utils";
+import { sha256 } from "@noble/hashes/sha2.js";
+import { concatBytes } from "@noble/hashes/utils.js";
 
 export type G1Point = InstanceType<typeof bls.G1.ProjectivePoint>;
 export type G2Point = InstanceType<typeof bls.G2.ProjectivePoint>;

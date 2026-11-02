@@ -28,7 +28,7 @@
 import { writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import * as ed from "@noble/ed25519";
-import { sha512 } from "@noble/hashes/sha512";
+import { sha512 } from "@noble/hashes/sha2.js";
 import { generateDid, type ArohaSpendingMandateBody, type ArohaTaskMandateBody, type SpendingConstraints } from "@aroha-sdk/core";
 import { mandateSigningPayloadV2, taskMandateSigningPayloadV2 } from "../src/mandate.js";
 import { HTTP_MANDATE_HEADER, InMemoryHttpPresentationNonces, presentMandateHttp } from "../src/http-mandate.js";

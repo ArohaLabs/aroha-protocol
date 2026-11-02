@@ -44,7 +44,7 @@
 // issuer-certified credentials — the actual cost the attacker must pay.
 
 import { ed25519 } from "@noble/curves/ed25519";
-import { sha256 } from "@noble/hashes/sha256";
+import { sha256 } from "@noble/hashes/sha2.js";
 import { bytesToNumberBE, numberToBytesBE, concatBytes, randomBytes } from "@noble/curves/abstract/utils.js";
 
 const G = ed25519.Point.BASE;

@@ -50,7 +50,7 @@
  */
 
 import * as ed from "@noble/ed25519";
-import { sha512 } from "@noble/hashes/sha512";
+import { sha512 } from "@noble/hashes/sha2.js";
 import type { KelSource, KelStore } from "@aroha-sdk/core/identity";
 import { canonicalizeJcs } from "./jcs.js";
 import { createMandateKeyResolver, resolveContentAddressedKey, type MandateKeyResolver } from "./mandate.js";

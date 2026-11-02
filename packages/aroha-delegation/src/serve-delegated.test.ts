@@ -11,7 +11,7 @@
 
 import { describe, it, expect, beforeAll, afterEach, vi } from "vitest";
 import * as ed from "@noble/ed25519";
-import { sha512 } from "@noble/hashes/sha512";
+import { sha512 } from "@noble/hashes/sha2.js";
 import { serveDelegated, publicKeyB64, DelegationError, type DelegatedContext } from "./serve-delegated.js";
 import { issueDelegation, callDelegated } from "./client.js";
 import type { ArohaAgent } from "@aroha-sdk/run";

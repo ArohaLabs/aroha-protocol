@@ -21,7 +21,7 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "http";
 import { readBody } from "./http-utils.js";
 import { WebSocketServer, WebSocket } from "ws";
-import { randomBytes } from "@noble/hashes/utils";
+import { randomBytes } from "@noble/hashes/utils.js";
 import { type ArohaEnvelope } from "../messages/envelope.js";
 import { validateEnvelope, type ValidationResult } from "../messages/envelope.js";
 import { NonceRegistry, type NonceStore } from "../messages/nonce.js";

@@ -11,7 +11,7 @@
 
 import { describe, it, expect } from "vitest";
 import * as ed from "@noble/ed25519";
-import { sha512 } from "@noble/hashes/sha512";
+import { sha512 } from "@noble/hashes/sha2.js";
 import { buildEnvelope, validateEnvelope, newCorrelationId } from "../messages/envelope.js";
 import { NonceRegistry } from "../messages/nonce.js";
 import { generateDID } from "../identity/did.js";

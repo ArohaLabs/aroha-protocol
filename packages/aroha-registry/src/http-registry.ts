@@ -23,8 +23,8 @@
  *   GET    /v1/kel/:did                     — Key Event Log (httpKelSource)
  */
 
-import { keccak_256 } from "@noble/hashes/sha3";
-import { bytesToHex } from "@noble/hashes/utils";
+import { keccak_256 } from "@noble/hashes/sha3.js";
+import { bytesToHex } from "@noble/hashes/utils.js";
 import type { KelEvent, KelSource } from "@aroha-sdk/core/identity";
 import { AROHA_MANAGED_REGISTRY_URL, assertSecureEndpoint, resolveRegistryUrl } from "@aroha-sdk/core/endpoints";
 import {

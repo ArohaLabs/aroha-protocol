@@ -8,8 +8,8 @@
  */
 
 import { describe, it, expect, vi } from "vitest";
-import { keccak_256 } from "@noble/hashes/sha3";
-import { bytesToHex } from "@noble/hashes/utils";
+import { keccak_256 } from "@noble/hashes/sha3.js";
+import { bytesToHex } from "@noble/hashes/utils.js";
 import { incept, resolveKelState } from "@aroha-sdk/core";
 import * as ed from "@noble/ed25519";
 import { ArohaHttpRegistry, RegistryHttpError, httpKelSource } from "./http-registry.js";

@@ -10,8 +10,8 @@
  */
 
 import * as ed from "@noble/ed25519";
-import { sha512 } from "@noble/hashes/sha512";
-import { randomBytes } from "@noble/hashes/utils";
+import { sha512 } from "@noble/hashes/sha2.js";
+import { randomBytes } from "@noble/hashes/utils.js";
 import { v4 as uuidv4 } from "uuid";
 
 ed.etc.sha512Sync = (...m) => sha512(...m);

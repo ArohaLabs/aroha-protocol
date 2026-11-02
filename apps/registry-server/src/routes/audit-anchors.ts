@@ -39,7 +39,7 @@
 import { Hono, type Context } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import * as ed from "@noble/ed25519";
-import { sha512 } from "@noble/hashes/sha512";
+import { sha512 } from "@noble/hashes/sha2.js";
 import { resolveContentAddressedKey } from "@aroha-sdk/credentials/mandates";
 import type { HonoEnv } from "../index.js";
 import { rateLimiter, clientIp } from "../middleware/rate-limit.js";

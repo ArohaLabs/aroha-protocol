@@ -9,7 +9,7 @@
 // Uses native WebCrypto, matching the existing org-signature verification in
 // routes/agents.ts — no new crypto dependency for this specific check.
 
-import { keccak_256 } from "@noble/hashes/sha3";
+import { keccak_256 } from "@noble/hashes/sha3.js";
 import type { RegistryRepository } from "./repository.js";
 import { decodeB64 } from "./b64.js";
 

@@ -15,6 +15,10 @@ name: DCO
 # This replaces tisonkun/actions-dco, which cannot apply a cut-off and runs on
 # the retired node12 Actions runtime.
 #
+# Bot exemption: commits authored by Dependabot are skipped. Dependabot cannot
+# add a sign-off, and its commits only change dependency manifests and
+# lockfiles. Any human commit pushed to a Dependabot branch is still checked.
+#
 # Not a required check: DCO is not in the "main" ruleset's required status
 # checks, so a failing DCO run is advisory (manual process: the reviewer must
 # not merge a PR with a red DCO check).
@@ -52,8 +56,12 @@ jobs:
             if [ "$(git show -s --format=%ct "$sha")" -lt "$CUTOFF_EPOCH" ]; then
               continue
             fi
-            CHECKED=$((CHECKED + 1))
             AUTHOR_EMAIL=$(git show -s --format=%ae "$sha")
+            if [ "$AUTHOR_EMAIL" = "49699333+dependabot[bot]@users.noreply.github.com" ]; then
+              echo "SKIP $sha (Dependabot)"
+              continue
+            fi
+            CHECKED=$((CHECKED + 1))
             if git show -s --format=%B "$sha" | grep -i '^Signed-off-by: ' | grep -qiF "<$AUTHOR_EMAIL>"; then
               echo "OK   $sha"
             else

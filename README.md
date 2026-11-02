@@ -89,6 +89,22 @@ Aroha answers four questions for every action: **who is acting, what were they a
 
 ---
 
+## Try it in sixty seconds
+
+An inbox assistant that may read mail and propose what to archive, and may never delete, no matter what it is told. No server, no keys to configure, runs offline against the published packages.
+
+```bash
+git clone https://github.com/ArohaLabs/aroha-protocol
+cd aroha-protocol/examples/mandates && npm install
+node inbox.mjs
+```
+
+![node inbox.mjs: read-email allowed, propose-archive allowed, delete-email refused (CAPABILITY_NOT_PERMITTED), sub-agent chain valid, widening refused](examples/mandates/inbox-demo.svg)
+
+The mail tool checks the signed mandate on every call, so the assistant does not need to be trustworthy and does not need to remember the instruction. [`examples/mandates`](examples/mandates/README.md) walks through both scripts, including the $500 flight example above.
+
+---
+
 ## Package architecture
 
 ```
@@ -210,6 +226,7 @@ One-click templates for fast deployment.
 packages/               SDK packages (@aroha-sdk/*)
 agents/mock-provider-agent/ Reference provider agent for interoperability tests
 examples/               Deployment templates (Vercel, Cloudflare, Railway, Render)
+examples/mandates/      Two runnable scripts: an inbox assistant that cannot delete, and the $500 flight
 examples/sandbox-agents/ Pre-built sandbox agents (flight, hotel, weather, web-search, summarizer)
 contracts/              Solidity contracts (ArohaRegistry, ArohaEscrow, ArohaReputation)
 docs/                   MkDocs documentation site

@@ -333,6 +333,20 @@ jobs:
           npx tsc --noEmit -p tsconfig.json
           npx wrangler deploy --dry-run --outdir dist
 
+      # The two scripts the README's "Try it in sixty seconds" points at. They
+      # run against the published 2.x packages, so a README that promises
+      # output the packages no longer produce fails here, not on a reader.
+      - name: Mandates example — run both scripts against the published packages
+        working-directory: examples/mandates
+        run: |
+          npm install --no-package-lock --no-audit --no-fund --no-save \
+            "@aroha-sdk/core@2.0.0" "@aroha-sdk/credentials@2.0.0" "@aroha-sdk/delegation@0.3.0"
+          node inbox.mjs | tee inbox.out
+          node flight.mjs | tee flight.out
+          grep -q 'delete-email    → refused (CAPABILITY_NOT_PERMITTED)' inbox.out
+          grep -q 'sub-agent chain → valid, may: read-email' inbox.out
+          grep -q 'valid: true chainVerified: true limit: 300' flight.out
+
   # ── Dependency audit ──────────────────────────────────────────────────────
   # `npm audit --audit-level=high --omit=dev` over the root lockfile (all
   # workspaces). Findings listed in .github/audit-allowlist.json (each with a

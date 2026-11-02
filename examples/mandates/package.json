@@ -1,0 +1,19 @@
+{
+  "name": "aroha-mandates-example",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "inbox": "node inbox.mjs",
+    "flight": "node flight.mjs",
+    "start": "node inbox.mjs && node flight.mjs"
+  },
+  "dependencies": {
+    "@aroha-sdk/core": "^2.0.0",
+    "@aroha-sdk/credentials": "^2.0.0",
+    "@aroha-sdk/delegation": "^0.3.0"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

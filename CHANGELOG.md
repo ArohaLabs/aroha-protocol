@@ -22,6 +22,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/). Version
 
 ### Added
 
+- **`examples/mandates`:** two runnable scripts against the published packages, linked from the README's new "Try it in sixty seconds" section. `inbox.mjs` is a non-monetary task mandate (an inbox assistant that may read and propose, with delete blocked, checked by the tool on every call and narrowed to a sub-agent); `flight.mjs` is the README's $500 flight. CI runs both and checks their output.
 - **Durable stores** for presentation nonces, enrollment (challenges and bindings) and the spending ledger, so replay protection and running totals survive restarts and are shared between processes:
   - `@aroha-sdk/store-postgres` (`migrate`, `PostgresNonceStore`, `PostgresEnrollmentStore`, `PostgresSpendingLedger`) and `@aroha-sdk/store-redis` (`RedisNonceStore`, `RedisEnrollmentStore`, `RedisSpendingLedger`; ioredis). Not yet published.
   - Python: `aroha.stores.postgres` and `aroha.stores.redis` (released in PyPI `aroha` 2.1.0, below).

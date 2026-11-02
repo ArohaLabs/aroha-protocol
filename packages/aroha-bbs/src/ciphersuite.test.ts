@@ -14,9 +14,9 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { bytesToHex } from "@noble/hashes/utils";
+import { bytesToHex } from "@noble/hashes/utils.js";
 import { expand_message_xmd as nobleExpand } from "@noble/curves/abstract/hash-to-curve";
-import { sha256 } from "@noble/hashes/sha256";
+import { sha256 } from "@noble/hashes/sha2.js";
 import { createGenerators, P1, P1_HEX, expandMessageXmd, utf8, i2osp, os2ip, bls } from "./ciphersuite.js";
 
 const vectors = JSON.parse(

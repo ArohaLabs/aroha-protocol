@@ -14,7 +14,7 @@
  */
 
 import { Hono } from "hono";
-import { keccak_256 } from "@noble/hashes/sha3";
+import { keccak_256 } from "@noble/hashes/sha3.js";
 import { authMiddleware, adminMiddleware, optionalAuthMiddleware } from "../auth.js";
 import { rotateKeyLimiter, discoveryIpLimiter } from "../middleware/rate-limit.js";
 import type { AgentRow } from "../repository.js";

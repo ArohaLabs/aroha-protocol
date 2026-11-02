@@ -15,7 +15,7 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
-import { bytesToHex, hexToBytes } from "@noble/hashes/utils";
+import { bytesToHex, hexToBytes } from "@noble/hashes/utils.js";
 import { prove, proveWithFixedScalarsForTesting, verifyProof, octetsToProof } from "./proof.js";
 import { sign, skToPk } from "./sign.js";
 import { os2ip, utf8 } from "./ciphersuite.js";

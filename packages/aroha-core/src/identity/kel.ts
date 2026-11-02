@@ -111,8 +111,8 @@
  */
 
 import * as ed from "@noble/ed25519";
-import { sha256 } from "@noble/hashes/sha256";
-import { sha512 } from "@noble/hashes/sha512";
+import { sha256 } from "@noble/hashes/sha2.js";
+import { sha512 } from "@noble/hashes/sha2.js";
 import { canonicalizeJcs } from "../crypto/jcs.js";
 import { toMultibase, fromMultibase } from "./did.js";
 import type { PublicKeyResolver } from "./did-cache.js";

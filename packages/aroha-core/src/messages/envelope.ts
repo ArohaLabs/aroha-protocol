@@ -15,7 +15,7 @@
  * business logic — that belongs to the application tier.
  */
 
-import { randomBytes } from "@noble/hashes/utils";
+import { randomBytes } from "@noble/hashes/utils.js";
 import { signMessage, verifyMessageSignature, type MessageProof } from "../crypto/signing.js";
 import { NonceRegistry } from "./nonce.js";
 import { extractPublicKey, type DIDDocument } from "../identity/did.js";

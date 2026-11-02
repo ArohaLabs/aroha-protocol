@@ -7,7 +7,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { ArohaErrorCode } from "@aroha-sdk/core";
 import * as ed from "@noble/ed25519";
-import { sha512 } from "@noble/hashes/sha512";
+import { sha512 } from "@noble/hashes/sha2.js";
 import { AgentError, UpstreamError, toErrorBody } from "./errors.js";
 import { ReservationStore } from "./reservations.js";
 import { isLoopbackHost, loadIdentity, publicKeyFromSeed, requireEnv, resolveEndpoint, resolveListenHost } from "./startup.js";

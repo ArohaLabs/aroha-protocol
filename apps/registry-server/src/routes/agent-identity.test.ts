@@ -7,7 +7,7 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import * as ed from "@noble/ed25519";
-import { sha512 } from "@noble/hashes/sha512";
+import { sha512 } from "@noble/hashes/sha2.js";
 import { incept, rotateKel, revokeKelSelf, canonicalizeJcs } from "@aroha-sdk/core";
 import { makeApp, type TestApp } from "../test-utils/make-app.js";
 import { registerAgent } from "../test-utils/register.js";

@@ -39,10 +39,14 @@ import { readFileSync, existsSync, readdirSync, mkdirSync, writeFileSync, rmSync
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
+import { spawnSync } from "node:child_process";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const require = createRequire(join(ROOT, "package.json"));
-const ts = require("typescript");
+// TypeScript 7 is a native compiler without the classic JavaScript API
+// (ts.createProgram and friends), so the compiler is run as a command and its
+// `--pretty false` diagnostics are parsed.
+const TSC = join(dirname(require.resolve("typescript/package.json")), "bin", "tsc");
 
 const KEEP = process.argv.includes("--keep");
 const WORK = join(ROOT, ".readme-check");
@@ -190,35 +194,75 @@ const shimmed = new Set();
 const writeShims = () =>
   writeFileSync(shimFile, [...shimmed].sort().map((m) => `declare module "${m}";`).join("\n") + "\n");
 
-const compilerOptions = {
-  target: ts.ScriptTarget.ES2022,
-  module: ts.ModuleKind.ESNext,
-  moduleResolution: ts.ModuleResolutionKind.Bundler,
-  lib: ["lib.es2022.d.ts"],
-  types: ["node"],
-  typeRoots: [join(ROOT, "node_modules", "@types")],
-  strict: true,
-  noImplicitAny: false,
-  noEmit: true,
-  skipLibCheck: true,
-  esModuleInterop: true,
-  allowSyntheticDefaultImports: true,
-  isolatedModules: false,
-  baseUrl: ROOT,
-  paths,
-};
+// `paths` targets are absolute, so no baseUrl is needed (TypeScript 7 removed it).
+const tsconfigFile = join(WORK, "tsconfig.json");
+writeFileSync(
+  tsconfigFile,
+  JSON.stringify(
+    {
+      compilerOptions: {
+        target: "ES2022",
+        module: "ESNext",
+        moduleResolution: "Bundler",
+        lib: ["ES2022"],
+        types: ["node"],
+        typeRoots: [join(ROOT, "node_modules", "@types")],
+        strict: true,
+        noImplicitAny: false,
+        noEmit: true,
+        skipLibCheck: true,
+        esModuleInterop: true,
+        allowSyntheticDefaultImports: true,
+        isolatedModules: false,
+        paths,
+      },
+      files: [...units.map((u) => u.file), shimFile],
+    },
+    null,
+    2,
+  ),
+);
+
+/**
+ * Runs tsc over the scratch project and returns its diagnostics as
+ * { file, line (1-based), code, message }. With --pretty false every
+ * diagnostic starts with "file(line,col): error TSnnnn: message"; indented
+ * lines that follow continue the same message chain.
+ */
+function compile() {
+  const r = spawnSync(process.execPath, [TSC, "-p", tsconfigFile, "--pretty", "false"], {
+    cwd: ROOT,
+    encoding: "utf8",
+    maxBuffer: 64 * 1024 * 1024,
+  });
+  if (r.error) throw r.error;
+  const out = [];
+  for (const raw of `${r.stdout}\n${r.stderr}`.split(/\r?\n/)) {
+    const m = /^(.+?)\((\d+),(\d+)\): error TS(\d+): (.*)$/.exec(raw);
+    if (m) {
+      out.push({ file: resolve(ROOT, m[1]), line: Number(m[2]), code: Number(m[4]), message: m[5] });
+    } else if (/^\s+\S/.test(raw) && out.length > 0) {
+      out[out.length - 1].message += `\n${raw.trim()}`;
+    } else if (/error TS\d+/.test(raw)) {
+      // A diagnostic without a file position (e.g. a bad compiler option) is
+      // a broken check, not a README failure: stop loudly.
+      console.error(`tsc reported a configuration error:\n${raw}`);
+      process.exit(2);
+    }
+  }
+  return out.filter((d) => d.file.includes(".readme-check"));
+}
 
 let diagnostics = [];
 for (let round = 1; round <= MAX_ROUNDS; round++) {
   for (const u of units) writeUnit(u);
   writeShims();
-  const program = ts.createProgram([...units.map((u) => u.file), shimFile], compilerOptions);
-  diagnostics = ts.getPreEmitDiagnostics(program).filter((d) => d.file && d.file.fileName.includes(".readme-check"));
+  diagnostics = compile();
 
   let changed = false;
   for (const d of diagnostics) {
-    const msg = ts.flattenDiagnosticMessageText(d.messageText, "\n");
-    const unit = units.find((u) => resolve(u.file) === resolve(d.file.fileName));
+    const msg = d.message;
+    const unit = units.find((u) => resolve(u.file) === d.file);
     if (!unit) continue;
     if (MISSING_NAME_CODES.has(d.code)) {
       const m = /(?:name|property) '([A-Za-z_$][\w$]*)'/.exec(msg);
@@ -237,12 +281,12 @@ for (let round = 1; round <= MAX_ROUNDS; round++) {
 
 const byUnit = new Map();
 for (const d of diagnostics) {
-  const unit = units.find((u) => resolve(u.file) === resolve(d.file.fileName));
+  const unit = units.find((u) => resolve(u.file) === d.file);
   if (!unit) continue;
-  const { line } = d.file.getLineAndCharacterOfPosition(d.start ?? 0);
+  const line = d.line - 1; // tsc reports 1-based lines
   // file line 0 is the prelude; file line k (k ≥ 1) is README line startLine + k - 1
   const readmeLine = line === 0 ? unit.startLine : unit.startLine + line - 1;
-  const msg = ts.flattenDiagnosticMessageText(d.messageText, "\n      ");
+  const msg = d.message.replace(/\n/g, "\n      ");
   if (!byUnit.has(unit.readme)) byUnit.set(unit.readme, []);
   byUnit.get(unit.readme).push(`${unit.readme}:${readmeLine}  TS${d.code}: ${msg}`);
 }

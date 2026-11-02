@@ -23,8 +23,8 @@ import {
   serialize, i2osp, os2ip, expandMessageXmd, type G1Point,
 } from "./ciphersuite.js";
 import { octetsToSignature, type SignOptions } from "./sign.js";
-import { concatBytes } from "@noble/hashes/utils";
-import { randomBytes } from "@noble/hashes/utils";
+import { concatBytes } from "@noble/hashes/utils.js";
+import { randomBytes } from "@noble/hashes/utils.js";
 
 const EXPAND_LEN = 48;
 

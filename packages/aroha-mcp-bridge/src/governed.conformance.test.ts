@@ -14,7 +14,7 @@
 import { createServer } from "node:net";
 import { describe, it, expect, vi, beforeAll, afterAll } from "vitest";
 import * as ed from "@noble/ed25519";
-import { sha512 } from "@noble/hashes/sha512";
+import { sha512 } from "@noble/hashes/sha2.js";
 import { buildEnvelope, incept, type KelEvent, type KelSource, type KelIdentity, type PublicKeyResolver } from "@aroha-sdk/core";
 import {
   issueIntentMandate,

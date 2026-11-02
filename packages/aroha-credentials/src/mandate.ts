@@ -55,7 +55,7 @@
  */
 
 import * as ed from "@noble/ed25519";
-import { sha512 } from "@noble/hashes/sha512";
+import { sha512 } from "@noble/hashes/sha2.js";
 // Runtime imports come from the ./identity subpath, never the @aroha-sdk/core
 // barrel: the barrel re-exports the Node transport (ws, undici -> fs, http),
 // which a Cloudflare Worker cannot bundle. Keeping this module (and

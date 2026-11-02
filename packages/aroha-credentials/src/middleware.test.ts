@@ -11,7 +11,7 @@
 import { describe, it, expect, beforeAll, afterEach } from "vitest";
 import { createServer, type Server } from "node:http";
 import * as ed from "@noble/ed25519";
-import { sha512 } from "@noble/hashes/sha512";
+import { sha512 } from "@noble/hashes/sha2.js";
 import type { ArohaEnvelope, ArohaHttpRoute } from "@aroha-sdk/core";
 import { createRbacMiddleware, credentialRegistryRoutes } from "./middleware.js";
 import { issueHumanCredential, serializeCredential } from "./credentials.js";

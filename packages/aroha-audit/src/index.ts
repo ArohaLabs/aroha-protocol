@@ -1,8 +1,8 @@
 // Copyright (c) 2026 Aroha Labs
 // SPDX-License-Identifier: Apache-2.0
 
-import { sha256 } from "@noble/hashes/sha256";
-import { bytesToHex } from "@noble/hashes/utils";
+import { sha256 } from "@noble/hashes/sha2.js";
+import { bytesToHex, utf8ToBytes } from "@noble/hashes/utils.js";
 
 export type AuditEventType =
   | "saga_started" | "saga_committed" | "saga_compensated" | "saga_failed"
@@ -119,7 +119,7 @@ export class AuditLog {
     const timestamp = new Date().toISOString();
 
     const content = { seq, ...input, timestamp, previousHash };
-    const hash = bytesToHex(sha256(JSON.stringify(content)));
+    const hash = bytesToHex(sha256(utf8ToBytes(JSON.stringify(content))));
 
     const entry: AuditEntry = { ...content, hash };
     this._entries.push(entry);
@@ -182,7 +182,7 @@ export class AuditLog {
       }
 
       const { hash, ...content } = entry;
-      const recomputed = bytesToHex(sha256(JSON.stringify(content)));
+      const recomputed = bytesToHex(sha256(utf8ToBytes(JSON.stringify(content))));
       if (recomputed !== hash) return false;
       // The entry after a seam names the archive's last hash, which the seam
       // also carries — so the same comparison holds across the cut.

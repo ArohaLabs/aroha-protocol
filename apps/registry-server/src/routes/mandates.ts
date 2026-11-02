@@ -74,7 +74,7 @@
 import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import * as ed from "@noble/ed25519";
-import { sha512 } from "@noble/hashes/sha512";
+import { sha512 } from "@noble/hashes/sha2.js";
 import { isInceptionDid, type KelSource } from "@aroha-sdk/core/identity";
 import {
   verifyMandateChain,

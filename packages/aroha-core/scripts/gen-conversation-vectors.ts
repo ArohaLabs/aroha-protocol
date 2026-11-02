@@ -19,7 +19,7 @@ import { writeFileSync, mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import * as ed from "@noble/ed25519";
-import { sha512 } from "@noble/hashes/sha512";
+import { sha512 } from "@noble/hashes/sha2.js";
 import { canonicalizeJcs } from "../src/crypto/jcs.js";
 import { canonicalizeMessage } from "../src/crypto/signing.js";
 import { generateDid } from "../src/identity/did.js";

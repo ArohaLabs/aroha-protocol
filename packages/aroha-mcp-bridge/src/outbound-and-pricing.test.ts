@@ -11,7 +11,7 @@
 import { createServer } from "node:net";
 import { describe, it, expect, vi, beforeAll } from "vitest";
 import * as ed from "@noble/ed25519";
-import { sha512 } from "@noble/hashes/sha512";
+import { sha512 } from "@noble/hashes/sha2.js";
 import { buildEnvelope, type ArohaClient, type ArohaEnvelope, type PublicKeyResolver } from "@aroha-sdk/core";
 import type { DiscoveredAgent } from "@aroha-sdk/registry";
 import { wrapMcp, arohaAgentToMcpTools, type McpToolDefinition } from "./index.js";

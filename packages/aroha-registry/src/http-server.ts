@@ -35,8 +35,8 @@
 import { isLoopbackHost } from "@aroha-sdk/core/endpoints";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { timingSafeEqual } from "node:crypto";
-import { keccak_256 } from "@noble/hashes/sha3";
-import { bytesToHex } from "@noble/hashes/utils";
+import { keccak_256 } from "@noble/hashes/sha3.js";
+import { bytesToHex } from "@noble/hashes/utils.js";
 import type { IArohaRegistry, AgentRecord } from "./types.js";
 import { registrationNeedsProof, verifyRegistrationChallenge } from "./registration-proof.js";
 import { isContentAddressedDid, fromMultibase } from "@aroha-sdk/core/identity";

@@ -367,7 +367,7 @@ export function registryResolver(
     if (hit && hit.expires > Date.now()) return hit.key;
     if (hit) cache.delete(did);
     try {
-      const { keccak_256 } = await import("@noble/hashes/sha3");
+      const { keccak_256 } = await import("@noble/hashes/sha3.js");
       const hash = keccak_256(new TextEncoder().encode(did));
       const didHash = "0x" + Array.from(hash).map((b) => b.toString(16).padStart(2, "0")).join("");
       const res = await fetch(`${base}/v1/agents/${encodeURIComponent(didHash)}`, {

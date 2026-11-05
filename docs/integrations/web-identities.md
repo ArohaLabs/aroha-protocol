@@ -163,6 +163,34 @@ Removing a key works the same way: it keeps verifying until each verifier's cach
 - **Message envelopes and registry records.** Agents that exchange Aroha envelopes or register in a registry still need a DID.
 - **Go and Java.** Not implemented.
 
+## Common questions
+
+**OAuth is the standard. Why not just use it?**
+
+Use it. OAuth decides whether an application may reach an account, and a mandate does not replace that. A mandate adds what OAuth scopes do not carry:
+
+- limits that travel with the work: which actions, how many, how much money, until when;
+- a rule that each hand-off can only narrow those limits;
+- a signature at every step, which the service doing the work checks itself.
+
+An agent can sign in with OAuth and present a mandate in the same request.
+
+**Is this the same as on-behalf-of?**
+
+On-behalf-of, built on OAuth token exchange (RFC 8693), is the nearest OAuth feature. A service trades the user's token at the authorization server for a new token to call the next service. Inside one organisation that often covers the need. The differences:
+
+| | On-behalf-of | Mandate chain |
+|---|---|---|
+| Who decides each hop | The authorization server, which must know both services | The party handing the work on |
+| Across two organisations | Needs federation set up in advance | Needs no shared server |
+| Narrowing | Up to the server's policy; the flow does not require it | Required; a verifier rejects a child that widens its parent |
+| What a limit can say | A scope name | Counts, amounts, time windows, a running total across the chain |
+| Evidence of the chain | Recorded by the server | Each link signed by the party that granted it |
+
+**Will OAuth add this?**
+
+Possibly. As of November 2026 there are IETF drafts on delegated and narrowing tokens for agents, and none is a standard. Web identities keep the names OAuth already uses, so a mandate can sit next to such a token without a second identifier scheme.
+
 ## Local development
 
 `allowLoopbackHttp: true` (Python: `allow_loopback_http=True`) also accepts `http://localhost:PORT/path` and `http://127.0.0.1:PORT/path`. Such an identity proves nothing to anyone else. Do not set it in production.

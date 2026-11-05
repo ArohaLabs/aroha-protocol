@@ -66,7 +66,15 @@ from aroha.identity import from_multibase, to_multibase
 from aroha.jcs import canonicalize_jcs, format_es_number, js_stringify_sorted
 from aroha.kel import KelSource, KelState, KelStore, is_inception_did, kel_key_resolver, resolve_kel_state
 from aroha.timeutil import iso_ms, now_ms, parse_iso_ms, to_ms
-from aroha.web_identity import create_web_identity_resolver, looks_like_web_identity
+from aroha.mandate_jwt import (
+    MANDATE_JWT_SEPARATOR,
+    decode_mandate_jwt,
+    looks_like_mandate_jwt,
+    mandate_jwt_instant,
+    sign_mandate_jwt,
+    split_mandate_jwt_chain,
+)
+from aroha.web_identity import create_web_identity_resolver, ed25519_jwk_thumbprint, looks_like_web_identity
 
 __all__ = [
     "MANDATE_TOKEN_VERSION",
@@ -214,6 +222,10 @@ class MandateChainLink:
     v: int
     mandate: dict[str, Any]
     signature: str
+    # Set when the link is in the JWT form (spec §6.10): the compact JWS it was
+    # signed as. ``signature`` is then the JWS signature and ``mandate`` the
+    # body the JWT's claims decode to.
+    jwt: Optional[str] = None
 
     def to_wire(self) -> dict[str, Any]:
         return {"v": self.v, "mandate": self.mandate, "signature": self.signature}
@@ -228,6 +240,7 @@ class SignedMandate:
     chain: Optional[list[MandateChainLink]] = None  # signed ancestry, root first, excluding this mandate
     wire: Optional[dict[str, Any]] = None   # the exact body that was signed
     legacy_python: bool = False             # decoded from an old snake_case Python token
+    jwt: Optional[str] = None               # JWT form (spec §6.10): this mandate's own JWT, the last link of ``token``
 
 
 @dataclass
@@ -339,10 +352,21 @@ def issue_intent_mandate(
     constraints: SpendingConstraints,
     private_key: Union[Ed25519PrivateKey, bytes],
     ttl_seconds: int = 3600,
+    *,
+    format: Optional[str] = None,
 ) -> SignedMandate:
-    """Issue a root Intent Mandate (v2) from a user to their personal agent."""
+    """Issue a root Intent Mandate (v2) from a user to their personal agent.
+
+    ``format="jwt"`` issues it in the JWT form (spec §6.10), which a stock JWT
+    library can read and verify; every mandate attenuated from it is a JWT
+    too. Times in the JWT form are whole seconds, so the mandate may expire up
+    to a second sooner than ``ttl_seconds``. Default: the native v2 token.
+    """
+    if format is not None and format != "jwt":
+        raise ValueError(f'Invalid format "{format}": must be "jwt" or left out')
     return _issue_mandate(
-        "intent", grantor_did, grantee_did, constraints, None, private_key, now_ms() + int(ttl_seconds * 1000), []
+        "intent", grantor_did, grantee_did, constraints, None, private_key, now_ms() + int(ttl_seconds * 1000), [],
+        fmt=format,
     )
 
 
@@ -379,9 +403,10 @@ def decode_mandate_token(token: str) -> SignedMandate:
         signature=leaf.signature,
         token=token,
         v=leaf.v,
-        chain=[MandateChainLink(a.v, a.wire, a.signature) for a in ancestors] if leaf.v == 2 else None,
+        chain=[MandateChainLink(a.v, a.wire, a.signature, a.jwt) for a in ancestors] if leaf.v == 2 else None,
         wire=leaf.wire,
         legacy_python=leaf.legacy_python,
+        jwt=leaf.jwt,
     )
 
 
@@ -691,6 +716,7 @@ class _Link:
     signature: str
     raw: dict[str, Any]           # the body exactly as it appeared in the token
     legacy_python: bool = False
+    jwt: Optional[str] = None     # JWT form (spec §6.10): the compact JWS this link was signed as
 
 
 def _signing_bytes(link: _Link) -> bytes:
@@ -720,6 +746,24 @@ def _unb64url(s: str) -> bytes:
 
 
 def _check_link_signature(link: _Link, public_key: Optional[bytes]) -> Optional[str]:
+    if link.jwt is not None:
+        # JWT form: the signature covers the JWT's own text. Decode it again
+        # here instead of trusting ``wire`` and ``signature``, so a link whose
+        # body was swapped after parsing cannot ride on another body's signature.
+        decoded = decode_mandate_jwt(link.jwt)
+        if isinstance(decoded, str) or decoded.kind != "spending":
+            return "Invalid signature"
+        try:
+            if decoded.signature != link.signature or canonicalize_jcs(decoded.body) != canonicalize_jcs(link.wire):
+                return "Mandate does not match its signed JWT"
+            Ed25519PublicKey.from_public_bytes(public_key).verify(  # type: ignore[arg-type]
+                _unb64url(decoded.signature), decoded.signing_input.encode("ascii")
+            )
+            return None
+        except InvalidSignature:
+            return "Invalid signature"
+        except Exception:
+            return "Signature verification error"
     try:
         sig = _unb64url(link.signature)
         Ed25519PublicKey.from_public_bytes(public_key).verify(sig, _signing_bytes(link))  # type: ignore[arg-type]
@@ -917,7 +961,39 @@ def _reject_constant(name: str) -> Any:
     raise ValueError(f"invalid JSON constant {name}")
 
 
+#: More links than any verifier accepts; refused before a single one is decoded.
+_MAX_JWT_LINKS = 64
+
+
+def _parse_jwt_mandate_token(token: str) -> Union[tuple[_Link, list[_Link]], str]:
+    """Parse a token in the JWT form (spec §6.10): link JWTs joined by "~", root first.
+
+    Each link's claims are mapped back to a mandate body and put through the
+    SAME shape check as a native link, so every rule that follows reads one
+    kind of object.
+    """
+    parts = split_mandate_jwt_chain(token)
+    if isinstance(parts, str):
+        return f"Malformed token: {parts}"
+    if len(parts) > _MAX_JWT_LINKS:
+        return f"Malformed token: {len(parts)} links"
+    links: list[_Link] = []
+    for i, part in enumerate(parts):
+        decoded = decode_mandate_jwt(part)
+        if isinstance(decoded, str):
+            return f"Malformed token: link {i}: {decoded}"
+        if decoded.kind != "spending":
+            return f"Malformed token: link {i} is a task mandate, not a spending mandate"
+        shape = check_mandate_shape(decoded.body)
+        if shape:
+            return f"Malformed token: link {i}: {shape}"
+        links.append(_Link(2, decoded.body, decoded.signature, decoded.body, False, part))
+    return links[-1], links[:-1]
+
+
 def _parse_mandate_token(token: str) -> Union[tuple[_Link, list[_Link]], str]:
+    if looks_like_mandate_jwt(token):
+        return _parse_jwt_mandate_token(token)
     try:
         raw = json.loads(_unb64url(token).decode("utf-8"), parse_constant=_reject_constant)
     except Exception:
@@ -1190,6 +1266,8 @@ def _issue_mandate(
     private_key: Union[Ed25519PrivateKey, bytes],
     expires_at_ms: int,
     chain: list[MandateChainLink],
+    *,
+    fmt: Optional[str] = None,
 ) -> SignedMandate:
     c_wire = constraints.to_wire()
     shape = _check_constraints_shape(c_wire)
@@ -1200,11 +1278,27 @@ def _issue_mandate(
         constraints=SpendingConstraints.from_wire(c_wire),
         grantee=grantee_did,
         grantor=grantor_did,
-        expires_at=iso_ms(expires_at_ms),
+        # A JWT carries whole seconds. Rounding DOWN keeps a child's expiry at
+        # or before its parent's, which is itself on a whole second.
+        expires_at=iso_ms(mandate_jwt_instant(expires_at_ms) if fmt == "jwt" else expires_at_ms),
         parent_mandate_id=parent_id,
-        issued_at=_now_iso(),
+        issued_at=iso_ms(mandate_jwt_instant(now_ms())) if fmt == "jwt" else _now_iso(),
     )
     wire = mandate.to_wire()
+    if fmt == "jwt":
+        if any(l.jwt is None for l in chain):
+            raise ValueError("A JWT-form mandate cannot be attenuated from a native one: a chain is in one form")
+        key = _priv(private_key)
+        jwt = sign_mandate_jwt("spending", wire, key, ed25519_jwk_thumbprint(key.public_key()))
+        return SignedMandate(
+            mandate=mandate,
+            signature=jwt.rsplit(".", 1)[1],
+            token=MANDATE_JWT_SEPARATOR.join([*(l.jwt for l in chain), jwt]),  # type: ignore[list-item]
+            v=2,
+            chain=list(chain),
+            wire=wire,
+            jwt=jwt,
+        )
     sig = _b64url(_priv(private_key).sign(mandate_signing_payload_v2(wire).encode("utf-8")))
     token_obj = {
         "v": MANDATE_TOKEN_VERSION,
@@ -1223,15 +1317,28 @@ def _ancestry_including_parent(parent: SignedMandate) -> list[MandateChainLink]:
     ancestors = parent.chain
     wire = parent.wire
     legacy_python = parent.legacy_python
-    if (ancestors is None or wire is None) and isinstance(parent.token, str):
+    jwt = parent.jwt
+    if (ancestors is None or wire is None or (jwt is None and looks_like_mandate_jwt(parent.token))) and isinstance(parent.token, str):
         parsed = _parse_mandate_token(parent.token)
         if not isinstance(parsed, str) and parsed[0].wire["mandateId"] == parent.mandate.mandate_id:
             leaf, anc = parsed
-            version = leaf.v
-            wire = leaf.wire
-            legacy_python = leaf.legacy_python
+            if wire is None:
+                version = leaf.v
+                wire = leaf.wire
+                legacy_python = leaf.legacy_python
+            if jwt is None:
+                jwt = leaf.jwt
             if ancestors is None and leaf.v == 2:
-                ancestors = [MandateChainLink(a.v, a.wire, a.signature) for a in anc]
+                ancestors = [MandateChainLink(a.v, a.wire, a.signature, a.jwt) for a in anc]
+    if jwt is not None:
+        # The JWT form carries the whole chain as JWTs; a parent rebuilt by
+        # hand without them cannot be extended.
+        if ancestors is None or any(a.jwt is None for a in ancestors):
+            raise ValueError(
+                "Cannot attenuate a JWT-form mandate whose ancestors are not all JWTs. "
+                "Decode the full token with decode_mandate_token first."
+            )
+        return [*ancestors, MandateChainLink(2, wire if wire is not None else parent.mandate.to_wire(), parent.signature, jwt)]
     if legacy_python:
         raise ValueError(
             "Cannot attenuate a legacy Python (snake_case v1) mandate: no other SDK can verify its signature. "
@@ -1273,5 +1380,7 @@ def _attenuate(
     expiry = min(parent_expiry, now_ms() + int(ttl_seconds * 1000)) if ttl_seconds else parent_expiry
 
     return _issue_mandate(
-        tier, parent.mandate.grantee, grantee_did, constraints, parent.mandate.mandate_id, grantor_key, expiry, chain
+        tier, parent.mandate.grantee, grantee_did, constraints, parent.mandate.mandate_id, grantor_key, expiry, chain,
+        # A chain is in one form: the child of a JWT is a JWT (spec §6.10).
+        fmt="jwt" if chain[-1].jwt is not None else None,
     )

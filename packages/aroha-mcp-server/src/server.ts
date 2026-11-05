@@ -60,6 +60,8 @@ import {
   revokeMandate,
   createWebIdentityResolver,
   looksLikeWebIdentity,
+  looksLikeMandateJwt,
+  peekMandateToken,
   type MandateKeyResolver,
   type MandateRevocationCheck,
 } from "@aroha-sdk/credentials/mandates";
@@ -958,6 +960,13 @@ export function createArohaMcpServer(rt: ArohaMcpRuntime, principal: string, con
 
 /** Decode the leaf of a task or spending token (no verification). */
 function decodeTaskOrSpendingLeaf(token: string): { kind: "task" | "spending"; mandateId: string; grantor: string } {
+  // The JWT form (spec §6.10) is not base64url JSON; read its last link.
+  if (looksLikeMandateJwt(token)) {
+    const leaf = peekMandateToken(token);
+    if (!leaf) throw new Error("malformed token");
+    if (leaf.kind === "spending") decodeMandateToken(token); // throws on a malformed spending token
+    return { kind: leaf.kind, mandateId: leaf.mandateId, grantor: leaf.grantor };
+  }
   let raw: unknown;
   try {
     raw = JSON.parse(Buffer.from(token, "base64url").toString("utf8"));

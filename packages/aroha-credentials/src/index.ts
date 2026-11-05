@@ -16,5 +16,6 @@ export * from "./redemption-d1.js";
 export * from "./mandate-registry-client.js";
 export * from "./http-mandate.js";
 export * from "./web-identity.js";
+export * from "./mandate-jwt.js";
 export * from "./http-spend.js";
 export * from "./enrollment.js";

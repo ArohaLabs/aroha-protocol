@@ -28,6 +28,7 @@ import {
   type HttpRequestBody,
   type PresentMandateHttpInput,
 } from "./http-mandate.js";
+import { looksLikeMandateJwt, peekMandateToken } from "./mandate-jwt.js";
 
 const b64u = (b: Uint8Array | string): string => Buffer.from(b).toString("base64url");
 
@@ -38,6 +39,7 @@ export function encodeHttpPresentation(members: unknown): string {
 
 /** The leaf mandateId of a token, or null when it is not decodable. No verification. */
 function leafMandateId(token: string): string | null {
+  if (looksLikeMandateJwt(token)) return peekMandateToken(token)?.mandateId ?? null;
   try {
     const raw = JSON.parse(Buffer.from(token, "base64url").toString("utf8")) as { mandate?: { mandateId?: unknown } };
     return typeof raw?.mandate?.mandateId === "string" ? raw.mandate.mandateId : null;

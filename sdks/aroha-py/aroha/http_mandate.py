@@ -66,6 +66,7 @@ from aroha.mandate import (
     resolve_content_addressed_key,
     verify_mandate_chain,
 )
+from aroha.mandate_jwt import looks_like_mandate_jwt, peek_mandate_token
 from aroha.spending_ledger import BudgetExhaustedError, SpendingLedger
 from aroha.timeutil import iso_ms, now_ms, parse_iso_ms
 
@@ -254,6 +255,10 @@ def _loads(s: str) -> Any:
 
 def _token_leaf(token: str) -> Optional[tuple[str, str]]:
     """(mandateId, grantee) of a token's leaf, spending or task; None when undecodable."""
+    # The JWT form (spec §6.10) is not base64url JSON; read its last link.
+    if looks_like_mandate_jwt(token):
+        leaf = peek_mandate_token(token)
+        return (leaf.mandate_id, leaf.grantee) if leaf and leaf.mandate_id and leaf.grantee else None
     try:
         raw = _loads(token)
     except Exception:
@@ -633,6 +638,9 @@ def _presented_task_mandate(header_value: Any) -> bool:
         return False
     try:
         p = _loads(header_value)
+        if isinstance(p, dict) and looks_like_mandate_jwt(p.get("token")):
+            leaf = peek_mandate_token(p["token"])
+            return leaf is not None and leaf.kind == "task"
         t = _loads(p["token"]) if isinstance(p, dict) and isinstance(p.get("token"), str) else None
         return isinstance(t, dict) and isinstance(t.get("mandate"), dict) and "mandateType" in t["mandate"]
     except Exception:

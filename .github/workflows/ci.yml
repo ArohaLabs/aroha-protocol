@@ -70,6 +70,7 @@ jobs:
           grep -q 'valid: true chainVerified: true limit: 300' "$RUNNER_TEMP/web-identities.out"
           grep -q 'widening to \$600 → Cannot attenuate' "$RUNNER_TEMP/web-identities.out"
           grep -q 'forged link  → valid: false' "$RUNNER_TEMP/web-identities.out"
+          grep -q 'as JWTs      → valid: true links: 2 leaf iss is the assistant: true limit: 300' "$RUNNER_TEMP/web-identities.out"
           grep -q 'after the assistant changes its key → valid: false' "$RUNNER_TEMP/web-identities.out"
 
   # ── Durable stores against real backends ──────────────────────────────────

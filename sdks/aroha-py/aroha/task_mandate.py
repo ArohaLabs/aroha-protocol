@@ -72,7 +72,9 @@ from aroha.mandate import (
     _unb64url,
     check_narrowing,
 )
+from aroha.mandate_jwt import decode_mandate_jwt, looks_like_mandate_jwt, mandate_jwt_instant, sign_mandate_jwt
 from aroha.timeutil import iso_ms, now_ms, parse_iso_ms
+from aroha.web_identity import ed25519_jwk_thumbprint
 
 __all__ = [
     "TASK_MANDATE_TOKEN_VERSION",
@@ -258,6 +260,7 @@ class SignedTaskMandate:
     token: str                      # base64url token
     v: int = TASK_MANDATE_TOKEN_VERSION
     wire: Optional[dict[str, Any]] = None   # the exact body that was signed
+    jwt: Optional[str] = None               # JWT form (spec §6.10): ``token`` is this compact JWS
 
 
 @dataclass
@@ -327,7 +330,24 @@ def _signing_bytes(v: int, body: dict[str, Any]) -> bytes:
     return s.encode("utf-8")
 
 
-def _verify_signature(v: int, body: dict[str, Any], signature: str, public_key: Optional[bytes]) -> bool:
+def _verify_signature(
+    v: int, body: dict[str, Any], signature: str, public_key: Optional[bytes], jwt: Optional[str] = None
+) -> bool:
+    if jwt is not None:
+        # JWT form: verify the JWT's own text, and refuse a body that is not
+        # the one its claims decode to.
+        decoded = decode_mandate_jwt(jwt)
+        if isinstance(decoded, str) or decoded.kind != "task":
+            return False
+        try:
+            if decoded.signature != signature or canonicalize_jcs(decoded.body) != canonicalize_jcs(body):
+                return False
+            Ed25519PublicKey.from_public_bytes(public_key).verify(  # type: ignore[arg-type]
+                _unb64url(decoded.signature), decoded.signing_input.encode("ascii")
+            )
+            return True
+        except (InvalidSignature, Exception):
+            return False
     try:
         Ed25519PublicKey.from_public_bytes(public_key).verify(  # type: ignore[arg-type]
             _unb64url(signature), _signing_bytes(v, body)
@@ -357,6 +377,7 @@ def issue_task_mandate(
     tier: Optional[TaskTier] = None,
     invariants: Optional[dict[str, Any]] = None,
     expires_at_ms: Optional[int] = None,
+    format: Optional[str] = None,
 ) -> SignedTaskMandate:
     """Issue a task mandate (root by default). Same as issueTaskMandate in mandate.ts.
 
@@ -365,8 +386,13 @@ def issue_task_mandate(
     check_task_mandate_shape before signing, so a mandate this function
     issues is one every SDK accepts.
     """
+    if format is not None and format != "jwt":
+        raise ValueError(f'Invalid format "{format}": must be "jwt" or left out')
     issued = now_ms()
     expiry = expires_at_ms if expires_at_ms is not None else issued + int(ttl_seconds * 1000)
+    if format == "jwt":
+        # A JWT carries whole seconds; rounding down keeps a child at or before its parent.
+        issued, expiry = mandate_jwt_instant(issued), mandate_jwt_instant(expiry)
     sc = _sc_wire(spending_constraints)
     body = _drop_none([
         ("mandateType", "hybrid" if sc is not None else "task"),
@@ -387,6 +413,11 @@ def issue_task_mandate(
     shape = check_task_mandate_shape(body)
     if shape:
         raise ValueError(f"Invalid task mandate: {shape}")
+
+    if format == "jwt":
+        key = _priv(private_key)
+        jwt = sign_mandate_jwt("task", body, key, ed25519_jwk_thumbprint(key.public_key()))
+        return SignedTaskMandate(TaskMandate.from_wire(body), jwt.rsplit(".", 1)[1], jwt, 2, body, jwt)
 
     sig = _b64url(_priv(private_key).sign(_signing_bytes(2, body)))
     token = _b64url(json.dumps(
@@ -462,14 +493,27 @@ def attenuate_task_mandate(
         parent_mandate_id=p["mandateId"],
         tier="cart" if p["mandateTier"] == "intent" else "execution",
         invariants=invariants,
+        # A chain is in one form: the child of a JWT is a JWT (spec §6.10).
+        format="jwt" if (parent.jwt is not None or looks_like_mandate_jwt(parent.token)) else None,
     )
 
 
 # ── Verify ────────────────────────────────────────────────────────────────────
 
-def _parse(token: Any) -> Union[tuple[int, dict[str, Any], str], str]:
+def _parse(token: Any) -> Union[tuple[int, dict[str, Any], str, Optional[str]], str]:
+    """(version, body, signature, jwt) for a token of either form, or why it is malformed."""
     if not isinstance(token, str) or not token:
         return "Malformed token"
+    if looks_like_mandate_jwt(token):
+        decoded = decode_mandate_jwt(token)
+        if isinstance(decoded, str):
+            return f"Malformed token: {decoded}"
+        if decoded.kind != "task":
+            return "Malformed token: this is a spending mandate, not a task mandate"
+        shape = check_task_mandate_shape(decoded.body)
+        if shape:
+            return f"Malformed token: {shape}"
+        return 2, decoded.body, decoded.signature, token
     try:
         raw = json.loads(_unb64url(token).decode("utf-8"), parse_constant=_reject_constant)
     except Exception:
@@ -488,7 +532,7 @@ def _parse(token: Any) -> Union[tuple[int, dict[str, Any], str], str]:
     shape = check_task_mandate_shape(raw.get("mandate"))
     if shape:
         return f"Malformed token: {shape}"
-    return version, raw["mandate"], raw["signature"]
+    return version, raw["mandate"], raw["signature"], None
 
 
 def _js_string(v: Any) -> str:
@@ -506,8 +550,8 @@ def decode_task_mandate_token(token: str) -> SignedTaskMandate:
     parsed = _parse(token)
     if isinstance(parsed, str):
         raise ValueError(parsed)
-    v, body, sig = parsed
-    return SignedTaskMandate(TaskMandate.from_wire(body), sig, token, v, body)
+    v, body, sig, jwt = parsed
+    return SignedTaskMandate(TaskMandate.from_wire(body), sig, token, v, body, jwt)
 
 
 def verify_task_mandate(
@@ -529,7 +573,7 @@ def verify_task_mandate(
     parsed = _parse(token)
     if isinstance(parsed, str):
         return TaskMandateVerificationResult(False, reason=parsed)
-    version, m, signature = parsed
+    version, m, signature, jwt = parsed
 
     t = _now_value(now)
     expires, issued = parse_iso_ms(m["expiresAt"]), parse_iso_ms(m["issuedAt"])
@@ -543,7 +587,7 @@ def verify_task_mandate(
     if expected_grantee and m["grantee"] != expected_grantee:
         return TaskMandateVerificationResult(False, reason=f"Grantee mismatch: expected {expected_grantee}")
 
-    if not _verify_signature(version, m, signature, _key_bytes(public_key)):
+    if not _verify_signature(version, m, signature, _key_bytes(public_key), jwt):
         return TaskMandateVerificationResult(False, reason="Invalid signature")
 
     if is_revoked is not None:

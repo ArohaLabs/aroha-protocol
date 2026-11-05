@@ -28,6 +28,7 @@ import type { ArohaTaskMandateBody } from "@aroha-sdk/core";
 import { isInceptionDid, type KelSource, type KelStore } from "@aroha-sdk/core/identity";
 import {
   checkTaskMandateShape, checkTaskNarrowing, checkTaskRevocation, createKelLookup,
+  decodeTaskMandateToken, looksLikeMandateJwt,
   taskMandateTokenVersion, verifyTaskMandateSignature,
   type SignedTaskMandate, type MandateRevocationCheck,
 } from "@aroha-sdk/credentials";
@@ -120,6 +121,15 @@ export class TaskMandateTokenError extends Error {
  * verify the signature; callers that act on the result must still verify it.
  */
 export function parseTaskMandateToken(token: string): SignedTaskMandate {
+  // The JWT form (spec §6.10): one compact JWS per link, decoded by the same
+  // function verifyTaskMandate uses.
+  if (looksLikeMandateJwt(token)) {
+    const decoded = decodeTaskMandateToken(token);
+    if (typeof decoded === "string") {
+      throw new TaskMandateTokenError(decoded.replace(/^Malformed token/, "Malformed task mandate token"));
+    }
+    return decoded;
+  }
   let parsed: unknown;
   try {
     parsed = JSON.parse(Buffer.from(token, "base64url").toString("utf8"));

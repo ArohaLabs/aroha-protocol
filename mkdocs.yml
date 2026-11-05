@@ -135,6 +135,7 @@ nav:
     - MCP Quickstart: quickstart-mcp.md
     - Remote MCP Connector: integrations/remote-mcp-connector.md
     - Web Identities: integrations/web-identities.md
+    - Mandates as JWTs: integrations/mandate-jwt.md
     - LangChain Quickstart: quickstart-langchain.md
     - Sandbox Registry: sandbox.md
     - Developer Journey: developer-journey.md

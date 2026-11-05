@@ -667,6 +667,43 @@ A plain HTTP request carries its presentation in the `Aroha-Mandate` request hea
 
 The reference implementation is `presentMandateHttp()`, `verifyHttpPresentation()`, `verifyHttpMandateRequest()` and `verifyHttpSpendRequest()` in `@aroha-sdk/credentials`, and `present_mandate_http()`, `verify_http_presentation()`, `verify_http_mandate_request()` and `verify_http_spend_request()` in the Python SDK's `aroha.http_mandate`. The conformance vectors are in `packages/aroha-credentials/test-vectors/http-presentation-v1.json` and `packages/aroha-credentials/test-vectors/http-spend-v1.json` in the reference repository.
 
+### 6.10 Mandate Token JWT Form (Optional)
+
+A mandate can be issued in a second form in which each link is a JSON Web Token, so that a service with a general JWT library can read a link and verify its signature. The form changes how a link is written and signed. It does not change the mandate body or any rule of §6.5, §6.6 or §6.9. Support for this section is OPTIONAL. A verifier that does not support it rejects a token in this form as malformed.
+
+**Link.** A link is a JWS in compact serialisation (RFC 7515) whose payload is a JWT claims set (RFC 7519).
+
+- The header has the members `alg` and `typ`, optionally `kid`, and no other member. `alg` is `EdDSA`; a verifier MUST also accept `Ed25519`. `typ` is `aroha-mandate+jwt`; a verifier MUST also accept `application/aroha-mandate+jwt`. `kid`, when present, is a non-empty string; an issuer SHOULD set it to the JWK thumbprint (RFC 7638) of its key.
+- The claims are exactly `iss`, `sub`, `jti`, `iat`, `exp` and `authorization_details`. `iss` is the mandate's `grantor`, `sub` its `grantee` and `jti` its `mandateId`, each a non-empty string. `iat` and `exp` are the mandate's `issuedAt` and `expiresAt` as whole, non-negative numbers of seconds since the Unix epoch.
+- `authorization_details` is an array that holds exactly one object. Its `type` is `aroha_spending_mandate` or `aroha_task_mandate`. Its other members are the members of the mandate body (§6.5 or §6.6) other than `grantor`, `grantee`, `mandateId`, `issuedAt` and `expiresAt`, with the names and values they have in the body.
+
+The mandate body of a link is recovered by reversing that mapping; `issuedAt` and `expiresAt` are the instants `iat` and `exp` written in the form `YYYY-MM-DDTHH:mm:ss.000Z`.
+
+**Signature.** The signature is the Ed25519 signature, by the link's grantor, over the JWS signing input: the ASCII bytes of the encoded header, a full stop and the encoded payload.
+
+**Token.** A spending mandate token is its link JWTs joined by the character `~`, root first, the leaf last. A root mandate is a single JWT. A task mandate token is one link JWT; a task-mandate chain is a list of such tokens, as in the native form. A token is in this form if and only if it contains a full stop.
+
+**Verification.** A verifier MUST reject a link if any of the following holds:
+
+1. It is not three non-empty base64url parts without padding, or its header or its payload is not a JSON object.
+2. Its header has a member other than `alg`, `typ` and `kid`, or its `alg` or `typ` is not one of the values above.
+3. Its claims set has a member other than the six above, or one of the six is missing or of the wrong type.
+4. Its `authorization_details` does not hold exactly one object of a mandate type, or that object has a member named `grantor`, `grantee`, `mandateId`, `issuedAt` or `expiresAt`.
+5. The recovered body is not a valid body for its type (§6.5, §6.6).
+6. It is a link of a spending mandate token and has the type `aroha_task_mandate`, or it is a task mandate token and has the type `aroha_spending_mandate`.
+
+A verifier MUST then apply to the recovered bodies every check that §6.5, for a spending token, or §6.6, for a task token, requires of a v2 token. It resolves each grantor's key as those sections and §4.7 define. A verifier MUST NOT use `kid`, or any key carried in a token, to choose the key a signature is checked against. A verifier MAY refuse a link longer than 16 384 characters.
+
+**Unknown members.** A verifier MUST reject an unknown header member or an unknown claim, and MUST NOT ignore it. A claim such as `nbf` or `aud` that a general JWT library enforces and a mandate verifier does not would let the two reach different verdicts on one token.
+
+**One form per chain.** A mandate is issued in one form, because its signature covers different bytes in each. An issuer that attenuates a mandate in this form MUST issue the child in this form. A spending mandate token in this form contains only links in this form.
+
+**Presentation.** A token in this form is presented as §6.9 defines, unchanged: it is the `token` member of the presentation, and the `mandateId` in the holder proof is the `jti` of its last link.
+
+**What a JWT library does not check (non-normative).** A general JWT library verifies one link: its signature, its issuer and its expiry. It does not check that a child narrows its parent, that the links join into a chain, or that the chain starts at a root the verifier trusts. Those are the checks of §6.5 and §6.6, and a service that acts on a mandate needs them. This form carries no audience, no key binding inside the token and no status list: the holder is bound by the presentation of §6.9, and revocation is §6.7.
+
+The conformance vectors are in `packages/aroha-credentials/test-vectors/mandate-jwt-v1.json` in the reference repository. The reference implementations are `issueIntentMandate` and `issueTaskMandate` with `format: "jwt"`, `verifyMandateChain` and `verifyTaskMandate` in `@aroha-sdk/credentials`, and the same functions in the Python SDK.
+
 ---
 
 ## 7. Orchestration (moved)

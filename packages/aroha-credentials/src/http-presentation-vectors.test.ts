@@ -18,6 +18,7 @@ import {
   httpBodySha256,
   httpMethodForProof,
   httpPresentationSigningPayload,
+  mandateTokenSha256,
   httpRequestTarget,
   presentMandateHttp,
   verifyHttpMandateRequest,
@@ -49,7 +50,7 @@ describe("http-presentation-v1 vectors", () => {
       const mandateId = JSON.parse(Buffer.from(V.tokens[c.present.token], "base64url").toString("utf8")).mandate.mandateId;
       expect(httpPresentationSigningPayload({
         audience: V.audience, method: e.method, target: e.target, bodySha256: e.bodySha256,
-        mandateId, holder: k.did, nonce: c.present.nonce, expires: e.expires,
+        mandateId, tokenSha256: mandateTokenSha256(V.tokens[c.present.token]), holder: k.did, nonce: c.present.nonce, expires: e.expires,
       }), c.name).toBe(e.signingPayload);
       const h = (await presentMandateHttp({
         token: V.tokens[c.present.token], holderDid: k.did, holderPrivateKey: fromHex(k.privateKeyHex),

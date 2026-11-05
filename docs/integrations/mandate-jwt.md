@@ -28,7 +28,7 @@ Each link of a chain is one JWT, signed by the party that granted it.
   "exp": 1767229200,
   "authorization_details": [
     {
-      "type": "aroha_spending_mandate",
+      "type": "https://aroha-labs.com/mandates/spending",
       "mandateTier": "cart",
       "constraints": { "spendLimitUsd": 300, "merchantCategory": "4511" },
       "parentMandateId": "11111111-1111-4111-8111-111111111111"
@@ -138,7 +138,9 @@ Those are the mandate rules, and `verifyMandateChain` applies them to both forms
 - **`typ` is required.** A mandate JWT has `typ: aroha-mandate+jwt`, so an access token or an identity token signed by the same key is never read as a mandate. A consumer that accepts other JWTs must check `typ` too, or it could read a mandate as one of those.
 - **Only six claims, and no unknown members.** `iss`, `sub`, `jti`, `iat`, `exp`, `authorization_details`. A JWT with any other claim, or an unknown member in `authorization_details` or its constraints, is refused. A member that one consumer enforces and the mandate verifier ignores would let the two disagree about the same token.
 - **`sub` is the agent, not the user.** It is the party the mandate was granted to. OAuth access tokens usually put the user there, so do not read it that way here.
-- **Portable values.** Nesting stops at 32 levels, numbers stay within 2^53 − 1, and text must be well-formed Unicode with no byte order mark, so every SDK reads a token the same way.
+- **`~` is not SD-JWT.** The first link is the root, the widest authority. Do not split a token and read the first part. The leaf is the last link.
+- **A JWT expires at `exp`,** as RFC 7519 says, not one instant later.
+- **Portable values.** Nesting stops at 32 levels, numbers stay within 2^53 − 1, text must be well-formed Unicode with no byte order mark, member names may not repeat, and `validFrom` and `validUntil` take exactly one date form, so every SDK reads a token the same way.
 - **Only `alg`, `typ` and `kid` in the header.** A key carried in the token (`jwk`, `jku`, `x5c`) is refused. The key always comes from the grantor's identity, never from the token.
 - **`alg` is `EdDSA`** (or `Ed25519`, its newer name). Nothing else, including `none`.
 - **One form per chain.** A mandate is issued in one form and its children keep it. The signature covers different bytes in each form, so a token cannot be converted.

@@ -197,6 +197,11 @@ export async function verifyTaskMandateChain(
     parsed.push(p);
   }
 
+  // A chain is in one form (spec §6.10), so a JWT link cannot sit on a native one.
+  if (parsed.some((p) => p.jwt !== undefined) && parsed.some((p) => p.jwt === undefined)) {
+    return { valid: false, depth: chain.length, reason: "Chain mixes the JWT and native token forms" };
+  }
+
   const now = Date.now();
 
   for (let i = 0; i < parsed.length; i++) {
@@ -209,7 +214,7 @@ export async function verifyTaskMandateChain(
     // expired". The shape check above already rejects non-dates; this is
     // the belt to its braces.
     const expiresAtMs = Date.parse(mandate.expiresAt);
-    if (Number.isNaN(expiresAtMs) || expiresAtMs < now) {
+    if (Number.isNaN(expiresAtMs) || expiresAtMs < now || (parsed[i].jwt !== undefined && expiresAtMs === now)) {
       return { valid: false, depth: chain.length, reason: `Mandate expired at ${at}` };
     }
     if (expiresAtMs < Date.parse(mandate.issuedAt)) {

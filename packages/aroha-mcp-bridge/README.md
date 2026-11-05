@@ -121,7 +121,7 @@ header and never as a tool argument:
 ```
 
 `proof` signs the RFC 8785 (JCS) form of
-`{ purpose: "aroha.mcp-mandate-presentation/v1", audience, tool, argsSha256, mandateId, holder, nonce, expires }`,
+`{ purpose: "aroha.mcp-mandate-presentation/v2", audience, tool, argsSha256, mandateId, tokenSha256, holder, nonce, expires }`,
 where `audience` is the wrapped agent's DID and `argsSha256` is SHA-256 of
 the JCS arguments. The bridge resolves `holder` with `resolvePublicKey`,
 checks the proof, refuses a reused nonce, then verifies the mandate chain

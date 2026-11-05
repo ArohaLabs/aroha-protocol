@@ -878,7 +878,7 @@ func inheritConstraints(parent, child SpendingConstraints) SpendingConstraints {
 	return child
 }
 
-func isAmount(f float64) bool { return !math.IsNaN(f) && !math.IsInf(f, 0) && f >= 0 }
+func isAmount(f float64) bool { return !math.IsNaN(f) && !math.IsInf(f, 0) && f >= 0 && f <= 9007199254740991 }
 
 func currencyOrUSD(c string) string {
 	if c == "" {
@@ -1022,6 +1022,11 @@ func checkRevocation(m SpendingMandate, isRevoked RevocationCheck) string {
 func checkTimeWindow(m SpendingMandate, now, tol int64) string {
 	if e, err := isoMillis(m.ExpiresAt); err != nil || e < now {
 		return "Mandate expired"
+	}
+	if e, err := isoMillis(m.ExpiresAt); err == nil {
+		if i, err := isoMillis(m.IssuedAt); err == nil && e < i {
+			return "Mandate expires before it was issued"
+		}
 	}
 	if i, err := isoMillis(m.IssuedAt); err != nil || i > now+tol {
 		return fmt.Sprintf("Mandate issuedAt %s is in the future", m.IssuedAt)

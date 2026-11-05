@@ -449,8 +449,20 @@ describe("web identity resolver cache", () => {
     }
   });
 
-  it("never caches a failure", async () => {
+  it("remembers a failure for 30 seconds, then asks again", async () => {
     const s = await setup();
+    const doc = s.served.responses[ID];
+    delete s.served.responses[ID];
+    expect(await s.resolve(ID)).toBeNull();
+    s.served.responses[ID] = doc;
+    expect(await s.resolve(ID)).toBeNull();
+    expect(s.served.calls).toHaveLength(1);
+    s.advance(30_001);
+    expect(hex((await s.resolve(ID))!)).toBe(hex(s.a.pub));
+  });
+
+  it("with failureCacheMs 0, retries at once", async () => {
+    const s = await setup({ failureCacheMs: 0 });
     const doc = s.served.responses[ID];
     delete s.served.responses[ID];
     expect(await s.resolve(ID)).toBeNull();

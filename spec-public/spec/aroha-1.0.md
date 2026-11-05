@@ -232,7 +232,7 @@ See the `@aroha-sdk/credentials` extension for details on the standard role syst
 
 ### 4.7 Web Identities (Optional)
 
-A web identity is an HTTPS URL that names a party to a mandate and serves a document publishing that party's signing key. A party that already publishes an OAuth Client ID Metadata Document (draft-ietf-oauth-client-id-metadata-document) at a URL can sign and hold mandates under that URL, with no `did:aroha` identifier. That draft defines the document for OAuth clients only; using it to name a mandate party is defined here, and no OAuth flow is involved. Support for this section is OPTIONAL. A verifier that does not support it cannot resolve a key for a web identity and therefore rejects the mandate.
+A web identity is an HTTPS URL that names a party to a mandate and serves a document publishing that party's signing key. A party that already publishes an OAuth Client ID Metadata Document (draft-ietf-oauth-client-id-metadata-document) at a URL can sign and hold mandates under that URL, with no `did:aroha` identifier. That draft defines the document for OAuth clients only; using it to name a mandate party is defined here, and no OAuth flow is involved. Support for this section is OPTIONAL. A verifier that does not support it, and has not pinned a key for that identity itself, cannot resolve a key for a web identity and therefore rejects the mandate.
 
 **Where it may appear.** A web identity MAY be the `grantor` or `grantee` of a spending mandate (§6.5) or a task mandate (§6.6), and the `holder` of a mandate presentation (§6.9). One chain MAY mix web identities and DIDs. Where §6.5, §6.6 and §6.9 say that a key is resolved from a DID, the key of a web identity is resolved as this section defines, and never taken from the token or the presentation. A web identity is not an Agent DID (§4.1): message envelopes (§6.1) and registry records (§5) name agents by DID. A verifier applying the governed profile (§6.8) MUST reject a chain whose root grantor is a web identity, because that profile requires an E-form person root.
 
@@ -247,7 +247,7 @@ path     = 1*( "/" segment ) [ "/" ]
 segment  = 1*( unreserved / sub-delims / ":" / "@" / "%" HEXDIG HEXDIG )
 ```
 
-The following rules also apply. The host is in lower case and at most 253 characters long, and its last label is either 2 to 63 letters or a label beginning `xn--`. An IP address literal is not a host, and neither is `localhost` or a name ending in `.localhost`. The port has no leading zero, is at most 65535 and is not 443. No segment is `.` or `..`, also when a dot is written `%2e` or `%2E`. A web identity is at most 2048 characters long. It follows that a web identity has no user information, no query and no fragment, and that its path is never `/`.
+The following rules also apply. The host is in lower case and at most 253 characters long, and its last label is either 2 to 63 letters or a label beginning `xn--`. A label beginning `xn--` MUST be a valid A-label: decoding it and encoding it again gives the same label. An IP address literal is not a host, and neither is `localhost` or a name ending in `.localhost`. The port has no leading zero, is at most 65535 and is not 443. No segment is `.` or `..`, also when a dot is written `%2e` or `%2E`. A web identity is at most 2048 characters long. It follows that a web identity has no user information, no query and no fragment, and that its path is never `/`.
 
 **Identity document.** A web identity resolves only if a GET request to it returns status 200 and a JSON object, the identity document, that meets every rule in this list:
 
@@ -264,8 +264,8 @@ A verifier MUST ignore members of the identity document that this section does n
 
 1. It MUST NOT follow a redirect, and it MUST treat every status other than 200 as a failure.
 2. It MUST limit the number of bytes it reads from a response and the time it waits for one. Limits of 5 kilobytes for an identity document and 16 kilobytes for a key set are RECOMMENDED.
-3. In production it MUST NOT send a request to a special-use address (RFC 6890), such as a loopback, private or link-local address.
-4. It MAY reuse a resolved key, for no longer than the `max-age` of the response's `Cache-Control` header and for no longer than a ceiling it sets; a ceiling of 5 minutes is RECOMMENDED. It MUST NOT reuse a key from a response marked `no-store` or `no-cache`, and it MUST NOT cache a failure.
+3. In production it MUST NOT send a request to an address it knows to be special-use (RFC 6890), such as a loopback, private or link-local address. It SHOULD resolve the host first and SHOULD connect to the address it checked. Where it can do neither, the deployment MUST keep it from such addresses by a host allowlist or a network policy.
+4. It MAY reuse a resolved key, for no longer than a ceiling it sets and, when the response's `Cache-Control` header has a `max-age`, for no longer than that; a ceiling of 5 minutes is RECOMMENDED. It MUST NOT reuse a key from a response marked `no-store` or `no-cache`. It MAY remember a failure for no longer than 30 seconds, and it SHOULD share concurrent requests for one identity and limit concurrent requests to one host.
 5. It MUST treat a web identity that does not resolve as an identifier with no known key, and reject the mandate or presentation.
 
 A verifier SHOULD send the request header `Accept: application/json`. For local development only, a verifier MAY also accept identities of the form `http://localhost[:port]/path` and `http://127.0.0.1[:port]/path`.
@@ -559,7 +559,7 @@ A spending mandate is a signed, narrowing grant of spending authority from a gra
 2. The root has `parentMandateId` null and tier `intent`; if the verifier expects a particular root, the root's `grantor` equals it.
 3. Each child's `grantor` equals its parent's `grantee`, its `parentMandateId` equals its parent's `mandateId`, its tier is not broader than its parent's (`intent` → `cart` → `payment`), and its `expiresAt` is not later than its parent's.
 4. Each child's constraints narrow its parent's: `spendLimitUsd` is not greater; and every optional limit the parent sets (`sessionLimitUsd`, `requireHumanApprovalAboveUsd`, `allowedMerchants`, `merchantCategory`, `validFrom`, `validUntil`, `currency`) is also set by the child, to an equal or narrower value. A child that omits a limit its parent sets is a widening and MUST be rejected.
-5. Every link is within its time window (`issuedAt`, `expiresAt`, `validFrom`, `validUntil`) and, when a revocation source is configured, not revoked.
+5. Every link is within its time window (`issuedAt`, `expiresAt`, `validFrom`, `validUntil`), its `expiresAt` is not before its `issuedAt`, and, when a revocation source is configured, it is not revoked. Amounts are at most 2^53 − 1.
 6. If the verifier expects a particular grantee (normally itself), the leaf's `grantee` equals it.
 
 Issuers MAY fill an omitted optional limit from the parent when they attenuate (so that honest callers produce valid children); verifiers MUST NOT.
@@ -621,7 +621,7 @@ A verifier that cannot meet one of these prerequisites MUST NOT report a verific
 
 ### 6.9 Mandate Presentation
 
-A mandate token is a bearer credential: anyone holding a copy can present it. A receiver MUST NOT act on a mandate token that arrives without a holder proof. A holder proof is an Ed25519 signature by the holder (the leaf grantee of the token) that binds the token to one receiver, one request and one use. This section defines two bindings, one for MCP tool calls and one for plain HTTP requests. Both share these rules:
+A mandate token is a bearer credential: anyone holding a copy can present it. A receiver MUST NOT act on a mandate token that arrives without a holder proof. A holder proof is an Ed25519 signature by the holder (the leaf grantee of the token) that binds the token to one receiver, one request and one use. It covers a hash of the token itself, because a `mandateId` is chosen by whoever mints the mandate and does not identify one token. This section defines two bindings, one for MCP tool calls and one for plain HTTP requests. Both share these rules:
 
 1. The verifier MUST resolve the holder's public key from the holder DID (as for a grantor in §6.5), never from the presentation.
 2. The verifier MUST reject a presentation whose holder is not the leaf grantee of the token, either directly or by verifying the token with the holder as the expected grantee.
@@ -631,7 +631,7 @@ A mandate token is a bearer credential: anyone holding a copy can present it. A 
 
 #### 6.9.1 MCP Binding
 
-An MCP `tools/call` request carries its presentation in the request `_meta` under the key `aroha/mandate`, as the object `{ "token", "holder", "nonce", "expires", "proof" }`. `proof` is the holder's Ed25519 signature, base64url without padding, over the UTF-8 bytes of the JCS canonicalisation of `{ "purpose": "aroha.mcp-mandate-presentation/v1", "audience", "tool", "argsSha256", "mandateId", "holder", "nonce", "expires" }`, where `audience` is the receiving agent's DID, `tool` the tool name, `argsSha256` the lower-case hex SHA-256 of the UTF-8 JCS canonicalisation of the call arguments (`{}` when there are none), and `mandateId` the token's leaf `mandateId`. The reference implementation is `presentMandate()` and `verifyPresentation()` in `@aroha-sdk/mcp-bridge`.
+An MCP `tools/call` request carries its presentation in the request `_meta` under the key `aroha/mandate`, as the object `{ "token", "holder", "nonce", "expires", "proof" }`. `proof` is the holder's Ed25519 signature, base64url without padding, over the UTF-8 bytes of the JCS canonicalisation of `{ "purpose": "aroha.mcp-mandate-presentation/v2", "audience", "tool", "argsSha256", "mandateId", "tokenSha256", "holder", "nonce", "expires" }`, where `audience` is the receiving agent's DID, `tool` the tool name, `argsSha256` the lower-case hex SHA-256 of the UTF-8 JCS canonicalisation of the call arguments (`{}` when there are none), `mandateId` the token's leaf `mandateId`, and `tokenSha256` the lower-case hex SHA-256 of the UTF-8 bytes of the token string. The reference implementation is `presentMandate()` and `verifyPresentation()` in `@aroha-sdk/mcp-bridge`.
 
 #### 6.9.2 HTTP Binding
 
@@ -642,12 +642,13 @@ A plain HTTP request carries its presentation in the `Aroha-Mandate` request hea
 - `proof` is the holder's Ed25519 signature, base64url without padding, over the UTF-8 bytes of the JCS canonicalisation of the signed object below.
 
 ```
-{ "purpose":    "aroha.http-mandate-presentation/v1",
+{ "purpose":    "aroha.http-mandate-presentation/v2",
   "audience":   <the receiving server's identifier>,
   "method":     <request method, ASCII upper-case>,
   "target":     <request target, see below>,
   "bodySha256": <lower-case hex SHA-256 of the exact body bytes>,
   "mandateId":  <the token's leaf mandateId>,
+  "tokenSha256": <lower-case hex SHA-256 of the exact token string>,
   "holder", "nonce", "expires" }
 ```
 
@@ -675,13 +676,13 @@ A mandate can be issued in a second form in which each link is a JSON Web Token,
 
 - The header has the members `alg` and `typ`, optionally `kid`, and no other member. `alg` is `EdDSA`; a verifier MUST also accept `Ed25519`. `typ` is `aroha-mandate+jwt`; a verifier MUST also accept `application/aroha-mandate+jwt`. `kid`, when present, is a non-empty string; an issuer SHOULD set it to the JWK thumbprint (RFC 7638) of its key.
 - The claims are exactly `iss`, `sub`, `jti`, `iat`, `exp` and `authorization_details`. `iss` is the mandate's `grantor`, `sub` its `grantee` and `jti` its `mandateId`, each a non-empty string. `iat` and `exp` are the mandate's `issuedAt` and `expiresAt` as whole, non-negative numbers of seconds since the Unix epoch.
-- `authorization_details` is an array that holds exactly one object. Its `type` is `aroha_spending_mandate` or `aroha_task_mandate`. Its other members are the members of the mandate body (§6.5 or §6.6) other than `grantor`, `grantee`, `mandateId`, `issuedAt` and `expiresAt`, with the names and values they have in the body.
+- `authorization_details` is an array that holds exactly one object. Its `type` is `https://aroha-labs.com/mandates/spending` or `https://aroha-labs.com/mandates/task`. Its other members are the members of the mandate body (§6.5 or §6.6) other than `grantor`, `grantee`, `mandateId`, `issuedAt` and `expiresAt`, with the names and values they have in the body.
 
 The mandate body of a link is recovered by reversing that mapping; `issuedAt` and `expiresAt` are the instants `iat` and `exp` written in the form `YYYY-MM-DDTHH:mm:ss.000Z`.
 
-**Signature.** The signature is the Ed25519 signature, by the link's grantor, over the JWS signing input: the ASCII bytes of the encoded header, a full stop and the encoded payload.
+**Signature.** The signature is the Ed25519 signature, by the link's grantor, over the JWS signing input: the ASCII bytes of the encoded header, a full stop and the encoded payload. Verification follows RFC 8032 strictly, and a verifier MUST reject a small-order public key; this applies to every mandate signature.
 
-**Token.** A spending mandate token is its link JWTs joined by the character `~`, root first, the leaf last. A root mandate is a single JWT. A task mandate token is one link JWT; a task-mandate chain is a list of such tokens, as in the native form. A token is in this form if and only if it contains a full stop.
+**Token.** A spending mandate token is its link JWTs joined by the character `~`, root first, the leaf last. A root mandate is a single JWT. A task mandate token is one link JWT; a task-mandate chain is a list of such tokens, as in the native form. A token is in this form if and only if it contains a full stop. A link is expired at the instant `exp`, as RFC 7519 defines, not after it.
 
 **Verification.** A verifier MUST reject a link if any of the following holds:
 
@@ -690,8 +691,11 @@ The mandate body of a link is recovered by reversing that mapping; `issuedAt` an
 3. Its claims set has a member other than the six above, or one of the six is missing or of the wrong type, or `iat` or `exp` is above 253402300799 (the end of the year 9999).
 4. Its `authorization_details` does not hold exactly one object of a mandate type, or that object has a member that §6.5 or §6.6 does not define for that type, which includes `grantor`, `grantee`, `mandateId`, `issuedAt` and `expiresAt`. The same applies to the members of `constraints`, `spendingConstraints` and `taskConstraints`.
 5. The recovered body is not a valid body for its type (§6.5, §6.6).
-6. It is a link of a spending mandate token and has the type `aroha_task_mandate`, or it is a task mandate token and has the type `aroha_spending_mandate`.
+6. It is a link of a spending mandate token and has the task mandate type, or it is a task mandate token and has the spending mandate type.
 7. Its claims set is nested more than 32 levels deep, or holds a string that is not well-formed Unicode, or a number that is not finite or whose magnitude is above 2^53 − 1.
+8. Its header or its claims set repeats a member name.
+9. Its `iss` or `sub` contains a colon and is not a URI.
+10. A `validFrom` or `validUntil` is not an instant in exactly the form `YYYY-MM-DDTHH:mm:ss.sssZ`.
 
 A verifier MUST then apply to the recovered bodies every check that §6.5, for a spending token, or §6.6, for a task token, requires of a v2 token. It resolves each grantor's key as those sections and §4.7 define. A verifier MUST NOT use `kid`, or any key carried in a token, to choose the key a signature is checked against. A verifier MAY refuse a link longer than 16 384 characters.
 
@@ -699,11 +703,11 @@ A verifier MUST then apply to the recovered bodies every check that §6.5, for a
 
 **General JWT verification.** A receiver MUST NOT authorise an action on the result of general JWT verification alone.
 
-**One form per chain.** A mandate is issued in one form, because its signature covers different bytes in each. An issuer that attenuates a mandate in this form MUST issue the child in this form. A spending mandate token in this form contains only links in this form.
+**One form per chain.** A mandate is issued in one form, because its signature covers different bytes in each. An issuer that attenuates a mandate in this form MUST issue the child in this form. A spending mandate token in this form contains only links in this form, and a verifier MUST reject a task-mandate chain that mixes the two forms.
 
 **Presentation.** A token in this form is presented as §6.9 defines, unchanged: it is the `token` member of the presentation, and the `mandateId` in the holder proof is the `jti` of its last link.
 
-**What a JWT library does not check (non-normative).** A general JWT library verifies one link: its signature, its issuer and its expiry. It does not check that a child narrows its parent, that the links join into a chain, or that the chain starts at a root the verifier trusts. It also does not read `validFrom` or `validUntil`, may accept an `iat` in the future, and may accept a link signed by any key in the set whose `kid` matches, where a mandate verifier uses only the identity's first eligible key. Those are the checks of §6.5 and §6.6, and a service that acts on a mandate needs them. This form carries no audience, no key binding inside the token and no status list: the holder is bound by the presentation of §6.9, and revocation is §6.7.
+**What a JWT library does not check (non-normative).** A general JWT library verifies one link: its signature, its issuer and its expiry. It does not check that a child narrows its parent, that the links join into a chain, or that the chain starts at a root the verifier trusts. It also does not read `validFrom` or `validUntil`, may accept an `iat` in the future, and may accept a link signed by any key in the set whose `kid` matches, where a mandate verifier uses only the identity's first eligible key. Those are the checks of §6.5 and §6.6, and a service that acts on a mandate needs them. This form carries no audience, no key binding inside the token and no status list: the holder is bound by the presentation of §6.9, and revocation is §6.7. The separator `~` also appears in SD-JWT, which this form is not: the first link is the root, the widest authority, and a consumer that splits a token and reads the first part reads the wrong link.
 
 The conformance vectors are in `packages/aroha-credentials/test-vectors/mandate-jwt-v1.json` in the reference repository. The reference implementations are `issueIntentMandate` and `issueTaskMandate` with `format: "jwt"`, `verifyMandateChain` and `verifyTaskMandate` in `@aroha-sdk/credentials`, and the same functions in the Python SDK.
 

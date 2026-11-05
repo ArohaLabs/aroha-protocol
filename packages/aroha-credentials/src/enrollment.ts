@@ -51,6 +51,7 @@
 
 import * as ed from "@noble/ed25519";
 import { sha512 } from "@noble/hashes/sha2.js";
+import { verifyEd25519 } from "./ed25519-strict.js";
 import type { KelSource, KelStore } from "@aroha-sdk/core/identity";
 import { canonicalizeJcs } from "./jcs.js";
 import { createMandateKeyResolver, resolveContentAddressedKey, type MandateKeyResolver } from "./mandate.js";
@@ -322,7 +323,7 @@ export async function completeEnrollment(store: EnrollmentStore, input: Complete
   let valid = false;
   try {
     const sig = typeof proof === "string" && BASE64URL_RE.test(proof) ? new Uint8Array(Buffer.from(proof, "base64url")) : new Uint8Array(0);
-    valid = sig.length === 64 && await ed.verifyAsync(
+    valid = sig.length === 64 && await verifyEd25519(
       sig, new TextEncoder().encode(enrollmentSigningPayload({ audience: input.audience, accountId, did, challenge })), key,
     );
   } catch {

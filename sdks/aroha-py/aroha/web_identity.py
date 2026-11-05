@@ -32,7 +32,8 @@ Trust model, which differs from ``did:aroha`` on purpose:
 
 Fetch rules (from the OAuth draft, applied to the document and to a
 ``jwks_uri``): HTTPS only, no redirects followed, HTTP 200 only, a size cap, a
-timeout, successes cached for a bounded time, failures never cached. Before
+timeout, successes cached for a bounded time, failures remembered for 30
+seconds at most. Before
 each request the host name is resolved and the request is refused if any of
 its addresses is special-use (loopback, private, link-local, ...). That check
 does not pin the connection; see ``_refusal`` for exactly what is covered, and
@@ -45,7 +46,6 @@ use ``allow_host``, a pinning ``fetch`` or an egress policy where it matters.
 from __future__ import annotations
 
 import base64
-import codecs
 import hashlib
 import ipaddress
 import json
@@ -61,6 +61,8 @@ from urllib.parse import urlsplit
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
+
+from aroha.mandate_jwt import _WEAK_KEYS_HEX
 
 __all__ = [
     "WEB_IDENTITY_MAX_LENGTH",
@@ -79,6 +81,7 @@ __all__ = [
     "jwk_to_ed25519_public_key",
     "select_web_identity_key",
     "is_special_use_address",
+    "is_weak_ed25519_key",
     "build_web_identity_document",
     "resolve_web_identity",
     "create_web_identity_resolver",
@@ -93,10 +96,17 @@ WEB_IDENTITY_MAX_JWKS_BYTES = 16 * 1024
 WEB_IDENTITY_MAX_CACHE_S = 300.0
 #: Default timeout for each HTTPS request.
 WEB_IDENTITY_FETCH_TIMEOUT_S = 5.0
+#: Default time a failed resolution is remembered.
+WEB_IDENTITY_FAILURE_CACHE_S = 30.0
 _CACHE_MAX_ENTRIES = 500
 
 
 # ── Identifier ────────────────────────────────────────────────────────────────
+
+def is_weak_ed25519_key(public_key: bytes) -> bool:
+    """True when ``public_key`` is a small-order point, which no real key is."""
+    return bytes(public_key).hex() in _WEAK_KEYS_HEX
+
 
 def looks_like_web_identity(identity: Any) -> bool:
     """True for anything a web-identity resolver should claim: an http(s) URL string."""
@@ -110,6 +120,7 @@ def looks_like_web_identity(identity: Any) -> bool:
 #   host     = label 1*( "." label )         ; lower case, the last label a TLD
 #   label    = 1-63 of a-z 0-9 "-", not starting or ending with "-"
 #   tld      = 2-63 letters a-z, or an "xn--" label; never "localhost"
+#   xn--     = a valid A-label: decoding and re-encoding gives the same label
 #   port     = 1-65535 without leading zeros, and not the scheme's default
 #   path     = 1*( "/" segment ) [ "/" ]     ; so never just "/"
 #   segment  = 1*( unreserved / sub-delims / ":" / "@" / "%" HEX HEX )
@@ -167,12 +178,13 @@ def _check_url(value: Any, *, loopback_http: bool, identity: bool) -> Optional[s
     # A URL parser rewrites "'" in a query, so it is never in normalised form.
     if query is not None and "'" in query:
         return "is not in normalised form"
-    # An "xn--" label must be decodable Punycode, as the URL parsers of other
-    # SDKs require; otherwise the SDKs would disagree on the same string.
+    # An "xn--" label must be a valid A-label (spec §4.7), or SDKs would
+    # disagree on the same string.
     for label in host.split("."):
         if label.startswith("xn--"):
             try:
-                codecs.decode(label[4:].encode("ascii"), "punycode")
+                if label.encode("ascii").decode("idna").encode("idna").decode("ascii") != label:
+                    return "is not a URL"
             except (UnicodeError, ValueError):
                 return "is not a URL"
     # Belt and braces: the standard library must read the string the same way
@@ -264,7 +276,7 @@ def jwk_to_ed25519_public_key(jwk: Any) -> Optional[bytes]:
     key = base64.urlsafe_b64decode(x + "=")
     # Round-trip: 43 base64url characters can spell 32 bytes more than one
     # way. Only the canonical spelling is a key.
-    return key if len(key) == 32 and _b64u(key) == x else None
+    return key if len(key) == 32 and _b64u(key) == x and not is_weak_ed25519_key(key) else None
 
 
 @dataclass(frozen=True)
@@ -435,7 +447,7 @@ _SPECIAL_USE_V4 = [ipaddress.ip_network(n) for n in (
 )]
 _SPECIAL_USE_V6 = [ipaddress.ip_network(n) for n in (
     "::/96", "64:ff9b:1::/48", "100::/64", "2001::/23", "2001:db8::/32", "2002::/16",
-    "fc00::/7", "fe80::/10", "ff00::/8",
+    "fc00::/7", "fe80::/10", "fec0::/10", "ff00::/8", "::ffff:0:0:0/96", "3fff::/20", "5f00::/16",
 )]
 _V4_MAPPED = ipaddress.ip_network("::ffff:0:0/96")
 _NAT64 = ipaddress.ip_network("64:ff9b::/96")
@@ -485,6 +497,7 @@ def _refusal(
     lookup: Union[WebIdentityAddressLookup, bool, None],
     custom_fetch: bool,
     allow_loopback_http: bool,
+    timeout_s: float,
 ) -> Optional[str]:
     """Why ``url`` must not be fetched, or None.
 
@@ -513,10 +526,22 @@ def _refusal(
     resolver = lookup if callable(lookup) else (None if custom_fetch else _system_lookup)
     if resolver is None:
         return None
-    try:
-        addresses = resolver(hostname)
-    except Exception:
+    # The system resolver has no timeout of its own, so it runs on a daemon
+    # thread that is abandoned at the deadline.
+    answer: list[Any] = []
+
+    def run() -> None:
+        try:
+            answer.append(resolver(hostname))
+        except Exception:
+            pass
+
+    worker = threading.Thread(target=run, daemon=True)
+    worker.start()
+    worker.join(timeout_s)
+    if not answer:
         return f"Host of {url} could not be resolved"
+    addresses = answer[0]
     if not isinstance(addresses, (list, tuple)) or len(addresses) == 0:
         return f"Host of {url} could not be resolved"
     if any(is_special_use_address(a) for a in addresses):
@@ -542,7 +567,7 @@ def _resolve_uncached(
     why = check_web_identity(identity, allow_loopback_http=allow_loopback_http)
     if why:
         return fail(why)
-    refused = _refusal(identity, allow_host=allow_host, lookup=lookup, custom_fetch=fetch is not None, allow_loopback_http=allow_loopback_http)
+    refused = _refusal(identity, allow_host=allow_host, lookup=lookup, custom_fetch=fetch is not None, allow_loopback_http=allow_loopback_http, timeout_s=timeout_s)
     if refused:
         return fail(refused)
 
@@ -572,7 +597,7 @@ def _resolve_uncached(
         uri_why = _check_url(jwks_uri, loopback_http=allow_loopback_http, identity=False)
         if uri_why:
             return fail(f"Identity document jwks_uri {uri_why}")
-        keys_refused = _refusal(jwks_uri, allow_host=allow_host, lookup=lookup, custom_fetch=fetch is not None, allow_loopback_http=allow_loopback_http)
+        keys_refused = _refusal(jwks_uri, allow_host=allow_host, lookup=lookup, custom_fetch=fetch is not None, allow_loopback_http=allow_loopback_http, timeout_s=timeout_s)
         if keys_refused:
             return fail(keys_refused)
         jwks, keys_cache_control, reason = _fetch_json(jwks_uri, max_jwks_bytes, fetch, timeout_s)
@@ -622,6 +647,8 @@ def create_web_identity_resolver(
     lookup: Union[WebIdentityAddressLookup, bool, None] = None,
     on_failure: Optional[Callable[[str, str], None]] = None,
     now: Optional[Callable[[], float]] = None,
+    failure_cache_s: float = WEB_IDENTITY_FAILURE_CACHE_S,
+    max_concurrent_per_host: int = 8,
 ) -> Callable[[str], Optional[bytes]]:
     """A key resolver for web identities, with a bounded in-memory cache.
 
@@ -632,7 +659,11 @@ def create_web_identity_resolver(
     ``max_cache_s`` is the longest time a resolved key is reused; a shorter
     ``Cache-Control: max-age`` is honoured and ``no-store`` / ``no-cache``
     disable reuse. It is also how long a key removed from the document keeps
-    verifying. ``allow_host(hostname)`` is asked before each request.
+    verifying. ``allow_host(hostname)`` is asked before each request. A failure
+    is remembered for ``failure_cache_s`` (never longer than ``max_cache_s``), so
+    a token naming a dead host cannot force a request per verification. Threads
+    resolving one identity share one request, and more than
+    ``max_concurrent_per_host`` requests to one host are refused.
 
     ``lookup(hostname)`` returns the addresses a host resolves to, so a
     request to a special-use address (see :func:`is_special_use_address`) is
@@ -642,17 +673,71 @@ def create_web_identity_resolver(
     """
     clock = now or time.monotonic
     cache: dict[str, tuple[float, bytes]] = {}
+    # Separate from ``cache``, so junk identities cannot push out good keys.
+    failures: dict[str, float] = {}
+    in_flight: dict[str, threading.Event] = {}
+    per_host: dict[str, int] = {}
+    failure_s = min(failure_cache_s, max_cache_s)
     lock = threading.Lock()
+
+    def report(identity: str, reason: str) -> None:
+        if on_failure is not None:
+            try:
+                on_failure(identity, reason)
+            except Exception:
+                pass  # a logging hook that raises must not change the outcome
 
     def resolve(identity: str) -> Optional[bytes]:
         if not looks_like_web_identity(identity):
             return None
-        with lock:
-            hit = cache.get(identity)
-            if hit is not None:
-                if hit[0] > clock():
-                    return hit[1]
-                del cache[identity]
+        host = urlsplit(identity).hostname or identity
+        while True:
+            with lock:
+                hit = cache.get(identity)
+                if hit is not None:
+                    if hit[0] > clock():
+                        return hit[1]
+                    del cache[identity]
+                failed_until = failures.get(identity)
+                if failed_until is not None:
+                    if failed_until > clock():
+                        return None
+                    del failures[identity]
+                waiting = in_flight.get(identity)
+                if waiting is None:
+                    if per_host.get(host, 0) >= max_concurrent_per_host:
+                        over = True
+                    else:
+                        over = False
+                        in_flight[identity] = threading.Event()
+                        per_host[host] = per_host.get(host, 0) + 1
+                    break
+            # Another thread is resolving this identity: wait, then read its result.
+            if not waiting.wait(timeout_s * 3):
+                return None
+            with lock:
+                done = cache.get(identity)
+                if done is not None and done[0] > clock():
+                    return done[1]
+                if identity in failures:
+                    return None
+            return None
+        if over:
+            report(identity, f"Too many requests in flight to {host}")
+            return None
+        try:
+            return _resolve_and_store(identity)
+        finally:
+            with lock:
+                event = in_flight.pop(identity)
+                left = per_host.get(host, 1) - 1
+                if left > 0:
+                    per_host[host] = left
+                else:
+                    per_host.pop(host, None)
+            event.set()
+
+    def _resolve_and_store(identity: str) -> Optional[bytes]:
         try:
             result, lifetime = _resolve_uncached(
                 identity, fetch=fetch, timeout_s=timeout_s, max_document_bytes=max_document_bytes,
@@ -661,13 +746,12 @@ def create_web_identity_resolver(
         except Exception as e:
             result, lifetime = WebIdentityResolution(False, reason=f"Web identity resolution failed: {e}"), 0.0
         if not result.ok or result.key is None:
-            # Failures are never cached: a document that was briefly
-            # unreachable must not lock an identity out for the cache lifetime.
-            if on_failure is not None:
-                try:
-                    on_failure(identity, result.reason or "unknown")
-                except Exception:
-                    pass  # a logging hook that raises must not change the outcome
+            if failure_s > 0:
+                with lock:
+                    if len(failures) >= _CACHE_MAX_ENTRIES:
+                        del failures[next(iter(failures))]
+                    failures[identity] = clock() + failure_s
+            report(identity, result.reason or "unknown")
             return None
         if lifetime > 0:
             with lock:

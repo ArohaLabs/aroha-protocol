@@ -159,6 +159,10 @@ async function main() {
   const future: Body = { ...intent, issuedAt: "2027-01-01T00:00:00.000Z", mandateId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb" };
   const tampered = `${parts[0]}.${b64u(JSON.stringify({ ...claims(intent), authorization_details: [{ ...detail(intent), constraints: { spendLimitUsd: 5000, merchantCategory: "4511", currency: "USD" } }] }))}.${parts[2]}`;
 
+  const signHeaderText = async (headerText: string, c: unknown) => {
+    const input = `${b64u(headerText)}.${b64u(JSON.stringify(c))}`;
+    return `${input}.${b64u(await ed.signAsync(new TextEncoder().encode(input), keys.human.priv))}`;
+  };
   const signBom = async (where: "header" | "payload", c: unknown) => {
     const bom = (v: unknown) => b64u(Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), Buffer.from(JSON.stringify(v))]));
     const input = where === "header" ? `${bom(header("human"))}.${b64u(JSON.stringify(c))}` : `${b64u(JSON.stringify(header("human")))}.${bom(c)}`;
@@ -200,7 +204,7 @@ async function main() {
     { name: "authorization_details type is not a mandate", kind: "spending", token: await signRaw(header("human"), { ...claims(intent), authorization_details: [{ ...detail(intent), type: "payment_initiation" }] }, "human") },
     { name: "authorization_details restates the grantor", kind: "spending", token: await signRaw(header("human"), { ...claims(intent), authorization_details: [{ ...detail(intent), grantor: agent.did }] }, "human") },
     { name: "spending detail carries mandateType", kind: "spending", token: await signRaw(header("human"), { ...claims(intent), authorization_details: [{ ...detail(intent), mandateType: "task" }] }, "human") },
-    { name: "constraints missing", kind: "spending", token: await signRaw(header("human"), { ...claims(intent), authorization_details: [{ type: "aroha_spending_mandate", mandateTier: "intent", parentMandateId: null }] }, "human") },
+    { name: "constraints missing", kind: "spending", token: await signRaw(header("human"), { ...claims(intent), authorization_details: [{ type: "https://aroha-labs.com/mandates/spending", mandateTier: "intent", parentMandateId: null }] }, "human") },
     { name: "payload is not JSON", kind: "spending", token: `${parts[0]}.${b64u("not json")}.${parts[2]}` },
     { name: "payload is a JSON array", kind: "spending", token: await signRaw(header("human"), [claims(intent)], "human") },
     { name: "payload base64url with padding", kind: "spending", token: `${parts[0]}.${parts[1]}=.${parts[2]}` },
@@ -212,6 +216,12 @@ async function main() {
     { name: "task detail carrying a spending member", kind: "task", signer: "human", token: await signRaw(header("human"), { ...mandateBodyToJwtClaims("task", task), authorization_details: [{ ...(mandateBodyToJwtClaims("task", task).authorization_details as Record<string, unknown>[])[0], constraints: { spendLimitUsd: 1 } }] }, "human") },
     { name: "unknown member in taskConstraints", kind: "task", signer: "human", token: await signRaw(header("human"), { ...mandateBodyToJwtClaims("task", task), authorization_details: [{ ...(mandateBodyToJwtClaims("task", task).authorization_details as Record<string, unknown>[])[0], taskConstraints: { futureLimit: 1 } }] }, "human") },
     { name: "exp one second past year 9999", kind: "spending", token: await signRaw(header("human"), { ...claims(intent), exp: 253402300800 }, "human") },
+    { name: "exp equal to the verifying instant (RFC 7519: expired at exp)", kind: "spending", token: await signRaw(header("human"), { ...claims(intent), iat: NOW_MS / 1000 - 10, exp: NOW_MS / 1000 }, "human") },
+    { name: "repeated member name in the payload", kind: "spending", token: await signText(header("human"), JSON.stringify(claims(intent)).replace('"iss":', '"jti":"other","iss":'), "human") },
+    { name: "repeated member name in the header", kind: "spending", token: await signHeaderText(`{"alg":"none","alg":"EdDSA","typ":"${MANDATE_JWT_TYP}"}`, claims(intent)) },
+    { name: "iss with a colon that is not a URI", kind: "spending", token: await signRaw(header("human"), { ...claims(intent), sub: "a: b" }, "human") },
+    { name: "validUntil in another date form", kind: "spending", token: await signRaw(header("human"), { ...claims(intent), authorization_details: [{ ...detail(intent), constraints: { spendLimitUsd: 500, validUntil: "2030-01-01T00:00:00Z" } }] }, "human") },
+    { name: "validUntil on a day that does not exist", kind: "spending", token: await signRaw(header("human"), { ...claims(intent), authorization_details: [{ ...detail(intent), constraints: { spendLimitUsd: 500, validUntil: "2030-02-30T00:00:00.000Z" } }] }, "human") },
     { name: "header with a byte order mark", kind: "spending", token: await signBom("header", claims(intent)) },
     { name: "payload with a byte order mark", kind: "spending", token: await signBom("payload", claims(intent)) },
     { name: "exp before iat, both inside the clock tolerance", kind: "spending", token: await signRaw(header("human"), { ...claims(intent), iat: NOW_MS / 1000 + 20, exp: NOW_MS / 1000 + 10 }, "human") },
@@ -220,7 +230,7 @@ async function main() {
     { name: "amount above 2^53 - 1", kind: "spending", token: await signRaw(header("human"), { ...claims(intent), authorization_details: [{ ...detail(intent), constraints: { spendLimitUsd: 9007199254740992 } }] }, "human") },
     { name: "task mandate signed by a key that is not its grantor's", kind: "task", token: await sign("task", task, "agent"), signer: "human" },
     { name: "a spending mandate presented as a task mandate", kind: "task", token: jwt.intent, signer: "human" },
-    { name: "task detail without allowed", kind: "task", token: await signRaw(header("human"), { ...mandateBodyToJwtClaims("task", task), authorization_details: [{ type: "aroha_task_mandate", mandateType: "task", mandateTier: "intent", taskConstraints: {}, parentMandateId: null }] }, "human"), signer: "human" },
+    { name: "task detail without allowed", kind: "task", token: await signRaw(header("human"), { ...mandateBodyToJwtClaims("task", task), authorization_details: [{ type: "https://aroha-labs.com/mandates/task", mandateType: "task", mandateTier: "intent", taskConstraints: {}, parentMandateId: null }] }, "human"), signer: "human" },
   ];
 
   const vectors = {

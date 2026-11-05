@@ -158,7 +158,7 @@ describe("issuing spending mandates in the JWT form", () => {
     const claims = segment(cart.jwt!, 1);
     expect(claims).toMatchObject({ iss: assistant.did, sub: shop.did, jti: cart.mandate.mandateId });
     expect(Object.keys(claims).sort()).toEqual(["authorization_details", "exp", "iat", "iss", "jti", "sub"]);
-    expect(claims.authorization_details).toEqual([{ type: "aroha_spending_mandate", mandateTier: "cart", constraints: { spendLimitUsd: 300, merchantCategory: "4511" }, parentMandateId: intent.mandate.mandateId }]);
+    expect(claims.authorization_details).toEqual([{ type: "https://aroha-labs.com/mandates/spending", mandateTier: "cart", constraints: { spendLimitUsd: 300, merchantCategory: "4511" }, parentMandateId: intent.mandate.mandateId }]);
 
     const r = await verifyMandateChain(payment.token, undefined, { expectedRoot: human.did, expectedGrantee: shop.did, isRevoked: null });
     expect(r.valid, r.reason).toBe(true);
@@ -275,7 +275,7 @@ describe("task mandates in the JWT form", () => {
     const root = await issueTaskMandate(human.did, assistant.did, ["inbox.read", "inbox.archive"], { actionLimits: { "inbox.archive": 20 }, maxDelegationDepth: 2 }, human.priv, 3_600_000, { blocked: ["inbox.delete"], format: "jwt" });
     expect(root.token).toBe(root.jwt);
     expect(segment(root.jwt!, 0)).toEqual({ alg: "EdDSA", typ: MANDATE_JWT_TYP, kid: ed25519JwkThumbprint(human.pub) });
-    expect((segment(root.jwt!, 1).authorization_details as Record<string, unknown>[])[0]).toMatchObject({ type: "aroha_task_mandate", mandateType: "task", allowed: ["inbox.read", "inbox.archive"], blocked: ["inbox.delete"] });
+    expect((segment(root.jwt!, 1).authorization_details as Record<string, unknown>[])[0]).toMatchObject({ type: "https://aroha-labs.com/mandates/task", mandateType: "task", allowed: ["inbox.read", "inbox.archive"], blocked: ["inbox.delete"] });
 
     const r = await verifyTaskMandate(root.token, human.pub, assistant.did);
     expect(r.valid, r.reason).toBe(true);
@@ -322,7 +322,7 @@ describe("a stock JWT library (jose) reads and verifies a mandate", () => {
     const { payload, protectedHeader } = await jwtVerify(intent.token, keySet, { issuer: HUMAN, subject: ASSISTANT, typ: MANDATE_JWT_TYP, algorithms: ["EdDSA"] });
     expect(protectedHeader.kid).toBe(ed25519JwkThumbprint(human.pub));
     expect(payload.jti).toBe(intent.mandate.mandateId);
-    expect((payload.authorization_details as { type: string; constraints: { spendLimitUsd: number } }[])[0]).toMatchObject({ type: "aroha_spending_mandate", constraints: { spendLimitUsd: 500 } });
+    expect((payload.authorization_details as { type: string; constraints: { spendLimitUsd: number } }[])[0]).toMatchObject({ type: "https://aroha-labs.com/mandates/spending", constraints: { spendLimitUsd: 500 } });
 
     // jose refuses what the Aroha verifier refuses: another issuer's key, a changed payload.
     const other = createLocalJWKSet({ keys: [ed25519PublicKeyToJwk(assistant.pub, ed25519JwkThumbprint(human.pub))] } as never);
@@ -359,7 +359,7 @@ describe("a stock JWT library (jose) reads and verifies a mandate", () => {
     const now = Math.floor(Date.now() / 1000);
     const privateJwk = { kty: "OKP", crv: "Ed25519", x: b64u(human.pub), d: b64u(human.priv) };
     const token = await new SignJWT({
-      authorization_details: [{ type: "aroha_spending_mandate", mandateTier: "intent", constraints: { spendLimitUsd: 75 }, parentMandateId: null }],
+      authorization_details: [{ type: "https://aroha-labs.com/mandates/spending", mandateTier: "intent", constraints: { spendLimitUsd: 75 }, parentMandateId: null }],
     })
       .setProtectedHeader({ alg: "EdDSA", typ: MANDATE_JWT_TYP })
       .setIssuer(human.did).setSubject(assistant.did).setJti(crypto.randomUUID()).setIssuedAt(now).setExpirationTime(now + 600)

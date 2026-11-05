@@ -798,6 +798,9 @@ public class ArohaMandateCredential {
     @SuppressWarnings("unchecked")
     private static String checkTimeWindow(Map<String, Object> m, long now, long tolerance) {
         if (IsoTime.parseMillis(m.get("expiresAt")) < now) return "Mandate expired";
+        if (IsoTime.parseMillis(m.get("expiresAt")) < IsoTime.parseMillis(m.get("issuedAt"))) {
+            return "Mandate expires before it was issued";
+        }
         if (IsoTime.parseMillis(m.get("issuedAt")) > now + tolerance) {
             return "Mandate issuedAt " + m.get("issuedAt") + " is in the future";
         }
@@ -868,7 +871,7 @@ public class ArohaMandateCredential {
     }
 
     private static boolean isAmount(Object x) {
-        return x instanceof Number n && Double.isFinite(n.doubleValue()) && n.doubleValue() >= 0;
+        return x instanceof Number n && Double.isFinite(n.doubleValue()) && n.doubleValue() >= 0 && n.doubleValue() <= 9007199254740991d;
     }
 
     private static boolean isIsoDate(Object x) {

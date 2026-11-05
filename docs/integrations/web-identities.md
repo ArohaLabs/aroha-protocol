@@ -117,7 +117,8 @@ What the resolver does on each lookup:
 - Does not follow redirects, and accepts HTTP 200 only.
 - Reads at most 5 kilobytes of the document and 16 kilobytes of a key set, and waits at most 5 seconds.
 - Takes the first Ed25519 signing key in the key set.
-- Reuses a key for at most 5 minutes, or less if the response's `Cache-Control` says so. Failures are never cached.
+- Reuses a key for at most 5 minutes, or less if the response's `Cache-Control` says so. Remembers a failure for 30 seconds, so a dead host cannot force a request per verification.
+- Shares one request between concurrent lookups of one identity, and allows at most 8 requests at a time to one host.
 - Returns no key on any failure, so the mandate is rejected.
 
 ### Python
@@ -179,7 +180,7 @@ Removing a key works the same way: it keeps verifying until each verifier's cach
 ## What a verifier should know
 
 - **A web identity is as strong as its web host.** Whoever controls the host, its DNS records or a certificate for it can publish a key. If you need a name that no third party can change, use a `did:aroha` identifier.
-- **Pin the root.** Set `expectedRoot` or `trustedRoots`. Without it, any address that publishes a key can start a chain.
+- **Pin the root.** Set `expectedRoot` or `trustedRoots`. Without it, any address that publishes a key can start a chain. A chain that fails the pin is refused before any request is made.
 - **Internal addresses.** A hostile token could name a host that resolves to an address inside your network. The SDK refuses IP addresses and `localhost` outright. On Node.js and in Python it also resolves each host name first and refuses the request if any address is special-use. Three limits remain:
   - The check does not pin the connection. The request resolves the name again, so a resolver that changes its answer in between can still get through.
   - A Cloudflare Worker or a browser has no resolver to ask, so the check does not run there.

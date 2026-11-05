@@ -23,8 +23,8 @@
  *   }
  *
  * `proof` signs RFC 8785 JCS of
- *   { purpose: "aroha.mcp-mandate-presentation/v1", audience: <this agent's DID>,
- *     tool, argsSha256, mandateId, holder, nonce, expires }
+ *   { purpose: "aroha.mcp-mandate-presentation/v2", audience: <this agent's DID>,
+ *     tool, argsSha256, mandateId, tokenSha256, holder, nonce, expires }
  * so a token seen on the wire cannot be replayed for another tool, other
  * arguments, another server, or a second time. Build it with
  * `presentMandate()`. A mandate token on its own is never accepted: without
@@ -34,10 +34,11 @@
 import { createHash, randomUUID } from "node:crypto";
 import * as ed from "@noble/ed25519";
 import { canonicalizeJcs, type PublicKeyResolver } from "@aroha-sdk/core";
-import { looksLikeMandateJwt, peekMandateToken } from "@aroha-sdk/credentials";
+import { looksLikeMandateJwt, peekMandateToken, verifyEd25519 } from "@aroha-sdk/credentials";
 
 export const MANDATE_META_KEY = "aroha/mandate";
-export const MANDATE_PRESENTATION_PURPOSE = "aroha.mcp-mandate-presentation/v1";
+/** v2 added tokenSha256, so the proof covers the token and not only its minter-chosen id. */
+export const MANDATE_PRESENTATION_PURPOSE = "aroha.mcp-mandate-presentation/v2";
 const MAX_PRESENTATION_TTL_MS = 5 * 60_000;
 
 export interface MandatePresentation {
@@ -65,13 +66,14 @@ function mandateIdOf(token: string): string {
   return raw.mandate.mandateId;
 }
 
-function presentationBytes(p: Omit<MandatePresentation, "proof" | "token"> & { audience: string; tool: string; argsSha256: string; mandateId: string }): Uint8Array {
+function presentationBytes(p: Omit<MandatePresentation, "proof" | "token"> & { audience: string; tool: string; argsSha256: string; mandateId: string; tokenSha256: string }): Uint8Array {
   return new TextEncoder().encode(canonicalizeJcs({
     purpose: MANDATE_PRESENTATION_PURPOSE,
     audience: p.audience,
     tool: p.tool,
     argsSha256: p.argsSha256,
     mandateId: p.mandateId,
+    tokenSha256: p.tokenSha256,
     holder: p.holder,
     nonce: p.nonce,
     expires: p.expires,
@@ -95,7 +97,7 @@ export async function presentMandate(input: {
   const expires = new Date(Date.now() + Math.min(input.ttlMs ?? 60_000, MAX_PRESENTATION_TTL_MS)).toISOString();
   const bytes = presentationBytes({
     audience: input.audience, tool: input.tool, argsSha256: argsDigest(input.args),
-    mandateId: mandateIdOf(input.token), holder: input.holderDid, nonce, expires,
+    mandateId: mandateIdOf(input.token), tokenSha256: createHash("sha256").update(input.token, "utf8").digest("hex"), holder: input.holderDid, nonce, expires,
   });
   const proof = Buffer.from(await ed.signAsync(bytes, input.holderPrivateKey)).toString("base64url");
   return { [MANDATE_META_KEY]: { token: input.token, holder: input.holderDid, nonce, expires, proof } };
@@ -147,9 +149,9 @@ export async function verifyPresentation(
   let valid = false;
   try {
     const sig = new Uint8Array(Buffer.from(p.proof!, "base64url"));
-    valid = sig.length === 64 && await ed.verifyAsync(sig, presentationBytes({
+    valid = sig.length === 64 && await verifyEd25519(sig, presentationBytes({
       audience: ctx.audience, tool: ctx.tool, argsSha256: argsDigest(ctx.args),
-      mandateId, holder: p.holder!, nonce: p.nonce!, expires: p.expires!,
+      mandateId, tokenSha256: createHash("sha256").update(p.token!, "utf8").digest("hex"), holder: p.holder!, nonce: p.nonce!, expires: p.expires!,
     }), key);
   } catch {
     valid = false;

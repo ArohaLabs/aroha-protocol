@@ -19,12 +19,13 @@
  * `proof` is the holder's Ed25519 signature (base64url, no padding) over the
  * UTF-8 bytes of the RFC 8785 JCS canonicalisation of
  *
- *   { purpose:    "aroha.http-mandate-presentation/v1",
+ *   { purpose:    "aroha.http-mandate-presentation/v2",
  *     audience:   <the server's identifier, as the server configures it>,
  *     method:     <HTTP method, ASCII upper-case>,
  *     target:     <path + query exactly as sent; see httpRequestTarget()>,
  *     bodySha256: <lower-case hex SHA-256 of the exact body bytes; empty body = SHA-256("")>,
  *     mandateId:  <the presented token's leaf mandateId>,
+ *     tokenSha256: <lower-case hex SHA-256 of the exact token string>,
  *     holder, nonce, expires }
  *
  * Client:  headers = await presentMandateHttp({ token, holderDid, holderPrivateKey, audience, method, url, body })
@@ -37,6 +38,7 @@
 import * as ed from "@noble/ed25519";
 import { sha256 } from "@noble/hashes/sha2.js";
 import { sha512 } from "@noble/hashes/sha2.js";
+import { verifyEd25519 } from "./ed25519-strict.js";
 import { canonicalizeJcs } from "./jcs.js";
 import {
   createMandateKeyResolver,
@@ -54,7 +56,12 @@ ed.etc.sha512Sync = (...m: Parameters<typeof sha512>) => sha512(...m);
 /** The request header that carries a mandate presentation. */
 export const HTTP_MANDATE_HEADER = "Aroha-Mandate";
 /** Domain-separation string inside every HTTP presentation proof. */
-export const HTTP_MANDATE_PRESENTATION_PURPOSE = "aroha.http-mandate-presentation/v1";
+/**
+ * v2 added tokenSha256. A mandateId is chosen by whoever mints the mandate, so
+ * signing only the id let a different token with the same id stand in for the
+ * one the holder signed. The proof now covers the token itself.
+ */
+export const HTTP_MANDATE_PRESENTATION_PURPOSE = "aroha.http-mandate-presentation/v2";
 /** Longest lifetime a presentation may have (5 minutes). */
 export const HTTP_PRESENTATION_MAX_TTL_MS = 5 * 60_000;
 /** Clock-skew allowance a verifier adds to the maximum lifetime. */
@@ -231,6 +238,7 @@ export function httpPresentationSigningPayload(fields: {
   target: string;
   bodySha256: string;
   mandateId: string;
+  tokenSha256: string;
   holder: string;
   nonce: string;
   expires: string;
@@ -242,10 +250,16 @@ export function httpPresentationSigningPayload(fields: {
     target: fields.target,
     bodySha256: fields.bodySha256,
     mandateId: fields.mandateId,
+    tokenSha256: fields.tokenSha256,
     holder: fields.holder,
     nonce: fields.nonce,
     expires: fields.expires,
   });
+}
+
+/** Lower-case hex SHA-256 of the exact token string, as a holder proof signs it. */
+export function mandateTokenSha256(token: string): string {
+  return Buffer.from(sha256(new TextEncoder().encode(token))).toString("hex");
 }
 
 /** Leaf mandateId and grantee of a token, spending or task. Null when undecodable. */
@@ -336,7 +350,7 @@ export async function presentMandateHttp(input: PresentMandateHttpInput): Promis
 
   const payload = httpPresentationSigningPayload({
     audience: input.audience, method, target, bodySha256: httpBodySha256(input.body),
-    mandateId: leaf.mandateId, holder: input.holderDid, nonce, expires,
+    mandateId: leaf.mandateId, tokenSha256: mandateTokenSha256(input.token), holder: input.holderDid, nonce, expires,
   });
   const proof = Buffer.from(await ed.signAsync(new TextEncoder().encode(payload), input.holderPrivateKey)).toString("base64url");
   const value = Buffer.from(canonicalizeJcs({ token: input.token, holder: input.holderDid, nonce, expires, proof }), "utf8").toString("base64url");
@@ -441,8 +455,8 @@ async function checkPresentation(
   let valid = false;
   try {
     const sig = BASE64URL_RE.test(proof) ? new Uint8Array(Buffer.from(proof, "base64url")) : new Uint8Array(0);
-    valid = sig.length === 64 && await ed.verifyAsync(sig, new TextEncoder().encode(httpPresentationSigningPayload({
-      audience: opts.audience, method, target, bodySha256, mandateId: leaf.mandateId, holder, nonce, expires,
+    valid = sig.length === 64 && await verifyEd25519(sig, new TextEncoder().encode(httpPresentationSigningPayload({
+      audience: opts.audience, method, target, bodySha256, mandateId: leaf.mandateId, tokenSha256: mandateTokenSha256(token), holder, nonce, expires,
     })), key);
   } catch {
     valid = false;

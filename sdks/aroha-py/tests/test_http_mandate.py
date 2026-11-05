@@ -26,6 +26,7 @@ from aroha.http_mandate import (
     http_body_sha256,
     http_method_for_proof,
     http_presentation_signing_payload,
+    mandate_token_sha256,
     http_request_target,
     present_mandate_http,
     verify_http_mandate_request,
@@ -302,7 +303,7 @@ def test_vector_presentations_byte_for_byte():
         mandate_id = json.loads(unb64u(token))["mandate"]["mandateId"]
         assert http_presentation_signing_payload(
             audience=V["audience"], method=e["method"], target=e["target"], body_sha256=e["bodySha256"],
-            mandate_id=mandate_id, holder=k["did"], nonce=p["nonce"], expires=e["expires"],
+            mandate_id=mandate_id, token_sha256=mandate_token_sha256(token), holder=k["did"], nonce=p["nonce"], expires=e["expires"],
         ) == e["signingPayload"], c["name"]
         h = present_mandate_http(
             token=token, holder_did=k["did"], holder_private_key=bytes.fromhex(k["privateKeyHex"]),

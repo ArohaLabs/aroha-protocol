@@ -101,5 +101,8 @@ conformance-results.json
 # Built from docs/whitepaper.tex (see docs/whitepaper.md)
 docs/whitepaper.pdf
 
+# Output of scripts/web-identity-fixture.mjs (contains a test private key)
+web-identity-fixture/
+
 # Package-manager manifests are release artifacts (packaging/generate-manifests.mjs)
 packaging/out/

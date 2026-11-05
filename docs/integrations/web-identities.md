@@ -9,6 +9,8 @@ A mandate says what a key may do and within which limits. A *web identity* lets 
 
 The document is the OAuth Client ID Metadata Document that many agent platforms already ask an agent to publish. An agent that signs in somewhere with `https://agents.example.com/shopper` as its OAuth client id can sign and hold mandates under the same address. That OAuth draft does not mention mandates; using the document this way is Aroha's choice, and no OAuth flow runs.
 
+To see it run, [`examples/web-identities`](https://github.com/ArohaLabs/aroha-protocol/tree/main/examples/web-identities) is the $500 flight example between three web addresses. It needs no accounts and runs offline.
+
 The mandate token format does not change. Only the way a verifier finds the signer's key does.
 
 ## Which name to use
@@ -143,6 +145,31 @@ result = verify_mandate_chain(token, resolve_key, expected_root="https://account
 
 The server fetches identity documents through the same address-vetting fetch it uses for agent endpoints. It refuses hosts that resolve to loopback, private or link-local addresses.
 
+### Reference registry
+
+The registry's revocation and redemption endpoints verify the mandate chain themselves. They accept chains that contain web identities when the operator sets:
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `WEB_IDENTITIES=1` | off | Resolve web identities in `POST /v1/mandates/:id/revoke` and `/redeem` |
+| `WEB_IDENTITY_HOSTS` | any host | Comma-separated host names that may be fetched |
+
+With that set, a web identity revokes what it granted the same way a DID does:
+
+```typescript
+import { httpRevocationCheck, revokeMandate, verifyMandateChain } from "@aroha-sdk/credentials";
+
+// The grantor, or any grantor above it in the chain, withdraws the mandate.
+await revokeMandate(registryUrl, cart.token, humanPrivateKey, { revokerDid: "https://accounts.example.com/people/kiri" });
+
+// Every verifier that asks this registry then rejects the chain.
+const result = await verifyMandateChain(payment.token, resolveKey, { isRevoked: httpRevocationCheck(registryUrl) });
+```
+
+Pass `revokerDid`. The client can work out the revoker by itself only for `did:aroha:z…` grantors.
+
+It is off by default because `/revoke` accepts tokens from anyone, so a registry that resolves web identities can be asked to fetch public addresses. The public reference registry has not been redeployed with this build.
+
 ## Replacing a key
 
 Publish the new key as the first entry in `jwks.keys`. Verifiers pick it up when their cached copy expires, within 5 minutes by default. Mandates signed with the earlier key then stop verifying, so issue them again. This is the same rule an E-form key rotation follows, and it is why mandates are short-lived.
@@ -165,7 +192,7 @@ Removing a key works the same way: it keeps verifying until each verifier's cach
 
 - **A JWT form of the mandate.** The token is still the Aroha v2 token. A stock JWT library reads the published key, but it does not verify the token.
 - **Governed roots.** The governed profile still requires a `did:aroha:E…` person as the root.
-- **Registry-backed revocation.** The reference registry resolves DIDs only, so it cannot record a revocation for a chain that contains a web identity. Use your own `isRevoked` hook and short lifetimes.
+- **Revocation at the public reference registry.** Registry-backed revocation covers web identities only where the registry's operator has turned it on (see [Reference registry](#reference-registry)). The public reference deployment has not. Elsewhere, use your own `isRevoked` hook and short lifetimes.
 - **Message envelopes and registry records.** Agents that exchange Aroha envelopes or register in a registry still need a DID.
 - **Go and Java.** Not implemented.
 

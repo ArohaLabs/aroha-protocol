@@ -173,5 +173,5 @@ Each figure is from a run on the date given; re-run before quoting. Commit hashe
 - Enterprise sign-in (ID-JAG) is tested against a reference IdP, not a production one.
 - MCP Tasks are polling-only and held in memory per process (several instances must route on `Mcp-Name`).
 - Multi-hop task-chain verification and task receipts are TypeScript-only.
-- Web identities (spec §4.7) are unreleased, TypeScript and Python only, and not tested against any hosted assistant. The reference registry does not resolve them, so registry-backed revocation does not cover a chain that contains one.
+- Web identities (spec §4.7) are unreleased, TypeScript and Python only, and not tested against any hosted assistant (a runbook exists and has not been run). The registry server resolves them only when its operator sets `WEB_IDENTITIES=1`; the public reference registry has not been redeployed, so its revocation does not cover a chain that contains one.
 - Pre-built provider agents are published to npm (1.0.0, 2026-06-23), but their source and tests are not in this repository.

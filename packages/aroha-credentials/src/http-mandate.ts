@@ -46,6 +46,7 @@ import {
   type MandateRevocationCheck,
   type VerifyMandateChainOptions,
 } from "./mandate.js";
+import { looksLikeMandateJwt, peekMandateToken } from "./mandate-jwt.js";
 import type { ArohaSpendingMandateBody } from "@aroha-sdk/core";
 
 ed.etc.sha512Sync = (...m: Parameters<typeof sha512>) => sha512(...m);
@@ -249,6 +250,11 @@ export function httpPresentationSigningPayload(fields: {
 
 /** Leaf mandateId and grantee of a token, spending or task. Null when undecodable. */
 function tokenLeaf(token: string): { mandateId: string; grantee: string } | null {
+  // The JWT form (spec §6.10) is not base64url JSON; read its last link.
+  if (looksLikeMandateJwt(token)) {
+    const leaf = peekMandateToken(token);
+    return leaf && leaf.mandateId.length > 0 && leaf.grantee.length > 0 ? { mandateId: leaf.mandateId, grantee: leaf.grantee } : null;
+  }
   if (!BASE64URL_RE.test(token)) return null;
   try {
     const raw = JSON.parse(Buffer.from(token, "base64url").toString("utf8")) as { mandate?: { mandateId?: unknown; grantee?: unknown } };

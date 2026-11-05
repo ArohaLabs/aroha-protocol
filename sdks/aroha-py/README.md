@@ -294,6 +294,25 @@ come from `resolve_key` (default: content-addressed `did:aroha:z…` DIDs);
 pass `kel_source=` to resolve rotatable `did:aroha:E…` DIDs through their Key
 Event Logs, and `require_person_root=True` to insist the root is a person.
 
+### JWT form (unreleased)
+
+`issue_intent_mandate(..., format="jwt")` issues a mandate as a JSON Web
+Token (spec §6.10) that a stock JWT library can read; everything attenuated
+from it is a JWT too, and a chain is its link JWTs joined by `~`, root first.
+`issue_task_mandate(..., format="jwt")` does the same for task mandates.
+The verifiers (`verify_mandate_chain`, `verify_mandate`,
+`verify_task_mandate`, the HTTP presentation) accept both forms and apply
+the same chain rules. The native token stays the default.
+
+```python
+intent = issue_intent_mandate(human, assistant, SpendingConstraints(spend_limit_usd=500), human_key, format="jwt")
+cart = attenuate_to_cart(intent, shop, SpendingConstraints(spend_limit_usd=300), assistant_key)
+result = verify_mandate_chain(cart.token, expected_root=human, expected_grantee=shop)
+```
+
+A JWT library verifies one link, not the chain: narrowing, linkage, the root
+and revocation are still `verify_mandate_chain`'s job.
+
 ### Web identities (unreleased)
 
 A grantor or grantee can also be an HTTPS address that publishes its signing
@@ -486,6 +505,7 @@ signature).
 | E-DIDs / KELs (`aroha.kel`) | Verification ported (inception/rotate/recover/revoke/anchor, controller seals, stale/duplicity store); reproduces the L0-KEL-01 pinned vector. Issuing helpers included |
 | Message types / error codes | All 19 types, all 35 `ArohaErrorCode` values |
 | Task mandates v2 (`aroha.task_mandate`) | Wire-identical; every vector in `packages/aroha-credentials/test-vectors/task-mandate-v2.json` passes (payloads, signatures, verdicts, reasons, narrowing reasons, violation codes and messages); live round trips both ways |
+| Mandates as JWTs (`aroha.mandate_jwt`, unreleased) | Same verdicts on every token in `packages/aroha-credentials/test-vectors/mandate-jwt-v1.json`; signing a vector's body reproduces its JWT byte for byte |
 | Web identities (`aroha.web_identity`, unreleased) | Same accepted and refused addresses and documents; every case in `packages/aroha-credentials/test-vectors/web-identity-v1.json` passes |
 | Not ported | Redemption store (`redeemPaymentMandate`) and ledger allocation when issuing or attenuating (the spending ledger used by `verify_http_spend_request` is ported — see Durable stores), multi-hop task-chain verifier (`verifyTaskMandateChain` in `@aroha-sdk/delegation`), task receipts |
 

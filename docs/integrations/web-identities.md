@@ -190,7 +190,7 @@ Removing a key works the same way: it keeps verifying until each verifier's cach
 
 ## Not included
 
-- **A JWT form of the mandate.** The token is still the Aroha v2 token. A stock JWT library reads the published key, but it does not verify the token.
+- **A JWT by default.** Naming a party by a web address does not change the token. For a token a stock JWT library can verify, issue the mandate in the [JWT form](mandate-jwt.md).
 - **Governed roots.** The governed profile still requires a `did:aroha:E…` person as the root.
 - **Revocation at the public reference registry.** Registry-backed revocation covers web identities only where the registry's operator has turned it on (see [Reference registry](#reference-registry)). The public reference deployment has not. Elsewhere, use your own `isRevoked` hook and short lifetimes.
 - **Message envelopes and registry records.** Agents that exchange Aroha envelopes or register in a registry still need a DID.

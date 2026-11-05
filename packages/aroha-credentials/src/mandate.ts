@@ -69,7 +69,8 @@ import { canonicalizeJcs } from "./jcs.js";
 // governed.ts imports only TYPES from this module, so there is no runtime cycle.
 import { checkGovernedPrerequisites } from "./governed.js";
 // web-identity.ts imports only TYPES from this module, so there is no runtime cycle.
-import { createWebIdentityResolver, looksLikeWebIdentity, type WebIdentityResolverOptions } from "./web-identity.js";
+import { createWebIdentityResolver, ed25519JwkThumbprint, looksLikeWebIdentity, type WebIdentityResolverOptions } from "./web-identity.js";
+import { decodeMandateJwt, looksLikeMandateJwt, mandateJwtInstant, signMandateJwt, splitMandateJwtChain, MANDATE_JWT_SEPARATOR } from "./mandate-jwt.js";
 
 // re-export so callers don't need a separate import
 export { BudgetExhaustedError };
@@ -100,14 +101,26 @@ export interface MandateChainLink {
   v: 1 | 2;
   mandate: ArohaSpendingMandateBody;
   signature: string;
+  /**
+   * Set when this link is in the JWT form (spec §6.10): the compact JWS it
+   * was signed as. `signature` is then the JWS signature and `mandate` the
+   * body the JWT's claims decode to; `v` is 2, because a JWT link carries its
+   * ancestry the way a v2 link does. Absent on native links.
+   */
+  jwt?: string;
 }
 
 export interface SignedMandate {
   mandate: ArohaSpendingMandateBody;
-  /** base64url Ed25519 signature over the canonical mandate. */
+  /** base64url Ed25519 signature over the canonical mandate (native form) or the JWS signature (JWT form). */
   signature: string;
-  /** base64url serialised token — embed in message body credentialToken. */
+  /**
+   * The serialised token. Native form: base64url JSON, for the message body's
+   * credentialToken. JWT form: the chain's link JWTs joined by "~", root first.
+   */
   token: string;
+  /** Set for a mandate in the JWT form: this mandate's own JWT, the last link of `token`. */
+  jwt?: string;
   /**
    * Set when the mandate was issued via a SpendingLedger.
    * Store this alongside the saga step so you can call releaseAllocation()
@@ -383,13 +396,23 @@ export async function issueIntentMandate(
      * payee. Inherited by every child (attenuation cannot change it).
      */
     actingFor?: "payer" | "payee";
+    /**
+     * "jwt" issues the mandate in the JWT form (spec §6.10), which a stock
+     * JWT library can read and verify. Every mandate attenuated from it is a
+     * JWT too. Default: the native v2 token. Times in the JWT form are whole
+     * seconds, so the mandate may expire up to a second sooner than ttlMs.
+     */
+    format?: "jwt";
   }
 ): Promise<SignedMandate> {
   if (options?.actingFor !== undefined && options.actingFor !== "payer" && options.actingFor !== "payee") {
     throw new Error(`Invalid actingFor "${String(options.actingFor)}": must be "payer" or "payee"`);
   }
+  if (options?.format !== undefined && options.format !== "jwt") {
+    throw new Error(`Invalid format "${String(options.format)}": must be "jwt" or left out`);
+  }
   const signed = await issueMandateInternal(
-    "intent", grantorDID, granteeDID, constraints, null, privateKey, Date.now() + ttlMs, [], options?.actingFor
+    "intent", grantorDID, granteeDID, constraints, null, privateKey, Date.now() + ttlMs, [], options?.actingFor, options?.format
   );
   if (options?.ledger) {
     await options.ledger.init(
@@ -507,7 +530,9 @@ async function attenuateInternal(
     chain,
     // Inherited unconditionally: a child acting for the other side of the
     // payment than its parent is exactly what the field exists to rule out.
-    parent.mandate.actingFor
+    parent.mandate.actingFor,
+    // A chain is in one form: the child of a JWT is a JWT (spec §6.10).
+    chain[chain.length - 1].jwt !== undefined ? "jwt" : undefined
   );
 
   return { ...signed, allocationId };
@@ -524,12 +549,24 @@ async function attenuateInternal(
 function ancestryIncludingParent(parent: SignedMandate): MandateChainLink[] {
   let version = parent.v;
   let ancestors = parent.chain;
-  if (ancestors === undefined && typeof parent.token === "string") {
+  let jwt = parent.jwt;
+  if ((ancestors === undefined || jwt === undefined) && typeof parent.token === "string") {
     const decoded = parseMandateToken(parent.token);
     if (typeof decoded !== "string" && decoded.leaf.mandate.mandateId === parent.mandate.mandateId) {
-      version = decoded.leaf.v;
-      ancestors = decoded.ancestors;
+      if (ancestors === undefined) {
+        version = decoded.leaf.v;
+        ancestors = decoded.ancestors;
+      }
+      jwt ??= decoded.leaf.jwt;
     }
+  }
+  if (jwt !== undefined) {
+    // The JWT form carries the whole chain as JWTs; a parent rebuilt by hand
+    // without them cannot be extended.
+    if (ancestors === undefined || ancestors.some((l) => l.jwt === undefined)) {
+      throw new Error("Cannot attenuate a JWT-form mandate whose ancestors are not all JWTs. Decode the full token with decodeMandateToken first.");
+    }
+    return [...ancestors, { v: 2, mandate: parent.mandate, signature: parent.signature, jwt }];
   }
   const v: 1 | 2 = version === 2 ? 2 : 1;
   if (ancestors === undefined) {
@@ -558,6 +595,7 @@ export function decodeMandateToken(token: string): SignedMandate {
     token,
     v: parsed.leaf.v,
     chain: parsed.leaf.v === 2 ? parsed.ancestors : undefined,
+    ...(parsed.leaf.jwt !== undefined ? { jwt: parsed.leaf.jwt } : {}),
   };
 }
 
@@ -1195,6 +1233,22 @@ function signingBytes(v: 1 | 2, mandate: ArohaSpendingMandateBody): Uint8Array {
 }
 
 async function checkLinkSignature(link: MandateChainLink, publicKey: Uint8Array): Promise<string | null> {
+  if (link.jwt !== undefined) {
+    // JWT form: the signature covers the JWT's own text. Decode it again
+    // here instead of trusting `mandate` and `signature`, so a link whose
+    // body was swapped after parsing cannot ride on another body's signature.
+    const decoded = decodeMandateJwt(link.jwt);
+    if (typeof decoded === "string" || decoded.kind !== "spending") return "Invalid signature";
+    if (decoded.signature !== link.signature || canonicalizeJcs(decoded.body) !== canonicalizeJcs(link.mandate)) {
+      return "Mandate does not match its signed JWT";
+    }
+    try {
+      const valid = await ed.verifyAsync(Buffer.from(decoded.signature, "base64url"), new TextEncoder().encode(decoded.signingInput), publicKey);
+      return valid ? null : "Invalid signature";
+    } catch {
+      return "Signature verification error";
+    }
+  }
   try {
     const sigBytes = Buffer.from(link.signature, "base64url");
     const valid = await ed.verifyAsync(sigBytes, signingBytes(link.v, link.mandate), publicKey);
@@ -1254,6 +1308,7 @@ function isRecord(x: unknown): x is Record<string, unknown> {
 
 /** Returns the parsed token or a human-readable reason it was rejected. */
 function parseMandateToken(token: string): ParsedMandateToken | string {
+  if (looksLikeMandateJwt(token)) return parseJwtMandateToken(token);
   let raw: unknown;
   try {
     raw = JSON.parse(Buffer.from(token, "base64url").toString("utf8"));
@@ -1285,6 +1340,31 @@ function parseMandateToken(token: string): ParsedMandateToken | string {
     }
   }
   return { leaf, ancestors };
+}
+
+/** More links than any verifier accepts; refused before a single one is decoded. */
+const MAX_JWT_LINKS = 64;
+
+/**
+ * Parse a token in the JWT form (spec §6.10): link JWTs joined by "~", root
+ * first, the leaf last. Each link's claims are mapped back to a mandate body
+ * and put through the SAME shape check as a native link, so every rule that
+ * follows reads one kind of object.
+ */
+function parseJwtMandateToken(token: string): ParsedMandateToken | string {
+  const parts = splitMandateJwtChain(token);
+  if (typeof parts === "string") return `Malformed token: ${parts}`;
+  if (parts.length > MAX_JWT_LINKS) return `Malformed token: ${parts.length} links`;
+  const links: MandateChainLink[] = [];
+  for (let i = 0; i < parts.length; i++) {
+    const decoded = decodeMandateJwt(parts[i]);
+    if (typeof decoded === "string") return `Malformed token: link ${i}: ${decoded}`;
+    if (decoded.kind !== "spending") return `Malformed token: link ${i} is a task mandate, not a spending mandate`;
+    const shape = checkMandateShape(decoded.body);
+    if (shape) return `Malformed token: link ${i}: ${shape}`;
+    links.push({ v: 2, mandate: decoded.body as unknown as ArohaSpendingMandateBody, signature: decoded.signature, jwt: parts[i] });
+  }
+  return { leaf: links[links.length - 1], ancestors: links.slice(0, -1) };
 }
 
 function toLink(v: 1 | 2, raw: Record<string, unknown>): MandateChainLink | string {
@@ -1360,11 +1440,15 @@ async function issueMandateInternal(
   privateKey: Uint8Array,
   expiresAtMs: number,
   chain: MandateChainLink[],
-  actingFor?: "payer" | "payee"
+  actingFor?: "payer" | "payee",
+  format?: "jwt"
 ): Promise<SignedMandate> {
   const shapeProblem = checkConstraintsShape(constraints);
   if (shapeProblem) throw new Error(`Invalid spending constraints: ${shapeProblem}`);
 
+  // A JWT carries whole seconds. Rounding DOWN keeps a child's expiry at or
+  // before its parent's, which is itself on a whole second.
+  const instant = (ms: number) => new Date(format === "jwt" ? mandateJwtInstant(ms) : ms).toISOString();
   const mandate: ArohaSpendingMandateBody = {
     mandateTier: tier,
     // JSON round-trip: the body we sign must be exactly the body the verifier
@@ -1372,14 +1456,30 @@ async function issueMandateInternal(
     constraints: JSON.parse(JSON.stringify(constraints)) as SpendingConstraints,
     grantee: granteeDID,
     grantor: grantorDID,
-    issuedAt: new Date().toISOString(),
-    expiresAt: new Date(expiresAtMs).toISOString(),
+    issuedAt: instant(Date.now()),
+    expiresAt: instant(expiresAtMs),
     parentMandateId,
     mandateId: crypto.randomUUID(),
     // Only when declared: an absent field leaves the JCS payload byte-identical
     // to tokens issued before actingFor existed.
     ...(actingFor !== undefined ? { actingFor } : {}),
   };
+
+  if (format === "jwt") {
+    if (chain.some((l) => l.jwt === undefined)) {
+      throw new Error("A JWT-form mandate cannot be attenuated from a native one: a chain is in one form");
+    }
+    const kid = ed25519JwkThumbprint(await ed.getPublicKeyAsync(privateKey));
+    const jwt = await signMandateJwt("spending", mandate as unknown as Record<string, unknown>, privateKey, kid);
+    return {
+      v: 2,
+      mandate,
+      signature: jwt.slice(jwt.lastIndexOf(".") + 1),
+      token: [...chain.map((l) => l.jwt as string), jwt].join(MANDATE_JWT_SEPARATOR),
+      chain,
+      jwt,
+    };
+  }
 
   const sig = await ed.signAsync(signingBytes(2, mandate), privateKey);
   const signature = Buffer.from(sig).toString("base64url");
@@ -1554,6 +1654,12 @@ export interface SignedTaskMandate {
    * absent on old objects) = sortKeys/JSON.stringify over the body.
    */
   v?: 1 | 2;
+  /**
+   * Set when the mandate is in the JWT form (spec §6.10): `token` is this
+   * compact JWS, `signature` its JWS signature, and `mandate` the body the
+   * JWT's claims decode to.
+   */
+  jwt?: string;
 }
 
 /** Task-mandate token version produced by issueTaskMandate / attenuateTaskMandate. */
@@ -1594,9 +1700,21 @@ function taskSigningBytes(v: 1 | 2, mandate: ArohaTaskMandateBody): Uint8Array {
  * chain verifier so both read the version marker the same way.
  */
 export async function verifyTaskMandateSignature(
-  signed: { mandate: ArohaTaskMandateBody; signature: string; v?: 1 | 2 },
+  signed: { mandate: ArohaTaskMandateBody; signature: string; v?: 1 | 2; jwt?: string },
   publicKey: Uint8Array
 ): Promise<boolean> {
+  if (signed.jwt !== undefined) {
+    // JWT form: verify the JWT's own text, and refuse a body that is not the
+    // one its claims decode to (see checkLinkSignature for spending links).
+    const decoded = decodeMandateJwt(signed.jwt);
+    if (typeof decoded === "string" || decoded.kind !== "task") return false;
+    if (decoded.signature !== signed.signature || canonicalizeJcs(decoded.body) !== canonicalizeJcs(signed.mandate)) return false;
+    try {
+      return await ed.verifyAsync(Buffer.from(decoded.signature, "base64url"), new TextEncoder().encode(decoded.signingInput), publicKey);
+    } catch {
+      return false;
+    }
+  }
   try {
     const v: 1 | 2 = signed.v === 2 ? 2 : 1;
     return await ed.verifyAsync(Buffer.from(signed.signature, "base64url"), taskSigningBytes(v, signed.mandate), publicKey);
@@ -1620,6 +1738,40 @@ export interface TaskMandateVerificationResult {
   valid: boolean;
   mandate?: ArohaTaskMandateBody;
   reason?: string;
+}
+
+/**
+ * Decode a task-mandate token of either form into a SignedTaskMandate, or
+ * return the reason it is malformed. No signature is checked. Shared by
+ * verifyTaskMandate and @aroha-sdk/delegation's chain verifier, so both read
+ * a token the same way.
+ *
+ *   native (§6.6)  base64url JSON of { v?, mandate, signature }
+ *   JWT (§6.10)    one compact JWS whose claims decode to the mandate body
+ */
+export function decodeTaskMandateToken(token: unknown): SignedTaskMandate | string {
+  if (typeof token !== "string" || token.length === 0) return "Malformed token";
+  if (looksLikeMandateJwt(token)) {
+    const decoded = decodeMandateJwt(token);
+    if (typeof decoded === "string") return `Malformed token: ${decoded}`;
+    if (decoded.kind !== "task") return "Malformed token: this is a spending mandate, not a task mandate";
+    const shape = checkTaskMandateShape(decoded.body);
+    if (shape) return `Malformed token: ${shape}`;
+    return { mandate: decoded.body as unknown as ArohaTaskMandateBody, signature: decoded.signature, token, v: 2, jwt: token };
+  }
+  let raw: unknown;
+  try {
+    raw = JSON.parse(Buffer.from(token, "base64url").toString("utf8"));
+  } catch {
+    return "Malformed token";
+  }
+  if (!isRecord(raw)) return "Malformed token";
+  if (typeof raw.signature !== "string" || raw.signature.length === 0) return "Malformed token: signature missing";
+  const version = taskMandateTokenVersion(raw);
+  if (version === null) return `Unsupported task mandate token version: ${String(raw.v)}`;
+  const shape = checkTaskMandateShape(raw.mandate);
+  if (shape) return `Malformed token: ${shape}`;
+  return { mandate: raw.mandate as ArohaTaskMandateBody, signature: raw.signature, token, v: version };
 }
 
 /**
@@ -1661,8 +1813,18 @@ export async function issueTaskMandate(
      * verifier then rejects a mandate that was correct when it was built.
      */
     expiresAtMs?: number;
+    /**
+     * "jwt" issues the mandate in the JWT form (spec §6.10). Default: the
+     * native v2 token. Times in the JWT form are whole seconds.
+     */
+    format?: "jwt";
   }
 ): Promise<SignedTaskMandate> {
+  if (options?.format !== undefined && options.format !== "jwt") {
+    throw new Error(`Invalid format "${String(options.format)}": must be "jwt" or left out`);
+  }
+  const jwtForm = options?.format === "jwt";
+  const instant = (ms: number) => new Date(jwtForm ? mandateJwtInstant(ms) : ms).toISOString();
   const mandateType = options?.spendingConstraints ? "hybrid" : "task";
   const draft: ArohaTaskMandateBody = {
     mandateType,
@@ -1674,14 +1836,20 @@ export async function issueTaskMandate(
     invariants: options?.invariants,
     grantee: granteeDID,
     grantor: grantorDID,
-    issuedAt: new Date().toISOString(),
-    expiresAt: new Date(options?.expiresAtMs ?? Date.now() + ttlMs).toISOString(),
+    issuedAt: instant(Date.now()),
+    expiresAt: instant(options?.expiresAtMs ?? Date.now() + ttlMs),
     parentMandateId: options?.parentMandateId ?? null,
     mandateId: crypto.randomUUID(),
   };
   // JSON round-trip: the body we sign must be exactly the body the verifier
   // will decode — no undefined-valued optional keys (JCS has no "undefined").
   const mandate = JSON.parse(JSON.stringify(draft)) as ArohaTaskMandateBody;
+
+  if (jwtForm) {
+    const kid = ed25519JwkThumbprint(await ed.getPublicKeyAsync(privateKey));
+    const jwt = await signMandateJwt("task", mandate as unknown as Record<string, unknown>, privateKey, kid);
+    return { mandate, signature: jwt.slice(jwt.lastIndexOf(".") + 1), token: jwt, v: 2, jwt };
+  }
 
   const sig = await ed.signAsync(taskSigningBytes(2, mandate), privateKey);
   const signature = Buffer.from(sig).toString("base64url");
@@ -1757,6 +1925,8 @@ export async function attenuateTaskMandate(
       parentMandateId: parent.mandate.mandateId,
       tier: parent.mandate.mandateTier === "intent" ? "cart" : "execution",
       invariants,
+      // A chain is in one form: the child of a JWT is a JWT (spec §6.10).
+      ...(parent.jwt !== undefined || looksLikeMandateJwt(parent.token) ? { format: "jwt" as const } : {}),
     }
   );
 }
@@ -1823,22 +1993,11 @@ export async function verifyTaskMandate(
   options: VerifyTaskMandateOptions = {}
 ): Promise<TaskMandateVerificationResult> {
   if (typeof token !== "string" || token.length === 0) return { valid: false, reason: "Malformed token" };
-  let raw: unknown;
-  try {
-    raw = JSON.parse(Buffer.from(token, "base64url").toString("utf8"));
-  } catch {
-    return { valid: false, reason: "Malformed token" };
-  }
-  if (!isRecord(raw)) return { valid: false, reason: "Malformed token" };
-  if (typeof raw.signature !== "string" || raw.signature.length === 0) {
-    return { valid: false, reason: "Malformed token: signature missing" };
-  }
-  const version = taskMandateTokenVersion(raw);
-  if (version === null) return { valid: false, reason: `Unsupported task mandate token version: ${String(raw.v)}` };
-  const shape = checkTaskMandateShape(raw.mandate);
-  if (shape) return { valid: false, reason: `Malformed token: ${shape}` };
-  const mandate = raw.mandate as ArohaTaskMandateBody;
-  const signature = raw.signature;
+  const parsed = decodeTaskMandateToken(token);
+  if (typeof parsed === "string") return { valid: false, reason: parsed };
+  const { mandate, signature } = parsed;
+  const version: 1 | 2 = parsed.v === 2 ? 2 : 1;
+  const jwt = parsed.jwt;
 
   const now = options.now ?? Date.now();
   const tolerance = options.clockToleranceMs ?? DEFAULT_CLOCK_TOLERANCE_MS;
@@ -1856,7 +2015,7 @@ export async function verifyTaskMandate(
     return { valid: false, reason: `Grantee mismatch: expected ${expectedGrantee}` };
   }
 
-  if (!(await verifyTaskMandateSignature({ mandate, signature, v: version }, publicKey))) {
+  if (!(await verifyTaskMandateSignature({ mandate, signature, v: version, ...(jwt !== undefined ? { jwt } : {}) }, publicKey))) {
     return { valid: false, reason: "Invalid signature" };
   }
 

@@ -108,6 +108,26 @@ describe("wrapMcp MCP-on-the-wire mode", () => {
     await c.close();
   });
 
+  it("accepts a mandate in the JWT form (spec §6.10), presented the same way", async () => {
+    const c = await client("modern");
+    const jwt = (await issueIntentMandate(HUMAN_DID, HOLDER_DID, { spendLimitUsd: 10, currency: "USD" }, humanPriv, 600_000, { format: "jwt" })).token;
+    expect(jwt.split(".")).toHaveLength(3);
+    const args = { q: "trains" };
+    const meta = await presentMandate({ token: jwt, holderDid: HOLDER_DID, holderPrivateKey: holderPriv, audience: BRIDGE_DID, tool: "search", args });
+    const r = await c.callTool({ name: "search", arguments: args, _meta: meta });
+    expect(r.isError).toBeFalsy();
+    expect(textOf(r)).toBe("found trains");
+
+    // A JWT whose claims were changed after signing is refused.
+    const [h, p, s] = jwt.split(".");
+    const claims = JSON.parse(Buffer.from(p, "base64url").toString("utf8")) as { exp: number };
+    const tampered = `${h}.${Buffer.from(JSON.stringify({ ...claims, exp: claims.exp + 86_400 })).toString("base64url")}.${s}`;
+    const badMeta = await presentMandate({ token: tampered, holderDid: HOLDER_DID, holderPrivateKey: holderPriv, audience: BRIDGE_DID, tool: "search", args });
+    const bad = await c.callTool({ name: "search", arguments: args, _meta: badMeta });
+    expect(bad.isError).toBe(true);
+    await c.close();
+  });
+
   it("refuses a presentation made for other arguments or another agent", async () => {
     const c = await client("modern");
     const other = await presentMandate({ token, holderDid: HOLDER_DID, holderPrivateKey: holderPriv, audience: BRIDGE_DID, tool: "search", args: { q: "a" } });

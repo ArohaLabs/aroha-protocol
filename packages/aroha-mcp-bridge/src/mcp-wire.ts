@@ -34,6 +34,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import * as ed from "@noble/ed25519";
 import { canonicalizeJcs, type PublicKeyResolver } from "@aroha-sdk/core";
+import { looksLikeMandateJwt, peekMandateToken } from "@aroha-sdk/credentials";
 
 export const MANDATE_META_KEY = "aroha/mandate";
 export const MANDATE_PRESENTATION_PURPOSE = "aroha.mcp-mandate-presentation/v1";
@@ -53,6 +54,12 @@ export function argsDigest(args: unknown): string {
 }
 
 function mandateIdOf(token: string): string {
+  // The JWT form (spec §6.10) is not base64url JSON; read its last link.
+  if (looksLikeMandateJwt(token)) {
+    const leaf = peekMandateToken(token);
+    if (!leaf) throw new Error("malformed mandate token");
+    return leaf.mandateId;
+  }
   const raw = JSON.parse(Buffer.from(token, "base64url").toString("utf8")) as { mandate?: { mandateId?: unknown } };
   if (typeof raw?.mandate?.mandateId !== "string") throw new Error("malformed mandate token");
   return raw.mandate.mandateId;

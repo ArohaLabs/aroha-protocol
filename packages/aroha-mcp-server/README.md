@@ -162,6 +162,8 @@ aroha_get_receipt(receiptId)
 ### `verify_mandate`
 Verify a mandate token: spending chains link by link to the root (governed profile when configured), task mandates against their grantor's key; time window, revocation and expected grantee.
 
+The token may be in the native form or the JWT form (spec §6.10; unreleased). The issuing tools still issue native tokens.
+
 A mandate whose grantor is a web identity (an `https://` address that publishes its key) verifies only when `AROHA_MCP_WEB_IDENTITIES=1`. The identity document is fetched through the same address-vetting fetch as agent endpoints: no redirects, and no loopback, private or link-local addresses.
 
 ### `revoke_mandate`

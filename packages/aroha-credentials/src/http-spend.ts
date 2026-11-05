@@ -42,6 +42,7 @@ import {
   mandateCumulativeLimitUsd,
   type SpendConstraintCode,
 } from "./mandate.js";
+import { looksLikeMandateJwt, peekMandateToken } from "./mandate-jwt.js";
 import { mandateRedemptionKey } from "./redemption.js";
 import { BudgetExhaustedError, type ISpendingLedger } from "./spending-ledger.js";
 
@@ -257,6 +258,7 @@ function presentedTaskMandate(headerValue: unknown): boolean {
   try {
     const p = JSON.parse(Buffer.from(headerValue, "base64url").toString("utf8")) as { token?: unknown };
     if (typeof p?.token !== "string") return false;
+    if (looksLikeMandateJwt(p.token)) return peekMandateToken(p.token)?.kind === "task";
     const t = JSON.parse(Buffer.from(p.token, "base64url").toString("utf8")) as { mandate?: { mandateType?: unknown } };
     return t?.mandate !== null && typeof t?.mandate === "object" && t.mandate.mandateType !== undefined;
   } catch {

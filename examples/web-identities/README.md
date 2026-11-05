@@ -28,6 +28,7 @@ flight agent → http://127.0.0.1:56066/agents/flights
 valid: true chainVerified: true limit: 300
 widening to $600 → Cannot attenuate intent → payment: child spendLimitUsd (600) exceeds parent (500)
 forged link  → valid: false
+as JWTs      → valid: true links: 2 leaf iss is the assistant: true limit: 300
 after the assistant changes its key → valid: false
 ```
 
@@ -44,6 +45,9 @@ The port changes on every run.
   signer's key from its address. The same resolver still accepts `did:aroha`
   identifiers.
 - **Narrowing still holds.** $600 out of a $500 grant is refused.
+- **JWTs when you want them.** `{ format: "jwt" }` at the root issues every
+  link as a JSON Web Token that a stock JWT library can read. The same
+  verifier checks the chain. See [Mandates as JWTs](../../docs/integrations/mandate-jwt.md).
 - **The address is the authority.** A link signed by a key the address does
   not publish is refused. When the assistant replaces its key, what it signed
   with the old one stops verifying.

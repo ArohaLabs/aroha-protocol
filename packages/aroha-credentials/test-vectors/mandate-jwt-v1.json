@@ -1,0 +1,837 @@
+{
+  "description": "Conformance vectors for the JWT form of a mandate (spec section 6.10). `links`: each `jwt` decodes to `body`, its header and claims are `header` and `claims`, and its signature verifies under the key of `signer`. `tokens`: judge each at the instant `nowMs`. A spending token is verified as a chain, with keys derived from the did:aroha:z identifiers; a task token is verified as one link under the key of `signer`. `expect.valid` is the verdict; for a valid spending token `rootGrantor`, the leaf `mandateId` and the number of `links` must match too. Keys are the RFC 8032 section 7.1 test keys.",
+  "version": 1,
+  "typ": "aroha-mandate+jwt",
+  "nowMs": 1790000000000,
+  "keys": {
+    "human": {
+      "seedHex": "9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60",
+      "publicKeyHex": "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a",
+      "did": "did:aroha:zFVen3X669xLzsi6N2V91DoiyzHzg1uAgqiT8jZ9nS96Z",
+      "kid": "kPrK_qmxVWaYVA9wwBF6Iuo3vVzz7TxHCTwXBygrS4k"
+    },
+    "agent": {
+      "seedHex": "4ccd089b28ff96da9db6c346ec114e0f5b8a319f35aba624da8cf6ed4fb8a6fb",
+      "publicKeyHex": "3d4017c3e843895a92b70aa74d1b7ebc9c982ccf2ec4968cc0cd55f12af4660c",
+      "did": "did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5",
+      "kid": "FtIu-VbGrfe_KB6CH7GNwODB72MNxj_ml11dEvO-7kk"
+    },
+    "provider": {
+      "seedHex": "c5aa8df43f9f837bedb7442f31dcb7b166d38535076f094b85ce3a2e0b4458f7",
+      "publicKeyHex": "fc51cd8e6218a1a38da47ed00230f0580816ed13ba3303ac5deb911548908025",
+      "did": "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr",
+      "kid": "FVV5umTuau890q59V-4Ga_R6qWb7ON_ivJc4EjvCwTM"
+    }
+  },
+  "links": [
+    {
+      "name": "spending intent",
+      "kind": "spending",
+      "signer": "human",
+      "body": {
+        "mandateTier": "intent",
+        "constraints": {
+          "spendLimitUsd": 500,
+          "merchantCategory": "4511",
+          "currency": "USD"
+        },
+        "grantee": "did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5",
+        "grantor": "did:aroha:zFVen3X669xLzsi6N2V91DoiyzHzg1uAgqiT8jZ9nS96Z",
+        "issuedAt": "2026-01-01T00:00:00.000Z",
+        "expiresAt": "2100-01-01T00:00:00.000Z",
+        "parentMandateId": null,
+        "mandateId": "11111111-1111-4111-8111-111111111111"
+      },
+      "header": {
+        "alg": "EdDSA",
+        "typ": "aroha-mandate+jwt",
+        "kid": "kPrK_qmxVWaYVA9wwBF6Iuo3vVzz7TxHCTwXBygrS4k"
+      },
+      "claims": {
+        "iss": "did:aroha:zFVen3X669xLzsi6N2V91DoiyzHzg1uAgqiT8jZ9nS96Z",
+        "sub": "did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5",
+        "jti": "11111111-1111-4111-8111-111111111111",
+        "iat": 1767225600,
+        "exp": 4102444800,
+        "authorization_details": [
+          {
+            "type": "aroha_spending_mandate",
+            "mandateTier": "intent",
+            "constraints": {
+              "spendLimitUsd": 500,
+              "merchantCategory": "4511",
+              "currency": "USD"
+            },
+            "parentMandateId": null
+          }
+        ]
+      },
+      "jwt": "eyJhbGciOiJFZERTQSIsInR5cCI6ImFyb2hhLW1hbmRhdGUrand0Iiwia2lkIjoia1ByS19xbXhWV2FZVkE5d3dCRjZJdW8zdlZ6ejdUeEhDVHdYQnlnclM0ayJ9.eyJpc3MiOiJkaWQ6YXJvaGE6ekZWZW4zWDY2OXhMenNpNk4yVjkxRG9peXpIemcxdUFncWlUOGpaOW5TOTZaIiwic3ViIjoiZGlkOmFyb2hhOno1ODZaN0gydnBYOXFOaE4yVDRlOVV0dWdpZTNvZ2pieHpHYU10TTNFNkhSNSIsImp0aSI6IjExMTExMTExLTExMTEtNDExMS04MTExLTExMTExMTExMTExMSIsImlhdCI6MTc2NzIyNTYwMCwiZXhwIjo0MTAyNDQ0ODAwLCJhdXRob3JpemF0aW9uX2RldGFpbHMiOlt7InR5cGUiOiJhcm9oYV9zcGVuZGluZ19tYW5kYXRlIiwibWFuZGF0ZVRpZXIiOiJpbnRlbnQiLCJjb25zdHJhaW50cyI6eyJzcGVuZExpbWl0VXNkIjo1MDAsIm1lcmNoYW50Q2F0ZWdvcnkiOiI0NTExIiwiY3VycmVuY3kiOiJVU0QifSwicGFyZW50TWFuZGF0ZUlkIjpudWxsfV19.mHwXtTOpG65caIS_rnNXuMUfr_5_wJ4-3KJ2JxvWykEsDnQBZ0wsZw-w1VyZrfB-qtfi8C3sAeaWi8nHvwy_Dw"
+    },
+    {
+      "name": "spending cart",
+      "kind": "spending",
+      "signer": "agent",
+      "body": {
+        "mandateTier": "cart",
+        "constraints": {
+          "spendLimitUsd": 300,
+          "merchantCategory": "4511",
+          "currency": "USD"
+        },
+        "grantee": "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr",
+        "grantor": "did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5",
+        "issuedAt": "2026-01-01T00:00:00.000Z",
+        "expiresAt": "2100-01-01T00:00:00.000Z",
+        "parentMandateId": "11111111-1111-4111-8111-111111111111",
+        "mandateId": "22222222-2222-4222-8222-222222222222"
+      },
+      "header": {
+        "alg": "EdDSA",
+        "typ": "aroha-mandate+jwt",
+        "kid": "FtIu-VbGrfe_KB6CH7GNwODB72MNxj_ml11dEvO-7kk"
+      },
+      "claims": {
+        "iss": "did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5",
+        "sub": "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr",
+        "jti": "22222222-2222-4222-8222-222222222222",
+        "iat": 1767225600,
+        "exp": 4102444800,
+        "authorization_details": [
+          {
+            "type": "aroha_spending_mandate",
+            "mandateTier": "cart",
+            "constraints": {
+              "spendLimitUsd": 300,
+              "merchantCategory": "4511",
+              "currency": "USD"
+            },
+            "parentMandateId": "11111111-1111-4111-8111-111111111111"
+          }
+        ]
+      },
+      "jwt": "eyJhbGciOiJFZERTQSIsInR5cCI6ImFyb2hhLW1hbmRhdGUrand0Iiwia2lkIjoiRnRJdS1WYkdyZmVfS0I2Q0g3R053T0RCNzJNTnhqX21sMTFkRXZPLTdrayJ9.eyJpc3MiOiJkaWQ6YXJvaGE6ejU4Nlo3SDJ2cFg5cU5oTjJUNGU5VXR1Z2llM29namJ4ekdhTXRNM0U2SFI1Iiwic3ViIjoiZGlkOmFyb2hhOnpIeXg2MndQUUd5dlhDb2loWnExQnJiVWpCUmgyTHVOeFdpaXFNa2ZBdVNaciIsImp0aSI6IjIyMjIyMjIyLTIyMjItNDIyMi04MjIyLTIyMjIyMjIyMjIyMiIsImlhdCI6MTc2NzIyNTYwMCwiZXhwIjo0MTAyNDQ0ODAwLCJhdXRob3JpemF0aW9uX2RldGFpbHMiOlt7InR5cGUiOiJhcm9oYV9zcGVuZGluZ19tYW5kYXRlIiwibWFuZGF0ZVRpZXIiOiJjYXJ0IiwiY29uc3RyYWludHMiOnsic3BlbmRMaW1pdFVzZCI6MzAwLCJtZXJjaGFudENhdGVnb3J5IjoiNDUxMSIsImN1cnJlbmN5IjoiVVNEIn0sInBhcmVudE1hbmRhdGVJZCI6IjExMTExMTExLTExMTEtNDExMS04MTExLTExMTExMTExMTExMSJ9XX0.wPas500jQZlonmb9ye7YATAYEbPE3ejuVp0BZ2VDwhIDMW52bWt2hNQ2AgChoIA40wwFO3DCvDzlG231zFHmDQ"
+    },
+    {
+      "name": "spending payment (a decimal amount)",
+      "kind": "spending",
+      "signer": "provider",
+      "body": {
+        "mandateTier": "payment",
+        "constraints": {
+          "spendLimitUsd": 249.99,
+          "merchantCategory": "4511",
+          "currency": "USD"
+        },
+        "grantee": "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr",
+        "grantor": "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr",
+        "issuedAt": "2026-01-01T00:00:00.000Z",
+        "expiresAt": "2100-01-01T00:00:00.000Z",
+        "parentMandateId": "22222222-2222-4222-8222-222222222222",
+        "mandateId": "33333333-3333-4333-8333-333333333333"
+      },
+      "header": {
+        "alg": "EdDSA",
+        "typ": "aroha-mandate+jwt",
+        "kid": "FVV5umTuau890q59V-4Ga_R6qWb7ON_ivJc4EjvCwTM"
+      },
+      "claims": {
+        "iss": "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr",
+        "sub": "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr",
+        "jti": "33333333-3333-4333-8333-333333333333",
+        "iat": 1767225600,
+        "exp": 4102444800,
+        "authorization_details": [
+          {
+            "type": "aroha_spending_mandate",
+            "mandateTier": "payment",
+            "constraints": {
+              "spendLimitUsd": 249.99,
+              "merchantCategory": "4511",
+              "currency": "USD"
+            },
+            "parentMandateId": "22222222-2222-4222-8222-222222222222"
+          }
+        ]
+      },
+      "jwt": "eyJhbGciOiJFZERTQSIsInR5cCI6ImFyb2hhLW1hbmRhdGUrand0Iiwia2lkIjoiRlZWNXVtVHVhdTg5MHE1OVYtNEdhX1I2cVdiN09OX2l2SmM0RWp2Q3dUTSJ9.eyJpc3MiOiJkaWQ6YXJvaGE6ekh5eDYyd1BRR3l2WENvaWhacTFCcmJVakJSaDJMdU54V2lpcU1rZkF1U1pyIiwic3ViIjoiZGlkOmFyb2hhOnpIeXg2MndQUUd5dlhDb2loWnExQnJiVWpCUmgyTHVOeFdpaXFNa2ZBdVNaciIsImp0aSI6IjMzMzMzMzMzLTMzMzMtNDMzMy04MzMzLTMzMzMzMzMzMzMzMyIsImlhdCI6MTc2NzIyNTYwMCwiZXhwIjo0MTAyNDQ0ODAwLCJhdXRob3JpemF0aW9uX2RldGFpbHMiOlt7InR5cGUiOiJhcm9oYV9zcGVuZGluZ19tYW5kYXRlIiwibWFuZGF0ZVRpZXIiOiJwYXltZW50IiwiY29uc3RyYWludHMiOnsic3BlbmRMaW1pdFVzZCI6MjQ5Ljk5LCJtZXJjaGFudENhdGVnb3J5IjoiNDUxMSIsImN1cnJlbmN5IjoiVVNEIn0sInBhcmVudE1hbmRhdGVJZCI6IjIyMjIyMjIyLTIyMjItNDIyMi04MjIyLTIyMjIyMjIyMjIyMiJ9XX0.L6EslZcsHqO4HT2oxF2gr-QXjeGrePdhhBnXtV4OxAcDHqgMitt3kQCkx8sj1WOPHk0KyezSob6-1uejCxvPDg"
+    },
+    {
+      "name": "spending intent with actingFor",
+      "kind": "spending",
+      "signer": "human",
+      "body": {
+        "mandateTier": "intent",
+        "constraints": {
+          "spendLimitUsd": 500,
+          "merchantCategory": "4511",
+          "currency": "USD"
+        },
+        "grantee": "did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5",
+        "grantor": "did:aroha:zFVen3X669xLzsi6N2V91DoiyzHzg1uAgqiT8jZ9nS96Z",
+        "issuedAt": "2026-01-01T00:00:00.000Z",
+        "expiresAt": "2100-01-01T00:00:00.000Z",
+        "parentMandateId": null,
+        "mandateId": "44444444-4444-4444-8444-444444444444",
+        "actingFor": "payer"
+      },
+      "header": {
+        "alg": "EdDSA",
+        "typ": "aroha-mandate+jwt",
+        "kid": "kPrK_qmxVWaYVA9wwBF6Iuo3vVzz7TxHCTwXBygrS4k"
+      },
+      "claims": {
+        "iss": "did:aroha:zFVen3X669xLzsi6N2V91DoiyzHzg1uAgqiT8jZ9nS96Z",
+        "sub": "did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5",
+        "jti": "44444444-4444-4444-8444-444444444444",
+        "iat": 1767225600,
+        "exp": 4102444800,
+        "authorization_details": [
+          {
+            "type": "aroha_spending_mandate",
+            "mandateTier": "intent",
+            "constraints": {
+              "spendLimitUsd": 500,
+              "merchantCategory": "4511",
+              "currency": "USD"
+            },
+            "parentMandateId": null,
+            "actingFor": "payer"
+          }
+        ]
+      },
+      "jwt": "eyJhbGciOiJFZERTQSIsInR5cCI6ImFyb2hhLW1hbmRhdGUrand0Iiwia2lkIjoia1ByS19xbXhWV2FZVkE5d3dCRjZJdW8zdlZ6ejdUeEhDVHdYQnlnclM0ayJ9.eyJpc3MiOiJkaWQ6YXJvaGE6ekZWZW4zWDY2OXhMenNpNk4yVjkxRG9peXpIemcxdUFncWlUOGpaOW5TOTZaIiwic3ViIjoiZGlkOmFyb2hhOno1ODZaN0gydnBYOXFOaE4yVDRlOVV0dWdpZTNvZ2pieHpHYU10TTNFNkhSNSIsImp0aSI6IjQ0NDQ0NDQ0LTQ0NDQtNDQ0NC04NDQ0LTQ0NDQ0NDQ0NDQ0NCIsImlhdCI6MTc2NzIyNTYwMCwiZXhwIjo0MTAyNDQ0ODAwLCJhdXRob3JpemF0aW9uX2RldGFpbHMiOlt7InR5cGUiOiJhcm9oYV9zcGVuZGluZ19tYW5kYXRlIiwibWFuZGF0ZVRpZXIiOiJpbnRlbnQiLCJjb25zdHJhaW50cyI6eyJzcGVuZExpbWl0VXNkIjo1MDAsIm1lcmNoYW50Q2F0ZWdvcnkiOiI0NTExIiwiY3VycmVuY3kiOiJVU0QifSwicGFyZW50TWFuZGF0ZUlkIjpudWxsLCJhY3RpbmdGb3IiOiJwYXllciJ9XX0.uE4OG8rGYvJ85kPKFnYG_CdMSvb17Y4CtCVxxBwY5GPhsx3g3-M-vQHpmipp-A2ss1V9oEaGVAq9qcDBOyaDAg"
+    },
+    {
+      "name": "task mandate",
+      "kind": "task",
+      "signer": "human",
+      "body": {
+        "mandateType": "task",
+        "mandateTier": "intent",
+        "allowed": [
+          "inbox.read",
+          "inbox.archive"
+        ],
+        "blocked": [
+          "inbox.delete"
+        ],
+        "taskConstraints": {
+          "actionLimits": {
+            "inbox.archive": 20
+          },
+          "maxDelegationDepth": 2
+        },
+        "grantee": "did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5",
+        "grantor": "did:aroha:zFVen3X669xLzsi6N2V91DoiyzHzg1uAgqiT8jZ9nS96Z",
+        "issuedAt": "2026-01-01T00:00:00.000Z",
+        "expiresAt": "2100-01-01T00:00:00.000Z",
+        "parentMandateId": null,
+        "mandateId": "55555555-5555-4555-8555-555555555555"
+      },
+      "header": {
+        "alg": "EdDSA",
+        "typ": "aroha-mandate+jwt",
+        "kid": "kPrK_qmxVWaYVA9wwBF6Iuo3vVzz7TxHCTwXBygrS4k"
+      },
+      "claims": {
+        "iss": "did:aroha:zFVen3X669xLzsi6N2V91DoiyzHzg1uAgqiT8jZ9nS96Z",
+        "sub": "did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5",
+        "jti": "55555555-5555-4555-8555-555555555555",
+        "iat": 1767225600,
+        "exp": 4102444800,
+        "authorization_details": [
+          {
+            "type": "aroha_task_mandate",
+            "mandateType": "task",
+            "mandateTier": "intent",
+            "allowed": [
+              "inbox.read",
+              "inbox.archive"
+            ],
+            "blocked": [
+              "inbox.delete"
+            ],
+            "taskConstraints": {
+              "actionLimits": {
+                "inbox.archive": 20
+              },
+              "maxDelegationDepth": 2
+            },
+            "parentMandateId": null
+          }
+        ]
+      },
+      "jwt": "eyJhbGciOiJFZERTQSIsInR5cCI6ImFyb2hhLW1hbmRhdGUrand0Iiwia2lkIjoia1ByS19xbXhWV2FZVkE5d3dCRjZJdW8zdlZ6ejdUeEhDVHdYQnlnclM0ayJ9.eyJpc3MiOiJkaWQ6YXJvaGE6ekZWZW4zWDY2OXhMenNpNk4yVjkxRG9peXpIemcxdUFncWlUOGpaOW5TOTZaIiwic3ViIjoiZGlkOmFyb2hhOno1ODZaN0gydnBYOXFOaE4yVDRlOVV0dWdpZTNvZ2pieHpHYU10TTNFNkhSNSIsImp0aSI6IjU1NTU1NTU1LTU1NTUtNDU1NS04NTU1LTU1NTU1NTU1NTU1NSIsImlhdCI6MTc2NzIyNTYwMCwiZXhwIjo0MTAyNDQ0ODAwLCJhdXRob3JpemF0aW9uX2RldGFpbHMiOlt7InR5cGUiOiJhcm9oYV90YXNrX21hbmRhdGUiLCJtYW5kYXRlVHlwZSI6InRhc2siLCJtYW5kYXRlVGllciI6ImludGVudCIsImFsbG93ZWQiOlsiaW5ib3gucmVhZCIsImluYm94LmFyY2hpdmUiXSwiYmxvY2tlZCI6WyJpbmJveC5kZWxldGUiXSwidGFza0NvbnN0cmFpbnRzIjp7ImFjdGlvbkxpbWl0cyI6eyJpbmJveC5hcmNoaXZlIjoyMH0sIm1heERlbGVnYXRpb25EZXB0aCI6Mn0sInBhcmVudE1hbmRhdGVJZCI6bnVsbH1dfQ.Lgicr1M-HqP_CxKjImh2Y0sQtwLJuHhA-wEoHnHt2340qiU868VxV-ga3j0-1Hw89n9E6y2Wn72k3TYcm7eFBw"
+    },
+    {
+      "name": "task mandate, second link",
+      "kind": "task",
+      "signer": "agent",
+      "body": {
+        "mandateType": "task",
+        "mandateTier": "cart",
+        "allowed": [
+          "inbox.read"
+        ],
+        "blocked": [
+          "inbox.delete"
+        ],
+        "taskConstraints": {
+          "actionLimits": {},
+          "maxDelegationDepth": 1
+        },
+        "grantee": "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr",
+        "grantor": "did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5",
+        "issuedAt": "2026-01-01T00:00:00.000Z",
+        "expiresAt": "2100-01-01T00:00:00.000Z",
+        "parentMandateId": "55555555-5555-4555-8555-555555555555",
+        "mandateId": "66666666-6666-4666-8666-666666666666"
+      },
+      "header": {
+        "alg": "EdDSA",
+        "typ": "aroha-mandate+jwt",
+        "kid": "FtIu-VbGrfe_KB6CH7GNwODB72MNxj_ml11dEvO-7kk"
+      },
+      "claims": {
+        "iss": "did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5",
+        "sub": "did:aroha:zHyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr",
+        "jti": "66666666-6666-4666-8666-666666666666",
+        "iat": 1767225600,
+        "exp": 4102444800,
+        "authorization_details": [
+          {
+            "type": "aroha_task_mandate",
+            "mandateType": "task",
+            "mandateTier": "cart",
+            "allowed": [
+              "inbox.read"
+            ],
+            "blocked": [
+              "inbox.delete"
+            ],
+            "taskConstraints": {
+              "actionLimits": {},
+              "maxDelegationDepth": 1
+            },
+            "parentMandateId": "55555555-5555-4555-8555-555555555555"
+          }
+        ]
+      },
+      "jwt": "eyJhbGciOiJFZERTQSIsInR5cCI6ImFyb2hhLW1hbmRhdGUrand0Iiwia2lkIjoiRnRJdS1WYkdyZmVfS0I2Q0g3R053T0RCNzJNTnhqX21sMTFkRXZPLTdrayJ9.eyJpc3MiOiJkaWQ6YXJvaGE6ejU4Nlo3SDJ2cFg5cU5oTjJUNGU5VXR1Z2llM29namJ4ekdhTXRNM0U2SFI1Iiwic3ViIjoiZGlkOmFyb2hhOnpIeXg2MndQUUd5dlhDb2loWnExQnJiVWpCUmgyTHVOeFdpaXFNa2ZBdVNaciIsImp0aSI6IjY2NjY2NjY2LTY2NjYtNDY2Ni04NjY2LTY2NjY2NjY2NjY2NiIsImlhdCI6MTc2NzIyNTYwMCwiZXhwIjo0MTAyNDQ0ODAwLCJhdXRob3JpemF0aW9uX2RldGFpbHMiOlt7InR5cGUiOiJhcm9oYV90YXNrX21hbmRhdGUiLCJtYW5kYXRlVHlwZSI6InRhc2siLCJtYW5kYXRlVGllciI6ImNhcnQiLCJhbGxvd2VkIjpbImluYm94LnJlYWQiXSwiYmxvY2tlZCI6WyJpbmJveC5kZWxldGUiXSwidGFza0NvbnN0cmFpbnRzIjp7ImFjdGlvbkxpbWl0cyI6e30sIm1heERlbGVnYXRpb25EZXB0aCI6MX0sInBhcmVudE1hbmRhdGVJZCI6IjU1NTU1NTU1LTU1NTUtNDU1NS04NTU1LTU1NTU1NTU1NTU1NSJ9XX0.pM3YeZHV3xvd-o_aJGE0ihWSx9unKikRgvcrj1f3HucUvtVV-0YcpUT-uSYkygfIFQfcjq2UOdSTKCpeqOzdCg"
+    },
+    {
+      "name": "hybrid task mandate",
+      "kind": "task",
+      "signer": "human",
+      "body": {
+        "mandateType": "hybrid",
+        "mandateTier": "intent",
+        "allowed": [
+          "flights.book"
+        ],
+        "taskConstraints": {
+          "reversibleOnly": true
+        },
+        "spendingConstraints": {
+          "spendLimitUsd": 300,
+          "currency": "USD"
+        },
+        "grantee": "did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5",
+        "grantor": "did:aroha:zFVen3X669xLzsi6N2V91DoiyzHzg1uAgqiT8jZ9nS96Z",
+        "issuedAt": "2026-01-01T00:00:00.000Z",
+        "expiresAt": "2100-01-01T00:00:00.000Z",
+        "parentMandateId": null,
+        "mandateId": "77777777-7777-4777-8777-777777777777"
+      },
+      "header": {
+        "alg": "EdDSA",
+        "typ": "aroha-mandate+jwt",
+        "kid": "kPrK_qmxVWaYVA9wwBF6Iuo3vVzz7TxHCTwXBygrS4k"
+      },
+      "claims": {
+        "iss": "did:aroha:zFVen3X669xLzsi6N2V91DoiyzHzg1uAgqiT8jZ9nS96Z",
+        "sub": "did:aroha:z586Z7H2vpX9qNhN2T4e9Utugie3ogjbxzGaMtM3E6HR5",
+        "jti": "77777777-7777-4777-8777-777777777777",
+        "iat": 1767225600,
+        "exp": 4102444800,
+        "authorization_details": [
+          {
+            "type": "aroha_task_mandate",
+            "mandateType": "hybrid",
+            "mandateTier": "intent",
+            "allowed": [
+              "flights.book"
+            ],
+            "taskConstraints": {
+              "reversibleOnly": true
+            },
+            "spendingConstraints": {
+              "spendLimitUsd": 300,
+              "currency": "USD"
+            },
+            "parentMandateId": null
+          }
+        ]
+      },
+      "jwt": "eyJhbGciOiJFZERTQSIsInR5cCI6ImFyb2hhLW1hbmRhdGUrand0Iiwia2lkIjoia1ByS19xbXhWV2FZVkE5d3dCRjZJdW8zdlZ6ejdUeEhDVHdYQnlnclM0ayJ9.eyJpc3MiOiJkaWQ6YXJvaGE6ekZWZW4zWDY2OXhMenNpNk4yVjkxRG9peXpIemcxdUFncWlUOGpaOW5TOTZaIiwic3ViIjoiZGlkOmFyb2hhOno1ODZaN0gydnBYOXFOaE4yVDRlOVV0dWdpZTNvZ2pieHpHYU10TTNFNkhSNSIsImp0aSI6Ijc3Nzc3Nzc3LTc3NzctNDc3Ny04Nzc3LTc3Nzc3Nzc3Nzc3NyIsImlhdCI6MTc2NzIyNTYwMCwiZXhwIjo0MTAyNDQ0ODAwLCJhdXRob3JpemF0aW9uX2RldGFpbHMiOlt7InR5cGUiOiJhcm9oYV90YXNrX21hbmRhdGUiLCJtYW5kYXRlVHlwZSI6Imh5YnJpZCIsIm1hbmRhdGVUaWVyIjoiaW50ZW50IiwiYWxsb3dlZCI6WyJmbGlnaHRzLmJvb2siXSwidGFza0NvbnN0cmFpbnRzIjp7InJldmVyc2libGVPbmx5Ijp0cnVlfSwic3BlbmRpbmdDb25zdHJhaW50cyI6eyJzcGVuZExpbWl0VXNkIjozMDAsImN1cnJlbmN5IjoiVVNEIn0sInBhcmVudE1hbmRhdGVJZCI6bnVsbH1dfQ.Vt6XxmexbxnFznxunFo30i9BZoYsgIrNoPp-9mzaErngx7RLJSy7FJPWlloq6-xagkMOJwWJ4Ex4z-or-9n-Ag"
+    }
+  ],
+  "tokens": [
+    {
+      "name": "one link: a root intent mandate is a plain JWT",
+      "kind": "spending",
+      "token": "eyJhbGciOiJFZERTQSIsInR5cCI6ImFyb2hhLW1hbmRhdGUrand0Iiwia2lkIjoia1ByS19xbXhWV2FZVkE5d3dCRjZJdW8zdlZ6ejdUeEhDVHdYQnlnclM0ayJ9.eyJpc3MiOiJkaWQ6YXJvaGE6ekZWZW4zWDY2OXhMenNpNk4yVjkxRG9peXpIemcxdUFncWlUOGpaOW5TOTZaIiwic3ViIjoiZGlkOmFyb2hhOno1ODZaN0gydnBYOXFOaE4yVDRlOVV0dWdpZTNvZ2pieHpHYU10TTNFNkhSNSIsImp0aSI6IjExMTExMTExLTExMTEtNDExMS04MTExLTExMTExMTExMTExMSIsImlhdCI6MTc2NzIyNTYwMCwiZXhwIjo0MTAyNDQ0ODAwLCJhdXRob3JpemF0aW9uX2RldGFpbHMiOlt7InR5cGUiOiJhcm9oYV9zcGVuZGluZ19tYW5kYXRlIiwibWFuZGF0ZVRpZXIiOiJpbnRlbnQiLCJjb25zdHJhaW50cyI6eyJzcGVuZExpbWl0VXNkIjo1MDAsIm1lcmNoYW50Q2F0ZWdvcnkiOiI0NTExIiwiY3VycmVuY3kiOiJVU0QifSwicGFyZW50TWFuZGF0ZUlkIjpudWxsfV19.mHwXtTOpG65caIS_rnNXuMUfr_5_wJ4-3KJ2JxvWykEsDnQBZ0wsZw-w1VyZrfB-qtfi8C3sAeaWi8nHvwy_Dw",
+      "expect": {
+        "valid": true,
+        "mandateId": "11111111-1111-4111-8111-111111111111",
+        "rootGrantor": "did:aroha:zFVen3X669xLzsi6N2V91DoiyzHzg1uAgqiT8jZ9nS96Z",
+        "links": 1
+      }
+    },
+    {
+      "name": "three links joined by ~, root first",
+      "kind": "spending",
+      "token": "eyJhbGciOiJFZERTQSIsInR5cCI6ImFyb2hhLW1hbmRhdGUrand0Iiwia2lkIjoia1ByS19xbXhWV2FZVkE5d3dCRjZJdW8zdlZ6ejdUeEhDVHdYQnlnclM0ayJ9.eyJpc3MiOiJkaWQ6YXJvaGE6ekZWZW4zWDY2OXhMenNpNk4yVjkxRG9peXpIemcxdUFncWlUOGpaOW5TOTZaIiwic3ViIjoiZGlkOmFyb2hhOno1ODZaN0gydnBYOXFOaE4yVDRlOVV0dWdpZTNvZ2pieHpHYU10TTNFNkhSNSIsImp0aSI6IjExMTExMTExLTExMTEtNDExMS04MTExLTExMTExMTExMTExMSIsImlhdCI6MTc2NzIyNTYwMCwiZXhwIjo0MTAyNDQ0ODAwLCJhdXRob3JpemF0aW9uX2RldGFpbHMiOlt7InR5cGUiOiJhcm9oYV9zcGVuZGluZ19tYW5kYXRlIiwibWFuZGF0ZVRpZXIiOiJpbnRlbnQiLCJjb25zdHJhaW50cyI6eyJzcGVuZExpbWl0VXNkIjo1MDAsIm1lcmNoYW50Q2F0ZWdvcnkiOiI0NTExIiwiY3VycmVuY3kiOiJVU0QifSwicGFyZW50TWFuZGF0ZUlkIjpudWxsfV19.mHwXtTOpG65caIS_rnNXuMUfr_5_wJ4-3KJ2JxvWykEsDnQBZ0wsZw-w1VyZrfB-qtfi8C3sAeaWi8nHvwy_Dw~eyJhbGciOiJFZERTQSIsInR5cCI6ImFyb2hhLW1hbmRhdGUrand0Iiwia2lkIjoiRnRJdS1WYkdyZmVfS0I2Q0g3R053T0RCNzJNTnhqX21sMTFkRXZPLTdrayJ9.eyJpc3MiOiJkaWQ6YXJvaGE6ejU4Nlo3SDJ2cFg5cU5oTjJUNGU5VXR1Z2llM29namJ4ekdhTXRNM0U2SFI1Iiwic3ViIjoiZGlkOmFyb2hhOnpIeXg2MndQUUd5dlhDb2loWnExQnJiVWpCUmgyTHVOeFdpaXFNa2ZBdVNaciIsImp0aSI6IjIyMjIyMjIyLTIyMjItNDIyMi04MjIyLTIyMjIyMjIyMjIyMiIsImlhdCI6MTc2NzIyNTYwMCwiZXhwIjo0MTAyNDQ0ODAwLCJhdXRob3JpemF0aW9uX2RldGFpbHMiOlt7InR5cGUiOiJhcm9oYV9zcGVuZGluZ19tYW5kYXRlIiwibWFuZGF0ZVRpZXIiOiJjYXJ0IiwiY29uc3RyYWludHMiOnsic3BlbmRMaW1pdFVzZCI6MzAwLCJtZXJjaGFudENhdGVnb3J5IjoiNDUxMSIsImN1cnJlbmN5IjoiVVNEIn0sInBhcmVudE1hbmRhdGVJZCI6IjExMTExMTExLTExMTEtNDExMS04MTExLTExMTExMTExMTExMSJ9XX0.wPas500jQZlonmb9ye7YATAYEbPE3ejuVp0BZ2VDwhIDMW52bWt2hNQ2AgChoIA40wwFO3DCvDzlG231zFHmDQ~eyJhbGciOiJFZERTQSIsInR5cCI6ImFyb2hhLW1hbmRhdGUrand0Iiwia2lkIjoiRlZWNXVtVHVhdTg5MHE1OVYtNEdhX1I2cVdiN09OX2l2SmM0RWp2Q3dUTSJ9.eyJpc3MiOiJkaWQ6YXJvaGE6ekh5eDYyd1BRR3l2WENvaWhacTFCcmJVakJSaDJMdU54V2lpcU1rZkF1U1pyIiwic3ViIjoiZGlkOmFyb2hhOnpIeXg2MndQUUd5dlhDb2loWnExQnJiVWpCUmgyTHVOeFdpaXFNa2ZBdVNaciIsImp0aSI6IjMzMzMzMzMzLTMzMzMtNDMzMy04MzMzLTMzMzMzMzMzMzMzMyIsImlhdCI6MTc2NzIyNTYwMCwiZXhwIjo0MTAyNDQ0ODAwLCJhdXRob3JpemF0aW9uX2RldGFpbHMiOlt7InR5cGUiOiJhcm9oYV9zcGVuZGluZ19tYW5kYXRlIiwibWFuZGF0ZVRpZXIiOiJwYXltZW50IiwiY29uc3RyYWludHMiOnsic3BlbmRMaW1pdFVzZCI6MjQ5Ljk5LCJtZXJjaGFudENhdGVnb3J5IjoiNDUxMSIsImN1cnJlbmN5IjoiVVNEIn0sInBhcmVudE1hbmRhdGVJZCI6IjIyMjIyMjIyLTIyMjItNDIyMi04MjIyLTIyMjIyMjIyMjIyMiJ9XX0.L6EslZcsHqO4HT2oxF2gr-QXjeGrePdhhBnXtV4OxAcDHqgMitt3kQCkx8sj1WOPHk0KyezSob6-1uejCxvPDg",
+      "expect": {
+        "valid": true,
+        "mandateId": "33333333-3333-4333-8333-333333333333",
+        "rootGrantor": "did:aroha:zFVen3X669xLzsi6N2V91DoiyzHzg1uAgqiT8jZ9nS96Z",
+        "links": 3
+      }
+    },
+    {
+      "name": "two links",
+      "kind": "spending",
+      "token": "eyJhbGciOiJFZERTQSIsInR5cCI6ImFyb2hhLW1hbmRhdGUrand0Iiwia2lkIjoia1ByS19xbXhWV2FZVkE5d3dCRjZJdW8zdlZ6ejdUeEhDVHdYQnlnclM0ayJ9.eyJpc3MiOiJkaWQ6YXJvaGE6ekZWZW4zWDY2OXhMenNpNk4yVjkxRG9peXpIemcxdUFncWlUOGpaOW5TOTZaIiwic3ViIjoiZGlkOmFyb2hhOno1ODZaN0gydnBYOXFOaE4yVDRlOVV0dWdpZTNvZ2pieHpHYU10TTNFNkhSNSIsImp0aSI6IjExMTExMTExLTExMTEtNDExMS04MTExLTExMTExMTExMTExMSIsImlhdCI6MTc2NzIyNTYwMCwiZXhwIjo0MTAyNDQ0ODAwLCJhdXRob3JpemF0aW9uX2RldGFpbHMiOlt7InR5cGUiOiJhcm9oYV9zcGVuZGluZ19tYW5kYXRlIiwibWFuZGF0ZVRpZXIiOiJpbnRlbnQiLCJjb25zdHJhaW50cyI6eyJzcGVuZExpbWl0VXNkIjo1MDAsIm1lcmNoYW50Q2F0ZWdvcnkiOiI0NTExIiwiY3VycmVuY3kiOiJVU0QifSwicGFyZW50TWFuZGF0ZUlkIjpudWxsfV19.mHwXtTOpG65caIS_rnNXuMUfr_5_wJ4-3KJ2JxvWykEsDnQBZ0wsZw-w1VyZrfB-qtfi8C3sAeaWi8nHvwy_Dw~eyJhbGciOiJFZERTQSIsInR5cCI6ImFyb2hhLW1hbmRhdGUrand0Iiwia2lkIjoiRnRJdS1WYkdyZmVfS0I2Q0g3R053T0RCNzJNTnhqX21sMTFkRXZPLTdrayJ9.eyJpc3MiOiJkaWQ6YXJvaGE6ejU4Nlo3SDJ2cFg5cU5oTjJUNGU5VXR1Z2llM29namJ4ekdhTXRNM0U2SFI1Iiwic3ViIjoiZGlkOmFyb2hhOnpIeXg2MndQUUd5dlhDb2loWnExQnJiVWpCUmgyTHVOeFdpaXFNa2ZBdVNaciIsImp0aSI6IjIyMjIyMjIyLTIyMjItNDIyMi04MjIyLTIyMjIyMjIyMjIyMiIsImlhdCI6MTc2NzIyNTYwMCwiZXhwIjo0MTAyNDQ0ODAwLCJhdXRob3JpemF0aW9uX2RldGFpbHMiOlt7InR5cGUiOiJhcm9oYV9zcGVuZGluZ19tYW5kYXRlIiwibWFuZGF0ZVRpZXIiOiJjYXJ0IiwiY29uc3RyYWludHMiOnsic3BlbmRMaW1pdFVzZCI6MzAwLCJtZXJjaGFudENhdGVnb3J5IjoiNDUxMSIsImN1cnJlbmN5IjoiVVNEIn0sInBhcmVudE1hbmRhdGVJZCI6IjExMTExMTExLTExMTEtNDExMS04MTExLTExMTExMTExMTExMSJ9XX0.wPas500jQZlonmb9ye7YATAYEbPE3ejuVp0BZ2VDwhIDMW52bWt2hNQ2AgChoIA40wwFO3DCvDzlG231zFHmDQ",
+      "expect": {
+        "valid": true,
+        "mandateId": "22222222-2222-4222-8222-222222222222",
+        "rootGrantor": "did:aroha:zFVen3X669xLzsi6N2V91DoiyzHzg1uAgqiT8jZ9nS96Z",
+        "links": 2
+      }
+    },
+    {
+      "name": "actingFor is carried in authorization_details",
+      "kind": "spending",
+      "token": "eyJhbGciOiJFZERTQSIsInR5cCI6ImFyb2hhLW1hbmRhdGUrand0Iiwia2lkIjoia1ByS19xbXhWV2FZVkE5d3dCRjZJdW8zdlZ6ejdUeEhDVHdYQnlnclM0ayJ9.eyJpc3MiOiJkaWQ6YXJvaGE6ekZWZW4zWDY2OXhMenNpNk4yVjkxRG9peXpIemcxdUFncWlUOGpaOW5TOTZaIiwic3ViIjoiZGlkOmFyb2hhOno1ODZaN0gydnBYOXFOaE4yVDRlOVV0dWdpZTNvZ2pieHpHYU10TTNFNkhSNSIsImp0aSI6IjQ0NDQ0NDQ0LTQ0NDQtNDQ0NC04NDQ0LTQ0NDQ0NDQ0NDQ0NCIsImlhdCI6MTc2NzIyNTYwMCwiZXhwIjo0MTAyNDQ0ODAwLCJhdXRob3JpemF0aW9uX2RldGFpbHMiOlt7InR5cGUiOiJhcm9oYV9zcGVuZGluZ19tYW5kYXRlIiwibWFuZGF0ZVRpZXIiOiJpbnRlbnQiLCJjb25zdHJhaW50cyI6eyJzcGVuZExpbWl0VXNkIjo1MDAsIm1lcmNoYW50Q2F0ZWdvcnkiOiI0NTExIiwiY3VycmVuY3kiOiJVU0QifSwicGFyZW50TWFuZGF0ZUlkIjpudWxsLCJhY3RpbmdGb3IiOiJwYXllciJ9XX0.uE4OG8rGYvJ85kPKFnYG_CdMSvb17Y4CtCVxxBwY5GPhsx3g3-M-vQHpmipp-A2ss1V9oEaGVAq9qcDBOyaDAg",
+      "expect": {
+        "valid": true,
+        "mandateId": "44444444-4444-4444-8444-444444444444",
+        "rootGrantor": "did:aroha:zFVen3X669xLzsi6N2V91DoiyzHzg1uAgqiT8jZ9nS96Z",
+        "links": 1
+      }
+    },
+    {
+      "name": "typ with the application/ prefix",
+      "kind": "spending",
+      "token": "eyJhbGciOiJFZERTQSIsInR5cCI6ImFwcGxpY2F0aW9uL2Fyb2hhLW1hbmRhdGUrand0Iiwia2lkIjoia1ByS19xbXhWV2FZVkE5d3dCRjZJdW8zdlZ6ejdUeEhDVHdYQnlnclM0ayJ9.eyJpc3MiOiJkaWQ6YXJvaGE6ekZWZW4zWDY2OXhMenNpNk4yVjkxRG9peXpIemcxdUFncWlUOGpaOW5TOTZaIiwic3ViIjoiZGlkOmFyb2hhOno1ODZaN0gydnBYOXFOaE4yVDRlOVV0dWdpZTNvZ2pieHpHYU10TTNFNkhSNSIsImp0aSI6IjExMTExMTExLTExMTEtNDExMS04MTExLTExMTExMTExMTExMSIsImlhdCI6MTc2NzIyNTYwMCwiZXhwIjo0MTAyNDQ0ODAwLCJhdXRob3JpemF0aW9uX2RldGFpbHMiOlt7InR5cGUiOiJhcm9oYV9zcGVuZGluZ19tYW5kYXRlIiwibWFuZGF0ZVRpZXIiOiJpbnRlbnQiLCJjb25zdHJhaW50cyI6eyJzcGVuZExpbWl0VXNkIjo1MDAsIm1lcmNoYW50Q2F0ZWdvcnkiOiI0NTExIiwiY3VycmVuY3kiOiJVU0QifSwicGFyZW50TWFuZGF0ZUlkIjpudWxsfV19.eUXABW4zL2qUIOnCgLy2xr6oS0qXm8GOO_fCr9zlo71ll3DWa4tKpADfzfuBYHOWfzJt3SgDbs1zHxVaK3ukAg",
+      "expect": {
+        "valid": true,
+        "mandateId": "11111111-1111-4111-8111-111111111111",
+        "rootGrantor": "did:aroha:zFVen3X669xLzsi6N2V91DoiyzHzg1uAgqiT8jZ9nS96Z",
+        "links": 1
+      }
+    },
+    {
+      "name": "alg Ed25519 (the RFC 9864 name)",
+      "kind": "spending",
+      "token": "eyJhbGciOiJFZDI1NTE5IiwidHlwIjoiYXJvaGEtbWFuZGF0ZStqd3QiLCJraWQiOiJrUHJLX3FteFZXYVlWQTl3d0JGNkl1bzN2Vnp6N1R4SENUd1hCeWdyUzRrIn0.eyJpc3MiOiJkaWQ6YXJvaGE6ekZWZW4zWDY2OXhMenNpNk4yVjkxRG9peXpIemcxdUFncWlUOGpaOW5TOTZaIiwic3ViIjoiZGlkOmFyb2hhOno1ODZaN0gydnBYOXFOaE4yVDRlOVV0dWdpZTNvZ2pieHpHYU10TTNFNkhSNSIsImp0aSI6IjExMTExMTExLTExMTEtNDExMS04MTExLTExMTExMTExMTExMSIsImlhdCI6MTc2NzIyNTYwMCwiZXhwIjo0MTAyNDQ0ODAwLCJhdXRob3JpemF0aW9uX2RldGFpbHMiOlt7InR5cGUiOiJhcm9oYV9zcGVuZGluZ19tYW5kYXRlIiwibWFuZGF0ZVRpZXIiOiJpbnRlbnQiLCJjb25zdHJhaW50cyI6eyJzcGVuZExpbWl0VXNkIjo1MDAsIm1lcmNoYW50Q2F0ZWdvcnkiOiI0NTExIiwiY3VycmVuY3kiOiJVU0QifSwicGFyZW50TWFuZGF0ZUlkIjpudWxsfV19.ZETL0Iam2bgoJ1e6qbVID9DQM81OcNQdNnMZsdIAa6g6js-XHepj6opGh69yW2aGClRMwPbITtb858SAmgj-Bg",
+      "expect": {
+        "valid": true,
+        "mandateId": "11111111-1111-4111-8111-111111111111",
+        "rootGrantor": "did:aroha:zFVen3X669xLzsi6N2V91DoiyzHzg1uAgqiT8jZ9nS96Z",
+        "links": 1
+      }
+    },
+    {
+      "name": "no kid",
+      "kind": "spending",
+      "token": "eyJhbGciOiJFZERTQSIsInR5cCI6ImFyb2hhLW1hbmRhdGUrand0In0.eyJpc3MiOiJkaWQ6YXJvaGE6ekZWZW4zWDY2OXhMenNpNk4yVjkxRG9peXpIemcxdUFncWlUOGpaOW5TOTZaIiwic3ViIjoiZGlkOmFyb2hhOno1ODZaN0gydnBYOXFOaE4yVDRlOVV0dWdpZTNvZ2pieHpHYU10TTNFNkhSNSIsImp0aSI6IjExMTExMTExLTExMTEtNDExMS04MTExLTExMTExMTExMTExMSIsImlhdCI6MTc2NzIyNTYwMCwiZXhwIjo0MTAyNDQ0ODAwLCJhdXRob3JpemF0aW9uX2RldGFpbHMiOlt7InR5cGUiOiJhcm9oYV9zcGVuZGluZ19tYW5kYXRlIiwibWFuZGF0ZVRpZXIiOiJpbnRlbnQiLCJjb25zdHJhaW50cyI6eyJzcGVuZExpbWl0VXNkIjo1MDAsIm1lcmNoYW50Q2F0ZWdvcnkiOiI0NTExIiwiY3VycmVuY3kiOiJVU0QifSwicGFyZW50TWFuZGF0ZUlkIjpudWxsfV19.v6lX2vbln4pcjio1i4DKcTJ8n6jY8N2JIcsDfUiYCudMMh4a0AkW69tPNXFd7Gbne-iK7ApwIZMQew0QGmVhCw",
+      "expect": {
+        "valid": true,
+        "mandateId": "11111111-1111-4111-8111-111111111111",
+        "rootGrantor": "did:aroha:zFVen3X669xLzsi6N2V91DoiyzHzg1uAgqiT8jZ9nS96Z",
+        "links": 1
+      }
+    },
+    {
+      "name": "whole seconds written with a fraction or an exponent (1767225600.0, 4.1024448e9)",
+      "kind": "spending",
+      "token": "eyJhbGciOiJFZERTQSIsInR5cCI6ImFyb2hhLW1hbmRhdGUrand0Iiwia2lkIjoia1ByS19xbXhWV2FZVkE5d3dCRjZJdW8zdlZ6ejdUeEhDVHdYQnlnclM0ayJ9.eyJpc3MiOiJkaWQ6YXJvaGE6ekZWZW4zWDY2OXhMenNpNk4yVjkxRG9peXpIemcxdUFncWlUOGpaOW5TOTZaIiwic3ViIjoiZGlkOmFyb2hhOno1ODZaN0gydnBYOXFOaE4yVDRlOVV0dWdpZTNvZ2pieHpHYU10TTNFNkhSNSIsImp0aSI6IjExMTExMTExLTExMTEtNDExMS04MTExLTExMTExMTExMTExMSIsImlhdCI6MTc2NzIyNTYwMC4wLCJleHAiOjQuMTAyNDQ0OGU5LCJhdXRob3JpemF0aW9uX2RldGFpbHMiOlt7InR5cGUiOiJhcm9oYV9zcGVuZGluZ19tYW5kYXRlIiwibWFuZGF0ZVRpZXIiOiJpbnRlbnQiLCJjb25zdHJhaW50cyI6eyJzcGVuZExpbWl0VXNkIjo1MDAsIm1lcmNoYW50Q2F0ZWdvcnkiOiI0NTExIiwiY3VycmVuY3kiOiJVU0QifSwicGFyZW50TWFuZGF0ZUlkIjpudWxsfV19.wkivaBZv_SpKVzsdCQuNjk1DpkWMcXn5V6ktmHSfXALlcbzOfvtkzck5bRQpbXLZcO6A0TNlknZQqAWNaIzBCw",
+      "expect": {
+        "valid": true,
+        "mandateId": "11111111-1111-4111-8111-111111111111",
+        "rootGrantor": "did:aroha:zFVen3X669xLzsi6N2V91DoiyzHzg1uAgqiT8jZ9nS96Z",
+        "links": 1
+      }
+    },
+    {
+      "name": "task mandate",
+      "kind": "task",
+      "token": "eyJhbGciOiJFZERTQSIsInR5cCI6ImFyb2hhLW1hbmRhdGUrand0Iiwia2lkIjoia1ByS19xbXhWV2FZVkE5d3dCRjZJdW8zdlZ6ejdUeEhDVHdYQnlnclM0ayJ9.eyJpc3MiOiJkaWQ6YXJvaGE6ekZWZW4zWDY2OXhMenNpNk4yVjkxRG9peXpIemcxdUFncWlUOGpaOW5TOTZaIiwic3ViIjoiZGlkOmFyb2hhOno1ODZaN0gydnBYOXFOaE4yVDRlOVV0dWdpZTNvZ2pieHpHYU10TTNFNkhSNSIsImp0aSI6IjU1NTU1NTU1LTU1NTUtNDU1NS04NTU1LTU1NTU1NTU1NTU1NSIsImlhdCI6MTc2NzIyNTYwMCwiZXhwIjo0MTAyNDQ0ODAwLCJhdXRob3JpemF0aW9uX2RldGFpbHMiOlt7InR5cGUiOiJhcm9oYV90YXNrX21hbmRhdGUiLCJtYW5kYXRlVHlwZSI6InRhc2siLCJtYW5kYXRlVGllciI6ImludGVudCIsImFsbG93ZWQiOlsiaW5ib3gucmVhZCIsImluYm94LmFyY2hpdmUiXSwiYmxvY2tlZCI6WyJpbmJveC5kZWxldGUiXSwidGFza0NvbnN0cmFpbnRzIjp7ImFjdGlvbkxpbWl0cyI6eyJpbmJveC5hcmNoaXZlIjoyMH0sIm1heERlbGVnYXRpb25EZXB0aCI6Mn0sInBhcmVudE1hbmRhdGVJZCI6bnVsbH1dfQ.Lgicr1M-HqP_CxKjImh2Y0sQtwLJuHhA-wEoHnHt2340qiU868VxV-ga3j0-1Hw89n9E6y2Wn72k3TYcm7eFBw",
+      "signer": "human",
+      "expect": {
+        "valid": true,
+        "mandateId": "55555555-5555-4555-8555-555555555555"
+      }
+    },
+    {
+      "name": "hybrid task mandate",
+      "kind": "task",
+      "token": "eyJhbGciOiJFZERTQSIsInR5cCI6ImFyb2hhLW1hbmRhdGUrand0Iiwia2lkIjoia1ByS19xbXhWV2FZVkE5d3dCRjZJdW8zdlZ6ejdUeEhDVHdYQnlnclM0ayJ9.eyJpc3MiOiJkaWQ6YXJvaGE6ekZWZW4zWDY2OXhMenNpNk4yVjkxRG9peXpIemcxdUFncWlUOGpaOW5TOTZaIiwic3ViIjoiZGlkOmFyb2hhOno1ODZaN0gydnBYOXFOaE4yVDRlOVV0dWdpZTNvZ2pieHpHYU10TTNFNkhSNSIsImp0aSI6Ijc3Nzc3Nzc3LTc3NzctNDc3Ny04Nzc3LTc3Nzc3Nzc3Nzc3NyIsImlhdCI6MTc2NzIyNTYwMCwiZXhwIjo0MTAyNDQ0ODAwLCJhdXRob3JpemF0aW9uX2RldGFpbHMiOlt7InR5cGUiOiJhcm9oYV90YXNrX21hbmRhdGUiLCJtYW5kYXRlVHlwZSI6Imh5YnJpZCIsIm1hbmRhdGVUaWVyIjoiaW50ZW50IiwiYWxsb3dlZCI6WyJmbGlnaHRzLmJvb2siXSwidGFza0NvbnN0cmFpbnRzIjp7InJldmVyc2libGVPbmx5Ijp0cnVlfSwic3BlbmRpbmdDb25zdHJhaW50cyI6eyJzcGVuZExpbWl0VXNkIjozMDAsImN1cnJlbmN5IjoiVVNEIn0sInBhcmVudE1hbmRhdGVJZCI6bnVsbH1dfQ.Vt6XxmexbxnFznxunFo30i9BZoYsgIrNoPp-9mzaErngx7RLJSy7FJPWlloq6-xagkMOJwWJ4Ex4z-or-9n-Ag",
+      "signer": "human",
+      "expect": {
+        "valid": true,
+        "mandateId": "77777777-7777-4777-8777-777777777777"
+      }
+    },
+    {
+      "name": "child widens its parent's limit",
+      "kind": "spending",
+      "token": "eyJhbGciOiJFZERTQSIsInR5cCI6ImFyb2hhLW1hbmRhdGUrand0Iiwia2lkIjoia1ByS19xbXhWV2FZVkE5d3dCRjZJdW8zdlZ6ejdUeEhDVHdYQnlnclM0ayJ9.eyJpc3MiOiJkaWQ6YXJvaGE6ekZWZW4zWDY2OXhMenNpNk4yVjkxRG9peXpIemcxdUFncWlUOGpaOW5TOTZaIiwic3ViIjoiZGlkOmFyb2hhOno1ODZaN0gydnBYOXFOaE4yVDRlOVV0dWdpZTNvZ2pieHpHYU10TTNFNkhSNSIsImp0aSI6IjExMTExMTExLTExMTEtNDExMS04MTExLTExMTExMTExMTExMSIsImlhdCI6MTc2NzIyNTYwMCwiZXhwIjo0MTAyNDQ0ODAwLCJhdXRob3JpemF0aW9uX2RldGFpbHMiOlt7InR5cGUiOiJhcm9oYV9zcGVuZGluZ19tYW5kYXRlIiwibWFuZGF0ZVRpZXIiOiJpbnRlbnQiLCJjb25zdHJhaW50cyI6eyJzcGVuZExpbWl0VXNkIjo1MDAsIm1lcmNoYW50Q2F0ZWdvcnkiOiI0NTExIiwiY3VycmVuY3kiOiJVU0QifSwicGFyZW50TWFuZGF0ZUlkIjpudWxsfV19.mHwXtTOpG65caIS_rnNXuMUfr_5_wJ4-3KJ2JxvWykEsDnQBZ0wsZw-w1VyZrfB-qtfi8C3sAeaWi8nHvwy_Dw~eyJhbGciOiJFZERTQSIsInR5cCI6ImFyb2hhLW1hbmRhdGUrand0Iiwia2lkIjoiRnRJdS1WYkdyZmVfS0I2Q0g3R053T0RCNzJNTnhqX21sMTFkRXZPLTdrayJ9.eyJpc3MiOiJkaWQ6YXJvaGE6ejU4Nlo3SDJ2cFg5cU5oTjJUNGU5VXR1Z2llM29namJ4ekdhTXRNM0U2SFI1Iiwic3ViIjoiZGlkOmFyb2hhOnpIeXg2MndQUUd5dlhDb2loWnExQnJiVWpCUmgyTHVOeFdpaXFNa2ZBdVNaciIsImp0aSI6Ijg4ODg4ODg4LTg4ODgtNDg4OC04ODg4LTg4ODg4ODg4ODg4OCIsImlhdCI6MTc2NzIyNTYwMCwiZXhwIjo0MTAyNDQ0ODAwLCJhdXRob3JpemF0aW9uX2RldGFpbHMiOlt7InR5cGUiOiJhcm9oYV9zcGVuZGluZ19tYW5kYXRlIiwibWFuZGF0ZVRpZXIiOiJjYXJ0IiwiY29uc3RyYWludHMiOnsic3BlbmRMaW1pdFVzZCI6NjAwLCJtZXJjaGFudENhdGVnb3J5IjoiNDUxMSIsImN1cnJlbmN5IjoiVVNEIn0sInBhcmVudE1hbmRhdGVJZCI6IjExMTExMTExLTExMTEtNDExMS04MTExLTExMTExMTExMTExMSJ9XX0.2R1Nw0bSyUGxRZrSc0587kQMWCfH4pR2lX-1U7KTkAK_x-ZActkKrB74fCM0uwGk7hGDcDItC3j3m5mhTXi7AA",
+      "expect": {
+        "valid": false
+      }
+    },
+    {
+      "name": "child outlives its parent",
+      "kind": "spending",
+      "token": "eyJhbGciOiJFZERTQSIsInR5cCI6ImFyb2hhLW1hbmRhdGUrand0Iiwia2lkIjoia1ByS19xbXhWV2FZVkE5d3dCRjZJdW8zdlZ6ejdUeEhDVHdYQnlnclM0ayJ9.eyJpc3MiOiJkaWQ6YXJvaGE6ekZWZW4zWDY2OXhMenNpNk4yVjkxRG9peXpIemcxdUFncWlUOGpaOW5TOTZaIiwic3ViIjoiZGlkOmFyb2hhOno1ODZaN0gydnBYOXFOaE4yVDRlOVV0dWdpZTNvZ2pieHpHYU10TTNFNkhSNSIsImp0aSI6IjExMTExMTExLTExMTEtNDExMS04MTExLTExMTExMTExMTExMSIsImlhdCI6MTc2NzIyNTYwMCwiZXhwIjo0MTAyNDQ0ODAwLCJhdXRob3JpemF0aW9uX2RldGFpbHMiOlt7InR5cGUiOiJhcm9oYV9zcGVuZGluZ19tYW5kYXRlIiwibWFuZGF0ZVRpZXIiOiJpbnRlbnQiLCJjb25zdHJhaW50cyI6eyJzcGVuZExpbWl0VXNkIjo1MDAsIm1lcmNoYW50Q2F0ZWdvcnkiOiI0NTExIiwiY3VycmVuY3kiOiJVU0QifSwicGFyZW50TWFuZGF0ZUlkIjpudWxsfV19.mHwXtTOpG65caIS_rnNXuMUfr_5_wJ4-3KJ2JxvWykEsDnQBZ0wsZw-w1VyZrfB-qtfi8C3sAeaWi8nHvwy_Dw~eyJhbGciOiJFZERTQSIsInR5cCI6ImFyb2hhLW1hbmRhdGUrand0Iiwia2lkIjoiRnRJdS1WYkdyZmVfS0I2Q0g3R053T0RCNzJNTnhqX21sMTFkRXZPLTdrayJ9.eyJpc3MiOiJkaWQ6YXJvaGE6ejU4Nlo3SDJ2cFg5cU5oTjJUNGU5VXR1Z2llM29namJ4ekdhTXRNM0U2SFI1Iiwic3ViIjoiZGlkOmFyb2hhOnpIeXg2MndQUUd5dlhDb2loWnExQnJiVWpCUmgyTHVOeFdpaXFNa2ZBdVNaciIsImp0aSI6Ijk5OTk5OTk5LTk5OTktNDk5OS04OTk5LTk5OTk5OTk5OTk5OSIsImlhdCI6MTc2NzIyNTYwMCwiZXhwIjo0MTAyNTMxMjAwLCJhdXRob3JpemF0aW9uX2RldGFpbHMiOlt7InR5cGUiOiJhcm9oYV9zcGVuZGluZ19tYW5kYXRlIiwibWFuZGF0ZVRpZXIiOiJjYXJ0IiwiY29uc3RyYWludHMiOnsic3BlbmRMaW1pdFVzZCI6MzAwLCJtZXJjaGFudENhdGVnb3J5IjoiNDUxMSIsImN1cnJlbmN5IjoiVVNEIn0sInBhcmVudE1hbmRhdGVJZCI6IjExMTExMTExLTExMTEtNDExMS04MTExLTExMTExMTExMTExMSJ9XX0._-N4gictLgCnaG5iZN4PADgXQ4v9no5Ylc9QXhlLCgRTBYnWvmSnLxmNvZQM_jkzVL71v2khBCbbxzODrdXVCw",
+      "expect": {
+        "valid": false
+      }
+    },
+    {
+      "name": "child signed by a key that is not its grantor's",
+      "kind": "spending",
+      "token": "eyJhbGciOiJFZERTQSIsInR5cCI6ImFyb2hhLW1hbmRhdGUrand0Iiwia2lkIjoia1ByS19xbXhWV2FZVkE5d3dCRjZJdW8zdlZ6ejdUeEhDVHdYQnlnclM0ayJ9.eyJpc3MiOiJkaWQ6YXJvaGE6ekZWZW4zWDY2OXhMenNpNk4yVjkxRG9peXpIemcxdUFncWlUOGpaOW5TOTZaIiwic3ViIjoiZGlkOmFyb2hhOno1ODZaN0gydnBYOXFOaE4yVDRlOVV0dWdpZTNvZ2pieHpHYU10TTNFNkhSNSIsImp0aSI6IjExMTExMTExLTExMTEtNDExMS04MTExLTExMTExMTExMTExMSIsImlhdCI6MTc2NzIyNTYwMCwiZXhwIjo0MTAyNDQ0ODAwLCJhdXRob3JpemF0aW9uX2RldGFpbHMiOlt7InR5cGUiOiJhcm9oYV9zcGVuZGluZ19tYW5kYXRlIiwibWFuZGF0ZVRpZXIiOiJpbnRlbnQiLCJjb25zdHJhaW50cyI6eyJzcGVuZExpbWl0VXNkIjo1MDAsIm1lcmNoYW50Q2F0ZWdvcnkiOiI0NTExIiwiY3VycmVuY3kiOiJVU0QifSwicGFyZW50TWFuZGF0ZUlkIjpudWxsfV19.mHwXtTOpG65caIS_rnNXuMUfr_5_wJ4-3KJ2JxvWykEsDnQBZ0wsZw-w1VyZrfB-qtfi8C3sAeaWi8nHvwy_Dw~eyJhbGciOiJFZERTQSIsInR5cCI6ImFyb2hhLW1hbmRhdGUrand0Iiwia2lkIjoiRlZWNXVtVHVhdTg5MHE1OVYtNEdhX1I2cVdiN09OX2l2SmM0RWp2Q3dUTSJ9.eyJpc3MiOiJkaWQ6YXJvaGE6ejU4Nlo3SDJ2cFg5cU5oTjJUNGU5VXR1Z2llM29namJ4ekdhTXRNM0U2SFI1Iiwic3ViIjoiZGlkOmFyb2hhOnpIeXg2MndQUUd5dlhDb2loWnExQnJiVWpCUmgyTHVOeFdpaXFNa2ZBdVNaciIsImp0aSI6IjIyMjIyMjIyLTIyMjItNDIyMi04MjIyLTIyMjIyMjIyMjIyMiIsImlhdCI6MTc2NzIyNTYwMCwiZXhwIjo0MTAyNDQ0ODAwLCJhdXRob3JpemF0aW9uX2RldGFpbHMiOlt7InR5cGUiOiJhcm9oYV9zcGVuZGluZ19tYW5kYXRlIiwibWFuZGF0ZVRpZXIiOiJjYXJ0IiwiY29uc3RyYWludHMiOnsic3BlbmRMaW1pdFVzZCI6MzAwLCJtZXJjaGFudENhdGVnb3J5IjoiNDUxMSIsImN1cnJlbmN5IjoiVVNEIn0sInBhcmVudE1hbmRhdGVJZCI6IjExMTExMTExLTExMTEtNDExMS04MTExLTExMTExMTExMTExMSJ9XX0.Vfs1QwUDOf9bqQ72aF9chtUYG8r0EmXQGwNrTGrWsXsFrv7GTS8cKV8UaTCyBOBb_QEwBlVbps6U1YYJkeiaAw",
+      "expect": {
+        "valid": false
+      }
+    },
+    {
+      "name": "root signed by a key that is not its grantor's",
+      "kind": "spending",
+      "token": "eyJhbGciOiJFZERTQSIsInR5cCI6ImFyb2hhLW1hbmRhdGUrand0Iiwia2lkIjoiRnRJdS1WYkdyZmVfS0I2Q0g3R053T0RCNzJNTnhqX21sMTFkRXZPLTdrayJ9.eyJpc3MiOiJkaWQ6YXJvaGE6ekZWZW4zWDY2OXhMenNpNk4yVjkxRG9peXpIemcxdUFncWlUOGpaOW5TOTZaIiwic3ViIjoiZGlkOmFyb2hhOno1ODZaN0gydnBYOXFOaE4yVDRlOVV0dWdpZTNvZ2pieHpHYU10TTNFNkhSNSIsImp0aSI6IjExMTExMTExLTExMTEtNDExMS04MTExLTExMTExMTExMTExMSIsImlhdCI6MTc2NzIyNTYwMCwiZXhwIjo0MTAyNDQ0ODAwLCJhdXRob3JpemF0aW9uX2RldGFpbHMiOlt7InR5cGUiOiJhcm9oYV9zcGVuZGluZ19tYW5kYXRlIiwibWFuZGF0ZVRpZXIiOiJpbnRlbnQiLCJjb25zdHJhaW50cyI6eyJzcGVuZExpbWl0VXNkIjo1MDAsIm1lcmNoYW50Q2F0ZWdvcnkiOiI0NTExIiwiY3VycmVuY3kiOiJVU0QifSwicGFyZW50TWFuZGF0ZUlkIjpudWxsfV19.SK5zrHWbeaxH421ORjBMyXLnAkg6j8sBtxet2CVqBLtGVsfbw2OqMdYQmX6vZ66OAVsZYiOkfJcl4VPoqaxXDg",
+      "expect": {
+        "valid": false
+      }
+    },
+    {
+      "name": "claims changed after signing",
+      "kind": "spending",
+      "token": "eyJhbGciOiJFZERTQSIsInR5cCI6ImFyb2hhLW1hbmRhdGUrand0Iiwia2lkIjoia1ByS19xbXhWV2FZVkE5d3dCRjZJdW8zdlZ6ejdUeEhDVHdYQnlnclM0ayJ9.eyJpc3MiOiJkaWQ6YXJvaGE6ekZWZW4zWDY2OXhMenNpNk4yVjkxRG9peXpIemcxdUFncWlUOGpaOW5TOTZaIiwic3ViIjoiZGlkOmFyb2hhOno1ODZaN0gydnBYOXFOaE4yVDRlOVV0dWdpZTNvZ2pieHpHYU10TTNFNkhSNSIsImp0aSI6IjExMTExMTExLTExMTEtNDExMS04MTExLTExMTExMTExMTExMSIsImlhdCI6MTc2NzIyNTYwMCwiZXhwIjo0MTAyNDQ0ODAwLCJhdXRob3JpemF0aW9uX2RldGFpbHMiOlt7InR5cGUiOiJhcm9oYV9zcGVuZGluZ19tYW5kYXRlIiwibWFuZGF0ZVRpZXIiOiJpbnRlbnQiLCJjb25zdHJhaW50cyI6eyJzcGVuZExpbWl0VXNkIjo1MDAwLCJtZXJjaGFudENhdGVnb3J5IjoiNDUxMSIsImN1cnJlbmN5IjoiVVNEIn0sInBhcmVudE1hbmRhdGVJZCI6bnVsbH1dfQ.mHwXtTOpG65caIS_rnNXuMUfr_5_wJ4-3KJ2JxvWykEsDnQBZ0wsZw-w1VyZrfB-qtfi8C3sAeaWi8nHvwy_Dw",
+      "expect": {
+        "valid": false
+      }
+    },
+    {
+      "name": "links in the wrong order (leaf first)",
+      "kind": "spending",
+      "token": "eyJhbGciOiJFZERTQSIsInR5cCI6ImFyb2hhLW1hbmRhdGUrand0Iiwia2lkIjoiRnRJdS1WYkdyZmVfS0I2Q0g3R053T0RCNzJNTnhqX21sMTFkRXZPLTdrayJ9.eyJpc3MiOiJkaWQ6YXJvaGE6ejU4Nlo3SDJ2cFg5cU5oTjJUNGU5VXR1Z2llM29namJ4ekdhTXRNM0U2SFI1Iiwic3ViIjoiZGlkOmFyb2hhOnpIeXg2MndQUUd5dlhDb2loWnExQnJiVWpCUmgyTHVOeFdpaXFNa2ZBdVNaciIsImp0aSI6IjIyMjIyMjIyLTIyMjItNDIyMi04MjIyLTIyMjIyMjIyMjIyMiIsImlhdCI6MTc2NzIyNTYwMCwiZXhwIjo0MTAyNDQ0ODAwLCJhdXRob3JpemF0aW9uX2RldGFpbHMiOlt7InR5cGUiOiJhcm9oYV9zcGVuZGluZ19tYW5kYXRlIiwibWFuZGF0ZVRpZXIiOiJjYXJ0IiwiY29uc3RyYWludHMiOnsic3BlbmRMaW1pdFVzZCI6MzAwLCJtZXJjaGFudENhdGVnb3J5IjoiNDUxMSIsImN1cnJlbmN5IjoiVVNEIn0sInBhcmVudE1hbmRhdGVJZCI6IjExMTExMTExLTExMTEtNDExMS04MTExLTExMTExMTExMTExMSJ9XX0.wPas500jQZlonmb9ye7YATAYEbPE3ejuVp0BZ2VDwhIDMW52bWt2hNQ2AgChoIA40wwFO3DCvDzlG231zFHmDQ~eyJhbGciOiJFZERTQSIsInR5cCI6ImFyb2hhLW1hbmRhdGUrand0Iiwia2lkIjoia1ByS19xbXhWV2FZVkE5d3dCRjZJdW8zdlZ6ejdUeEhDVHdYQnlnclM0ayJ9.eyJpc3MiOiJkaWQ6YXJvaGE6ekZWZW4zWDY2OXhMenNpNk4yVjkxRG9peXpIemcxdUFncWlUOGpaOW5TOTZaIiwic3ViIjoiZGlkOmFyb2hhOno1ODZaN0gydnBYOXFOaE4yVDRlOVV0dWdpZTNvZ2pieHpHYU10TTNFNkhSNSIsImp0aSI6IjExMTExMTExLTExMTEtNDExMS04MTExLTExMTExMTExMTExMSIsImlhdCI6MTc2NzIyNTYwMCwiZXhwIjo0MTAyNDQ0ODAwLCJhdXRob3JpemF0aW9uX2RldGFpbHMiOlt7InR5cGUiOiJhcm9oYV9zcGVuZGluZ19tYW5kYXRlIiwibWFuZGF0ZVRpZXIiOiJpbnRlbnQiLCJjb25zdHJhaW50cyI6eyJzcGVuZExpbWl0VXNkIjo1MDAsIm1lcmNoYW50Q2F0ZWdvcnkiOiI0NTExIiwiY3VycmVuY3kiOiJVU0QifSwicGFyZW50TWFuZGF0ZUlkIjpudWxsfV19.mHwXtTOpG65caIS_rnNXuMUfr_5_wJ4-3KJ2JxvWykEsDnQBZ0wsZw-w1VyZrfB-qtfi8C3sAeaWi8nHvwy_Dw",
+      "expect": {
+        "valid": false
+      }
+    },
+    {
+      "name": "a link missing from the middle",
+      "kind": "spending",
+      "token": "eyJhbGciOiJFZERTQSIsInR5cCI6ImFyb2hhLW1hbmRhdGUrand0Iiwia2lkIjoia1ByS19xbXhWV2FZVkE5d3dCRjZJdW8zdlZ6ejdUeEhDVHdYQnlnclM0ayJ9.eyJpc3MiOiJkaWQ6YXJvaGE6ekZWZW4zWDY2OXhMenNpNk4yVjkxRG9peXpIemcxdUFncWlUOGpaOW5TOTZaIiwic3ViIjoiZGlkOmFyb2hhOno1ODZaN0gydnBYOXFOaE4yVDRlOVV0dWdpZTNvZ2pieHpHYU10TTNFNkhSNSIsImp0aSI6IjExMTExMTExLTExMTEtNDExMS04MTExLTExMTExMTExMTExMSIsImlhdCI6MTc2NzIyNTYwMCwiZXhwIjo0MTAyNDQ0ODAwLCJhdXRob3JpemF0aW9uX2RldGFpbHMiOlt7InR5cGUiOiJhcm9oYV9zcGVuZGluZ19tYW5kYXRlIiwibWFuZGF0ZVRpZXIiOiJpbnRlbnQiLCJjb25zdHJhaW50cyI6eyJzcGVuZExpbWl0VXNkIjo1MDAsIm1lcmNoYW50Q2F0ZWdvcnkiOiI0NTExIiwiY3VycmVuY3kiOiJVU0QifSwicGFyZW50TWFuZGF0ZUlkIjpudWxsfV19.mHwXtTOpG65caIS_rnNXuMUfr_5_wJ4-3KJ2JxvWykEsDnQBZ0wsZw-w1VyZrfB-qtfi8C3sAeaWi8nHvwy_Dw~eyJhbGciOiJFZERTQSIsInR5cCI6ImFyb2hhLW1hbmRhdGUrand0Iiwia2lkIjoiRlZWNXVtVHVhdTg5MHE1OVYtNEdhX1I2cVdiN09OX2l2SmM0RWp2Q3dUTSJ9.eyJpc3MiOiJkaWQ6YXJvaGE6ekh5eDYyd1BRR3l2WENvaWhacTFCcmJVakJSaDJMdU54V2lpcU1rZkF1U1pyIiwic3ViIjoiZGlkOmFyb2hhOnpIeXg2MndQUUd5dlhDb2loWnExQnJiVWpCUmgyTHVOeFdpaXFNa2ZBdVNaciIsImp0aSI6IjMzMzMzMzMzLTMzMzMtNDMzMy04MzMzLTMzMzMzMzMzMzMzMyIsImlhdCI6MTc2NzIyNTYwMCwiZXhwIjo0MTAyNDQ0ODAwLCJhdXRob3JpemF0aW9uX2RldGFpbHMiOlt7InR5cGUiOiJhcm9oYV9zcGVuZGluZ19tYW5kYXRlIiwibWFuZGF0ZVRpZXIiOiJwYXltZW50IiwiY29uc3RyYWludHMiOnsic3BlbmRMaW1pdFVzZCI6MjQ5Ljk5LCJtZXJjaGFudENhdGVnb3J5IjoiNDUxMSIsImN1cnJlbmN5IjoiVVNEIn0sInBhcmVudE1hbmRhdGVJZCI6IjIyMjIyMjIyLTIyMjItNDIyMi04MjIyLTIyMjIyMjIyMjIyMiJ9XX0.L6EslZcsHqO4HT2oxF2gr-QXjeGrePdhhBnXtV4OxAcDHqgMitt3kQCkx8sj1WOPHk0KyezSob6-1uejCxvPDg",
+      "expect": {
+        "valid": false
+      }
+    },
+    {
+      "name": "child presented without its parent",
+      "kind": "spending",
+      "token": "eyJhbGciOiJFZERTQSIsInR5cCI6ImFyb2hhLW1hbmRhdGUrand0Iiwia2lkIjoiRnRJdS1WYkdyZmVfS0I2Q0g3R053T0RCNzJNTnhqX21sMTFkRXZPLTdrayJ9.eyJpc3MiOiJkaWQ6YXJvaGE6ejU4Nlo3SDJ2cFg5cU5oTjJUNGU5VXR1Z2llM29namJ4ekdhTXRNM0U2SFI1Iiwic3ViIjoiZGlkOmFyb2hhOnpIeXg2MndQUUd5dlhDb2loWnExQnJiVWpCUmgyTHVOeFdpaXFNa2ZBdVNaciIsImp0aSI6IjIyMjIyMjIyLTIyMjItNDIyMi04MjIyLTIyMjIyMjIyMjIyMiIsImlhdCI6MTc2NzIyNTYwMCwiZXhwIjo0MTAyNDQ0ODAwLCJhdXRob3JpemF0aW9uX2RldGFpbHMiOlt7InR5cGUiOiJhcm9oYV9zcGVuZGluZ19tYW5kYXRlIiwibWFuZGF0ZVRpZXIiOiJjYXJ0IiwiY29uc3RyYWludHMiOnsic3BlbmRMaW1pdFVzZCI6MzAwLCJtZXJjaGFudENhdGVnb3J5IjoiNDUxMSIsImN1cnJlbmN5IjoiVVNEIn0sInBhcmVudE1hbmRhdGVJZCI6IjExMTExMTExLTExMTEtNDExMS04MTExLTExMTExMTExMTExMSJ9XX0.wPas500jQZlonmb9ye7YATAYEbPE3ejuVp0BZ2VDwhIDMW52bWt2hNQ2AgChoIA40wwFO3DCvDzlG231zFHmDQ",
+      "expect": {
+        "valid": false
+      }
+    },
+    {
+      "name": "the same link twice",
+      "kind": "spending",
+      "token": "eyJhbGciOiJFZERTQSIsInR5cCI6ImFyb2hhLW1hbmRhdGUrand0Iiwia2lkIjoia1ByS19xbXhWV2FZVkE5d3dCRjZJdW8zdlZ6ejdUeEhDVHdYQnlnclM0ayJ9.eyJpc3MiOiJkaWQ6YXJvaGE6ekZWZW4zWDY2OXhMenNpNk4yVjkxRG9peXpIemcxdUFncWlUOGpaOW5TOTZaIiwic3ViIjoiZGlkOmFyb2hhOno1ODZaN0gydnBYOXFOaE4yVDRlOVV0dWdpZTNvZ2pieHpHYU10TTNFNkhSNSIsImp0aSI6IjExMTExMTExLTExMTEtNDExMS04MTExLTExMTExMTExMTExMSIsImlhdCI6MTc2NzIyNTYwMCwiZXhwIjo0MTAyNDQ0ODAwLCJhdXRob3JpemF0aW9uX2RldGFpbHMiOlt7InR5cGUiOiJhcm9oYV9zcGVuZGluZ19tYW5kYXRlIiwibWFuZGF0ZVRpZXIiOiJpbnRlbnQiLCJjb25zdHJhaW50cyI6eyJzcGVuZExpbWl0VXNkIjo1MDAsIm1lcmNoYW50Q2F0ZWdvcnkiOiI0NTExIiwiY3VycmVuY3kiOiJVU0QifSwicGFyZW50TWFuZGF0ZUlkIjpudWxsfV19.mHwXtTOpG65caIS_rnNXuMUfr_5_wJ4-3KJ2JxvWykEsDnQBZ0wsZw-w1VyZrfB-qtfi8C3sAeaWi8nHvwy_Dw~eyJhbGciOiJFZERTQSIsInR5cCI6ImFyb2hhLW1hbmRhdGUrand0Iiwia2lkIjoia1ByS19xbXhWV2FZVkE5d3dCRjZJdW8zdlZ6ejdUeEhDVHdYQnlnclM0ayJ9.eyJpc3MiOiJkaWQ6YXJvaGE6ekZWZW4zWDY2OXhMenNpNk4yVjkxRG9peXpIemcxdUFncWlUOGpaOW5TOTZaIiwic3ViIjoiZGlkOmFyb2hhOno1ODZaN0gydnBYOXFOaE4yVDRlOVV0dWdpZTNvZ2pieHpHYU10TTNFNkhSNSIsImp0aSI6IjExMTExMTExLTExMTEtNDExMS04MTExLTExMTExMTExMTExMSIsImlhdCI6MTc2NzIyNTYwMCwiZXhwIjo0MTAyNDQ0ODAwLCJhdXRob3JpemF0aW9uX2RldGFpbHMiOlt7InR5cGUiOiJhcm9oYV9zcGVuZGluZ19tYW5kYXRlIiwibWFuZGF0ZVRpZXIiOiJpbnRlbnQiLCJjb25zdHJhaW50cyI6eyJzcGVuZExpbWl0VXNkIjo1MDAsIm1lcmNoYW50Q2F0ZWdvcnkiOiI0NTExIiwiY3VycmVuY3kiOiJVU0QifSwicGFyZW50TWFuZGF0ZUlkIjpudWxsfV19.mHwXtTOpG65caIS_rnNXuMUfr_5_wJ4-3KJ2JxvWykEsDnQBZ0wsZw-w1VyZrfB-qtfi8C3sAeaWi8nHvwy_Dw",
+      "expect": {
+        "valid": false
+      }
+    },
+    {
+      "name": "an empty link",
+      "kind": "spending",
+      "token": "eyJhbGciOiJFZERTQSIsInR5cCI6ImFyb2hhLW1hbmRhdGUrand0Iiwia2lkIjoia1ByS19xbXhWV2FZVkE5d3dCRjZJdW8zdlZ6ejdUeEhDVHdYQnlnclM0ayJ9.eyJpc3MiOiJkaWQ6YXJvaGE6ekZWZW4zWDY2OXhMenNpNk4yVjkxRG9peXpIemcxdUFncWlUOGpaOW5TOTZaIiwic3ViIjoiZGlkOmFyb2hhOno1ODZaN0gydnBYOXFOaE4yVDRlOVV0dWdpZTNvZ2pieHpHYU10TTNFNkhSNSIsImp0aSI6IjExMTExMTExLTExMTEtNDExMS04MTExLTExMTExMTExMTExMSIsImlhdCI6MTc2NzIyNTYwMCwiZXhwIjo0MTAyNDQ0ODAwLCJhdXRob3JpemF0aW9uX2RldGFpbHMiOlt7InR5cGUiOiJhcm9oYV9zcGVuZGluZ19tYW5kYXRlIiwibWFuZGF0ZVRpZXIiOiJpbnRlbnQiLCJjb25zdHJhaW50cyI6eyJzcGVuZExpbWl0VXNkIjo1MDAsIm1lcmNoYW50Q2F0ZWdvcnkiOiI0NTExIiwiY3VycmVuY3kiOiJVU0QifSwicGFyZW50TWFuZGF0ZUlkIjpudWxsfV19.mHwXtTOpG65caIS_rnNXuMUfr_5_wJ4-3KJ2JxvWykEsDnQBZ0wsZw-w1VyZrfB-qtfi8C3sAeaWi8nHvwy_Dw~~eyJhbGciOiJFZERTQSIsInR5cCI6ImFyb2hhLW1hbmRhdGUrand0Iiwia2lkIjoiRnRJdS1WYkdyZmVfS0I2Q0g3R053T0RCNzJNTnhqX21sMTFkRXZPLTdrayJ9.eyJpc3MiOiJkaWQ6YXJvaGE6ejU4Nlo3SDJ2cFg5cU5oTjJUNGU5VXR1Z2llM29namJ4ekdhTXRNM0U2SFI1Iiwic3ViIjoiZGlkOmFyb2hhOnpIeXg2MndQUUd5dlhDb2loWnExQnJiVWpCUmgyTHVOeFdpaXFNa2ZBdVNaciIsImp0aSI6IjIyMjIyMjIyLTIyMjItNDIyMi04MjIyLTIyMjIyMjIyMjIyMiIsImlhdCI6MTc2NzIyNTYwMCwiZXhwIjo0MTAyNDQ0ODAwLCJhdXRob3JpemF0aW9uX2RldGFpbHMiOlt7InR5cGUiOiJhcm9oYV9zcGVuZGluZ19tYW5kYXRlIiwibWFuZGF0ZVRpZXIiOiJjYXJ0IiwiY29uc3RyYWludHMiOnsic3BlbmRMaW1pdFVzZCI6MzAwLCJtZXJjaGFudENhdGVnb3J5IjoiNDUxMSIsImN1cnJlbmN5IjoiVVNEIn0sInBhcmVudE1hbmRhdGVJZCI6IjExMTExMTExLTExMTEtNDExMS04MTExLTExMTExMTExMTExMSJ9XX0.wPas500jQZlonmb9ye7YATAYEbPE3ejuVp0BZ2VDwhIDMW52bWt2hNQ2AgChoIA40wwFO3DCvDzlG231zFHmDQ",
+      "expect": {
+        "valid": false
+      }
+    },
+    {
+      "name": "a trailing separator",
+      "kind": "spending",
+      "token": "eyJhbGciOiJFZERTQSIsInR5cCI6ImFyb2hhLW1hbmRhdGUrand0Iiwia2lkIjoia1ByS19xbXhWV2FZVkE5d3dCRjZJdW8zdlZ6ejdUeEhDVHdYQnlnclM0ayJ9.eyJpc3MiOiJkaWQ6YXJvaGE6ekZWZW4zWDY2OXhMenNpNk4yVjkxRG9peXpIemcxdUFncWlUOGpaOW5TOTZaIiwic3ViIjoiZGlkOmFyb2hhOno1ODZaN0gydnBYOXFOaE4yVDRlOVV0dWdpZTNvZ2pieHpHYU10TTNFNkhSNSIsImp0aSI6IjExMTExMTExLTExMTEtNDExMS04MTExLTExMTExMTExMTExMSIsImlhdCI6MTc2NzIyNTYwMCwiZXhwIjo0MTAyNDQ0ODAwLCJhdXRob3JpemF0aW9uX2RldGFpbHMiOlt7InR5cGUiOiJhcm9oYV9zcGVuZGluZ19tYW5kYXRlIiwibWFuZGF0ZVRpZXIiOiJpbnRlbnQiLCJjb25zdHJhaW50cyI6eyJzcGVuZExpbWl0VXNkIjo1MDAsIm1lcmNoYW50Q2F0ZWdvcnkiOiI0NTExIiwiY3VycmVuY3kiOiJVU0QifSwicGFyZW50TWFuZGF0ZUlkIjpudWxsfV19.mHwXtTOpG65caIS_rnNXuMUfr_5_wJ4-3KJ2JxvWykEsDnQBZ0wsZw-w1VyZrfB-qtfi8C3sAeaWi8nHvwy_Dw~",
+      "expect": {
+        "valid": false
+      }
+    },
+    {
+      "name": "a task mandate inside a spending chain",
+      "kind": "spending",
+      "token": "eyJhbGciOiJFZERTQSIsInR5cCI6ImFyb2hhLW1hbmRhdGUrand0Iiwia2lkIjoia1ByS19xbXhWV2FZVkE5d3dCRjZJdW8zdlZ6ejdUeEhDVHdYQnlnclM0ayJ9.eyJpc3MiOiJkaWQ6YXJvaGE6ekZWZW4zWDY2OXhMenNpNk4yVjkxRG9peXpIemcxdUFncWlUOGpaOW5TOTZaIiwic3ViIjoiZGlkOmFyb2hhOno1ODZaN0gydnBYOXFOaE4yVDRlOVV0dWdpZTNvZ2pieHpHYU10TTNFNkhSNSIsImp0aSI6IjExMTExMTExLTExMTEtNDExMS04MTExLTExMTExMTExMTExMSIsImlhdCI6MTc2NzIyNTYwMCwiZXhwIjo0MTAyNDQ0ODAwLCJhdXRob3JpemF0aW9uX2RldGFpbHMiOlt7InR5cGUiOiJhcm9oYV9zcGVuZGluZ19tYW5kYXRlIiwibWFuZGF0ZVRpZXIiOiJpbnRlbnQiLCJjb25zdHJhaW50cyI6eyJzcGVuZExpbWl0VXNkIjo1MDAsIm1lcmNoYW50Q2F0ZWdvcnkiOiI0NTExIiwiY3VycmVuY3kiOiJVU0QifSwicGFyZW50TWFuZGF0ZUlkIjpudWxsfV19.mHwXtTOpG65caIS_rnNXuMUfr_5_wJ4-3KJ2JxvWykEsDnQBZ0wsZw-w1VyZrfB-qtfi8C3sAeaWi8nHvwy_Dw~eyJhbGciOiJFZERTQSIsInR5cCI6ImFyb2hhLW1hbmRhdGUrand0Iiwia2lkIjoiRnRJdS1WYkdyZmVfS0I2Q0g3R053T0RCNzJNTnhqX21sMTFkRXZPLTdrayJ9.eyJpc3MiOiJkaWQ6YXJvaGE6ejU4Nlo3SDJ2cFg5cU5oTjJUNGU5VXR1Z2llM29namJ4ekdhTXRNM0U2SFI1Iiwic3ViIjoiZGlkOmFyb2hhOnpIeXg2MndQUUd5dlhDb2loWnExQnJiVWpCUmgyTHVOeFdpaXFNa2ZBdVNaciIsImp0aSI6IjY2NjY2NjY2LTY2NjYtNDY2Ni04NjY2LTY2NjY2NjY2NjY2NiIsImlhdCI6MTc2NzIyNTYwMCwiZXhwIjo0MTAyNDQ0ODAwLCJhdXRob3JpemF0aW9uX2RldGFpbHMiOlt7InR5cGUiOiJhcm9oYV90YXNrX21hbmRhdGUiLCJtYW5kYXRlVHlwZSI6InRhc2siLCJtYW5kYXRlVGllciI6ImNhcnQiLCJhbGxvd2VkIjpbImluYm94LnJlYWQiXSwiYmxvY2tlZCI6WyJpbmJveC5kZWxldGUiXSwidGFza0NvbnN0cmFpbnRzIjp7ImFjdGlvbkxpbWl0cyI6e30sIm1heERlbGVnYXRpb25EZXB0aCI6MX0sInBhcmVudE1hbmRhdGVJZCI6IjU1NTU1NTU1LTU1NTUtNDU1NS04NTU1LTU1NTU1NTU1NTU1NSJ9XX0.pM3YeZHV3xvd-o_aJGE0ihWSx9unKikRgvcrj1f3HucUvtVV-0YcpUT-uSYkygfIFQfcjq2UOdSTKCpeqOzdCg",
+      "expect": {
+        "valid": false
+      }
+    },
+    {
+      "name": "a task mandate presented as a spending mandate",
+      "kind": "spending",
+      "token": "eyJhbGciOiJFZERTQSIsInR5cCI6ImFyb2hhLW1hbmRhdGUrand0Iiwia2lkIjoia1ByS19xbXhWV2FZVkE5d3dCRjZJdW8zdlZ6ejdUeEhDVHdYQnlnclM0ayJ9.eyJpc3MiOiJkaWQ6YXJvaGE6ekZWZW4zWDY2OXhMenNpNk4yVjkxRG9peXpIemcxdUFncWlUOGpaOW5TOTZaIiwic3ViIjoiZGlkOmFyb2hhOno1ODZaN0gydnBYOXFOaE4yVDRlOVV0dWdpZTNvZ2pieHpHYU10TTNFNkhSNSIsImp0aSI6IjU1NTU1NTU1LTU1NTUtNDU1NS04NTU1LTU1NTU1NTU1NTU1NSIsImlhdCI6MTc2NzIyNTYwMCwiZXhwIjo0MTAyNDQ0ODAwLCJhdXRob3JpemF0aW9uX2RldGFpbHMiOlt7InR5cGUiOiJhcm9oYV90YXNrX21hbmRhdGUiLCJtYW5kYXRlVHlwZSI6InRhc2siLCJtYW5kYXRlVGllciI6ImludGVudCIsImFsbG93ZWQiOlsiaW5ib3gucmVhZCIsImluYm94LmFyY2hpdmUiXSwiYmxvY2tlZCI6WyJpbmJveC5kZWxldGUiXSwidGFza0NvbnN0cmFpbnRzIjp7ImFjdGlvbkxpbWl0cyI6eyJpbmJveC5hcmNoaXZlIjoyMH0sIm1heERlbGVnYXRpb25EZXB0aCI6Mn0sInBhcmVudE1hbmRhdGVJZCI6bnVsbH1dfQ.Lgicr1M-HqP_CxKjImh2Y0sQtwLJuHhA-wEoHnHt2340qiU868VxV-ga3j0-1Hw89n9E6y2Wn72k3TYcm7eFBw",
+      "expect": {
+        "valid": false
+      }
+    },
+    {
+      "name": "expired",
+      "kind": "spending",
+      "token": "eyJhbGciOiJFZERTQSIsInR5cCI6ImFyb2hhLW1hbmRhdGUrand0Iiwia2lkIjoia1ByS19xbXhWV2FZVkE5d3dCRjZJdW8zdlZ6ejdUeEhDVHdYQnlnclM0ayJ9.eyJpc3MiOiJkaWQ6YXJvaGE6ekZWZW4zWDY2OXhMenNpNk4yVjkxRG9peXpIemcxdUFncWlUOGpaOW5TOTZaIiwic3ViIjoiZGlkOmFyb2hhOno1ODZaN0gydnBYOXFOaE4yVDRlOVV0dWdpZTNvZ2pieHpHYU10TTNFNkhSNSIsImp0aSI6ImFhYWFhYWFhLWFhYWEtNGFhYS04YWFhLWFhYWFhYWFhYWFhYSIsImlhdCI6MTc2NzIyNTYwMCwiZXhwIjoxNzgwMjcyMDAwLCJhdXRob3JpemF0aW9uX2RldGFpbHMiOlt7InR5cGUiOiJhcm9oYV9zcGVuZGluZ19tYW5kYXRlIiwibWFuZGF0ZVRpZXIiOiJpbnRlbnQiLCJjb25zdHJhaW50cyI6eyJzcGVuZExpbWl0VXNkIjo1MDAsIm1lcmNoYW50Q2F0ZWdvcnkiOiI0NTExIiwiY3VycmVuY3kiOiJVU0QifSwicGFyZW50TWFuZGF0ZUlkIjpudWxsfV19.c_e0hAuaxVFOOiM2wNPpBicT97ZStSrNJViFh1RoEW0gIvzqQBR9YDfAms9GFcaRz8xxyLoHnDYV2rqNp_QpBQ",
+      "expect": {
+        "valid": false
+      }
+    },
+    {
+      "name": "issued in the future",
+      "kind": "spending",
+      "token": "eyJhbGciOiJFZERTQSIsInR5cCI6ImFyb2hhLW1hbmRhdGUrand0Iiwia2lkIjoia1ByS19xbXhWV2FZVkE5d3dCRjZJdW8zdlZ6ejdUeEhDVHdYQnlnclM0ayJ9.eyJpc3MiOiJkaWQ6YXJvaGE6ekZWZW4zWDY2OXhMenNpNk4yVjkxRG9peXpIemcxdUFncWlUOGpaOW5TOTZaIiwic3ViIjoiZGlkOmFyb2hhOno1ODZaN0gydnBYOXFOaE4yVDRlOVV0dWdpZTNvZ2pieHpHYU10TTNFNkhSNSIsImp0aSI6ImJiYmJiYmJiLWJiYmItNGJiYi04YmJiLWJiYmJiYmJiYmJiYiIsImlhdCI6MTc5ODc2MTYwMCwiZXhwIjo0MTAyNDQ0ODAwLCJhdXRob3JpemF0aW9uX2RldGFpbHMiOlt7InR5cGUiOiJhcm9oYV9zcGVuZGluZ19tYW5kYXRlIiwibWFuZGF0ZVRpZXIiOiJpbnRlbnQiLCJjb25zdHJhaW50cyI6eyJzcGVuZExpbWl0VXNkIjo1MDAsIm1lcmNoYW50Q2F0ZWdvcnkiOiI0NTExIiwiY3VycmVuY3kiOiJVU0QifSwicGFyZW50TWFuZGF0ZUlkIjpudWxsfV19.IAXdbyrQcDV-Di4SFFc3RDMNZNAVuxWJipgOYaRsQwUzpsO9-2iGkr0-VcSKmFwu8ZOhKHTINJBgCS7lsdAKBA",
+      "expect": {
+        "valid": false
+      }
+    },
+    {
+      "name": "alg none",
+      "kind": "spending",
+      "token": "eyJhbGciOiJub25lIiwidHlwIjoiYXJvaGEtbWFuZGF0ZStqd3QiLCJraWQiOiJrUHJLX3FteFZXYVlWQTl3d0JGNkl1bzN2Vnp6N1R4SENUd1hCeWdyUzRrIn0.eyJpc3MiOiJkaWQ6YXJvaGE6ekZWZW4zWDY2OXhMenNpNk4yVjkxRG9peXpIemcxdUFncWlUOGpaOW5TOTZaIiwic3ViIjoiZGlkOmFyb2hhOno1ODZaN0gydnBYOXFOaE4yVDRlOVV0dWdpZTNvZ2pieHpHYU10TTNFNkhSNSIsImp0aSI6IjExMTExMTExLTExMTEtNDExMS04MTExLTExMTExMTExMTExMSIsImlhdCI6MTc2NzIyNTYwMCwiZXhwIjo0MTAyNDQ0ODAwLCJhdXRob3JpemF0aW9uX2RldGFpbHMiOlt7InR5cGUiOiJhcm9oYV9zcGVuZGluZ19tYW5kYXRlIiwibWFuZGF0ZVRpZXIiOiJpbnRlbnQiLCJjb25zdHJhaW50cyI6eyJzcGVuZExpbWl0VXNkIjo1MDAsIm1lcmNoYW50Q2F0ZWdvcnkiOiI0NTExIiwiY3VycmVuY3kiOiJVU0QifSwicGFyZW50TWFuZGF0ZUlkIjpudWxsfV19.",
+      "expect": {
+        "valid": false
+      }
+    },
+    {
+      "name": "alg HS256",
+      "kind": "spending",
+      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6ImFyb2hhLW1hbmRhdGUrand0Iiwia2lkIjoia1ByS19xbXhWV2FZVkE5d3dCRjZJdW8zdlZ6ejdUeEhDVHdYQnlnclM0ayJ9.eyJpc3MiOiJkaWQ6YXJvaGE6ekZWZW4zWDY2OXhMenNpNk4yVjkxRG9peXpIemcxdUFncWlUOGpaOW5TOTZaIiwic3ViIjoiZGlkOmFyb2hhOno1ODZaN0gydnBYOXFOaE4yVDRlOVV0dWdpZTNvZ2pieHpHYU10TTNFNkhSNSIsImp0aSI6IjExMTExMTExLTExMTEtNDExMS04MTExLTExMTExMTExMTExMSIsImlhdCI6MTc2NzIyNTYwMCwiZXhwIjo0MTAyNDQ0ODAwLCJhdXRob3JpemF0aW9uX2RldGFpbHMiOlt7InR5cGUiOiJhcm9oYV9zcGVuZGluZ19tYW5kYXRlIiwibWFuZGF0ZVRpZXIiOiJpbnRlbnQiLCJjb25zdHJhaW50cyI6eyJzcGVuZExpbWl0VXNkIjo1MDAsIm1lcmNoYW50Q2F0ZWdvcnkiOiI0NTExIiwiY3VycmVuY3kiOiJVU0QifSwicGFyZW50TWFuZGF0ZUlkIjpudWxsfV19.8FQ4yucxzeenz74cXWfOVbzp9yYOCSAWqViTyqUKdmSW8bUNCmyy4luhqHMQYhOuX_MV5BevpM-SCEeIWsH5BA",
+      "expect": {
+        "valid": false
+      }
+    },
+    {
+      "name": "typ missing",
+      "kind": "spending",
+      "token": "eyJhbGciOiJFZERTQSIsImtpZCI6ImtQcktfcW14VldhWVZBOXd3QkY2SXVvM3ZWeno3VHhIQ1R3WEJ5Z3JTNGsifQ.eyJpc3MiOiJkaWQ6YXJvaGE6ekZWZW4zWDY2OXhMenNpNk4yVjkxRG9peXpIemcxdUFncWlUOGpaOW5TOTZaIiwic3ViIjoiZGlkOmFyb2hhOno1ODZaN0gydnBYOXFOaE4yVDRlOVV0dWdpZTNvZ2pieHpHYU10TTNFNkhSNSIsImp0aSI6IjExMTExMTExLTExMTEtNDExMS04MTExLTExMTExMTExMTExMSIsImlhdCI6MTc2NzIyNTYwMCwiZXhwIjo0MTAyNDQ0ODAwLCJhdXRob3JpemF0aW9uX2RldGFpbHMiOlt7InR5cGUiOiJhcm9oYV9zcGVuZGluZ19tYW5kYXRlIiwibWFuZGF0ZVRpZXIiOiJpbnRlbnQiLCJjb25zdHJhaW50cyI6eyJzcGVuZExpbWl0VXNkIjo1MDAsIm1lcmNoYW50Q2F0ZWdvcnkiOiI0NTExIiwiY3VycmVuY3kiOiJVU0QifSwicGFyZW50TWFuZGF0ZUlkIjpudWxsfV19.vp6DbMMz8xhmEHk7CDXqD-kAOc1T3Xjdm-cdxI_-Vn07VGed21JOSPLgm-dZlssiFIHeqVoQOUtUIpv8I4IfAA",
+      "expect": {
+        "valid": false
+      }
+    },
+    {
+      "name": "typ JWT",
+      "kind": "spending",
+      "token": "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCIsImtpZCI6ImtQcktfcW14VldhWVZBOXd3QkY2SXVvM3ZWeno3VHhIQ1R3WEJ5Z3JTNGsifQ.eyJpc3MiOiJkaWQ6YXJvaGE6ekZWZW4zWDY2OXhMenNpNk4yVjkxRG9peXpIemcxdUFncWlUOGpaOW5TOTZaIiwic3ViIjoiZGlkOmFyb2hhOno1ODZaN0gydnBYOXFOaE4yVDRlOVV0dWdpZTNvZ2pieHpHYU10TTNFNkhSNSIsImp0aSI6IjExMTExMTExLTExMTEtNDExMS04MTExLTExMTExMTExMTExMSIsImlhdCI6MTc2NzIyNTYwMCwiZXhwIjo0MTAyNDQ0ODAwLCJhdXRob3JpemF0aW9uX2RldGFpbHMiOlt7InR5cGUiOiJhcm9oYV9zcGVuZGluZ19tYW5kYXRlIiwibWFuZGF0ZVRpZXIiOiJpbnRlbnQiLCJjb25zdHJhaW50cyI6eyJzcGVuZExpbWl0VXNkIjo1MDAsIm1lcmNoYW50Q2F0ZWdvcnkiOiI0NTExIiwiY3VycmVuY3kiOiJVU0QifSwicGFyZW50TWFuZGF0ZUlkIjpudWxsfV19.5xmwhrZuRTxZ8OJ9pBPNXoYgwKKSIjiawszjhu0VBWZMeRBiEUg5ghwCorrLPdwZ7FiW_uv50AiEece_8HBvDw",
+      "expect": {
+        "valid": false
+      }
+    },
+    {
+      "name": "typ at+jwt (an OAuth access token)",
+      "kind": "spending",
+      "token": "eyJhbGciOiJFZERTQSIsInR5cCI6ImF0K2p3dCIsImtpZCI6ImtQcktfcW14VldhWVZBOXd3QkY2SXVvM3ZWeno3VHhIQ1R3WEJ5Z3JTNGsifQ.eyJpc3MiOiJkaWQ6YXJvaGE6ekZWZW4zWDY2OXhMenNpNk4yVjkxRG9peXpIemcxdUFncWlUOGpaOW5TOTZaIiwic3ViIjoiZGlkOmFyb2hhOno1ODZaN0gydnBYOXFOaE4yVDRlOVV0dWdpZTNvZ2pieHpHYU10TTNFNkhSNSIsImp0aSI6IjExMTExMTExLTExMTEtNDExMS04MTExLTExMTExMTExMTExMSIsImlhdCI6MTc2NzIyNTYwMCwiZXhwIjo0MTAyNDQ0ODAwLCJhdXRob3JpemF0aW9uX2RldGFpbHMiOlt7InR5cGUiOiJhcm9oYV9zcGVuZGluZ19tYW5kYXRlIiwibWFuZGF0ZVRpZXIiOiJpbnRlbnQiLCJjb25zdHJhaW50cyI6eyJzcGVuZExpbWl0VXNkIjo1MDAsIm1lcmNoYW50Q2F0ZWdvcnkiOiI0NTExIiwiY3VycmVuY3kiOiJVU0QifSwicGFyZW50TWFuZGF0ZUlkIjpudWxsfV19.kkFhO61pYxBNqAVSqhOF9abs4sH_sVfucKXPme2tE7mlZqA_M1ZOGWHcYMVcA0T7DbygE1dmDpU4ODrS_jw-Dg",
+      "expect": {
+        "valid": false
+      }
+    },
+    {
+      "name": "unknown header member crit",
+      "kind": "spending",
+      "token": "eyJhbGciOiJFZERTQSIsInR5cCI6ImFyb2hhLW1hbmRhdGUrand0Iiwia2lkIjoia1ByS19xbXhWV2FZVkE5d3dCRjZJdW8zdlZ6ejdUeEhDVHdYQnlnclM0ayIsImNyaXQiOlsiZXhwIl19.eyJpc3MiOiJkaWQ6YXJvaGE6ekZWZW4zWDY2OXhMenNpNk4yVjkxRG9peXpIemcxdUFncWlUOGpaOW5TOTZaIiwic3ViIjoiZGlkOmFyb2hhOno1ODZaN0gydnBYOXFOaE4yVDRlOVV0dWdpZTNvZ2pieHpHYU10TTNFNkhSNSIsImp0aSI6IjExMTExMTExLTExMTEtNDExMS04MTExLTExMTExMTExMTExMSIsImlhdCI6MTc2NzIyNTYwMCwiZXhwIjo0MTAyNDQ0ODAwLCJhdXRob3JpemF0aW9uX2RldGFpbHMiOlt7InR5cGUiOiJhcm9oYV9zcGVuZGluZ19tYW5kYXRlIiwibWFuZGF0ZVRpZXIiOiJpbnRlbnQiLCJjb25zdHJhaW50cyI6eyJzcGVuZExpbWl0VXNkIjo1MDAsIm1lcmNoYW50Q2F0ZWdvcnkiOiI0NTExIiwiY3VycmVuY3kiOiJVU0QifSwicGFyZW50TWFuZGF0ZUlkIjpudWxsfV19.AFC9FEGXISivxvKA7Y5G1NbzMhDXPFmmFdBAGGJw3BS0_gyCsqlo-SQ2ZAhg2-_rL5esgrDibXsHY9UwgbAADg",
+      "expect": {
+        "valid": false
+      }
+    },
+    {
+      "name": "header carries a key (jwk)",
+      "kind": "spending",
+      "token": "eyJhbGciOiJFZERTQSIsInR5cCI6ImFyb2hhLW1hbmRhdGUrand0Iiwia2lkIjoia1ByS19xbXhWV2FZVkE5d3dCRjZJdW8zdlZ6ejdUeEhDVHdYQnlnclM0ayIsImp3ayI6eyJrdHkiOiJPS1AiLCJjcnYiOiJFZDI1NTE5IiwieCI6IlBVQVh3LWhEaVZxU3R3cW5UUnQtdkp5WUxNOHV4SmFNd00xVjhTcjBaZ3cifX0.eyJpc3MiOiJkaWQ6YXJvaGE6ekZWZW4zWDY2OXhMenNpNk4yVjkxRG9peXpIemcxdUFncWlUOGpaOW5TOTZaIiwic3ViIjoiZGlkOmFyb2hhOno1ODZaN0gydnBYOXFOaE4yVDRlOVV0dWdpZTNvZ2pieHpHYU10TTNFNkhSNSIsImp0aSI6IjExMTExMTExLTExMTEtNDExMS04MTExLTExMTExMTExMTExMSIsImlhdCI6MTc2NzIyNTYwMCwiZXhwIjo0MTAyNDQ0ODAwLCJhdXRob3JpemF0aW9uX2RldGFpbHMiOlt7InR5cGUiOiJhcm9oYV9zcGVuZGluZ19tYW5kYXRlIiwibWFuZGF0ZVRpZXIiOiJpbnRlbnQiLCJjb25zdHJhaW50cyI6eyJzcGVuZExpbWl0VXNkIjo1MDAsIm1lcmNoYW50Q2F0ZWdvcnkiOiI0NTExIiwiY3VycmVuY3kiOiJVU0QifSwicGFyZW50TWFuZGF0ZUlkIjpudWxsfV19.AC46ESnS1eTu8wKpm7a09tEBiFJ_K0_mhweMBQOmFIALXoQbXZRRt0gCeZTBr0DX0CF6gRZpMlOjkb-EdDj9CQ",
+      "expect": {
+        "valid": false
+      }
+    },
+    {
+      "name": "unknown claim nbf",
+      "kind": "spending",
+      "token": "eyJhbGciOiJFZERTQSIsInR5cCI6ImFyb2hhLW1hbmRhdGUrand0Iiwia2lkIjoia1ByS19xbXhWV2FZVkE5d3dCRjZJdW8zdlZ6ejdUeEhDVHdYQnlnclM0ayJ9.eyJpc3MiOiJkaWQ6YXJvaGE6ekZWZW4zWDY2OXhMenNpNk4yVjkxRG9peXpIemcxdUFncWlUOGpaOW5TOTZaIiwic3ViIjoiZGlkOmFyb2hhOno1ODZaN0gydnBYOXFOaE4yVDRlOVV0dWdpZTNvZ2pieHpHYU10TTNFNkhSNSIsImp0aSI6IjExMTExMTExLTExMTEtNDExMS04MTExLTExMTExMTExMTExMSIsImlhdCI6MTc2NzIyNTYwMCwiZXhwIjo0MTAyNDQ0ODAwLCJhdXRob3JpemF0aW9uX2RldGFpbHMiOlt7InR5cGUiOiJhcm9oYV9zcGVuZGluZ19tYW5kYXRlIiwibWFuZGF0ZVRpZXIiOiJpbnRlbnQiLCJjb25zdHJhaW50cyI6eyJzcGVuZExpbWl0VXNkIjo1MDAsIm1lcmNoYW50Q2F0ZWdvcnkiOiI0NTExIiwiY3VycmVuY3kiOiJVU0QifSwicGFyZW50TWFuZGF0ZUlkIjpudWxsfV0sIm5iZiI6NDAwMDAwMDAwMH0.TnQbAuxMmzwTS738fdLj6XYVRxGN8-rEeNvXIG19qm3xZpfWA6wqGJszgstwlpB0WvmIELaM0YM8YZI5PqkJBQ",
+      "expect": {
+        "valid": false
+      }
+    },
+    {
+      "name": "unknown claim aud",
+      "kind": "spending",
+      "token": "eyJhbGciOiJFZERTQSIsInR5cCI6ImFyb2hhLW1hbmRhdGUrand0Iiwia2lkIjoia1ByS19xbXhWV2FZVkE5d3dCRjZJdW8zdlZ6ejdUeEhDVHdYQnlnclM0ayJ9.eyJpc3MiOiJkaWQ6YXJvaGE6ekZWZW4zWDY2OXhMenNpNk4yVjkxRG9peXpIemcxdUFncWlUOGpaOW5TOTZaIiwic3ViIjoiZGlkOmFyb2hhOno1ODZaN0gydnBYOXFOaE4yVDRlOVV0dWdpZTNvZ2pieHpHYU10TTNFNkhSNSIsImp0aSI6IjExMTExMTExLTExMTEtNDExMS04MTExLTExMTExMTExMTExMSIsImlhdCI6MTc2NzIyNTYwMCwiZXhwIjo0MTAyNDQ0ODAwLCJhdXRob3JpemF0aW9uX2RldGFpbHMiOlt7InR5cGUiOiJhcm9oYV9zcGVuZGluZ19tYW5kYXRlIiwibWFuZGF0ZVRpZXIiOiJpbnRlbnQiLCJjb25zdHJhaW50cyI6eyJzcGVuZExpbWl0VXNkIjo1MDAsIm1lcmNoYW50Q2F0ZWdvcnkiOiI0NTExIiwiY3VycmVuY3kiOiJVU0QifSwicGFyZW50TWFuZGF0ZUlkIjpudWxsfV0sImF1ZCI6Imh0dHBzOi8vYXBpLmV4YW1wbGUuY29tIn0.w0ns2HASm6CpS0TuCS67q6EoldX_V_4cRaTpf8vBLDv8g81IhVYEpMYWxmA-ky4jx19rOANjLPAQjTaQ-w6NCw",
+      "expect": {
+        "valid": false
+      }
+    },
+    {
+      "name": "iat is not a whole number",
+      "kind": "spending",
+      "token": "eyJhbGciOiJFZERTQSIsInR5cCI6ImFyb2hhLW1hbmRhdGUrand0Iiwia2lkIjoia1ByS19xbXhWV2FZVkE5d3dCRjZJdW8zdlZ6ejdUeEhDVHdYQnlnclM0ayJ9.eyJpc3MiOiJkaWQ6YXJvaGE6ekZWZW4zWDY2OXhMenNpNk4yVjkxRG9peXpIemcxdUFncWlUOGpaOW5TOTZaIiwic3ViIjoiZGlkOmFyb2hhOno1ODZaN0gydnBYOXFOaE4yVDRlOVV0dWdpZTNvZ2pieHpHYU10TTNFNkhSNSIsImp0aSI6IjExMTExMTExLTExMTEtNDExMS04MTExLTExMTExMTExMTExMSIsImlhdCI6MTc2NzIyNTYwMC41LCJleHAiOjQxMDI0NDQ4MDAsImF1dGhvcml6YXRpb25fZGV0YWlscyI6W3sidHlwZSI6ImFyb2hhX3NwZW5kaW5nX21hbmRhdGUiLCJtYW5kYXRlVGllciI6ImludGVudCIsImNvbnN0cmFpbnRzIjp7InNwZW5kTGltaXRVc2QiOjUwMCwibWVyY2hhbnRDYXRlZ29yeSI6IjQ1MTEiLCJjdXJyZW5jeSI6IlVTRCJ9LCJwYXJlbnRNYW5kYXRlSWQiOm51bGx9XX0.tDz6jrAzrW7O-JiIj1y6j_sXHmEkeO_-AglvjeDOOT3gv08WPNAXjm1dOQeh1coNExErpl6JWjbLHUWg2cspDg",
+      "expect": {
+        "valid": false
+      }
+    },
+    {
+      "name": "exp is a string",
+      "kind": "spending",
+      "token": "eyJhbGciOiJFZERTQSIsInR5cCI6ImFyb2hhLW1hbmRhdGUrand0Iiwia2lkIjoia1ByS19xbXhWV2FZVkE5d3dCRjZJdW8zdlZ6ejdUeEhDVHdYQnlnclM0ayJ9.eyJpc3MiOiJkaWQ6YXJvaGE6ekZWZW4zWDY2OXhMenNpNk4yVjkxRG9peXpIemcxdUFncWlUOGpaOW5TOTZaIiwic3ViIjoiZGlkOmFyb2hhOno1ODZaN0gydnBYOXFOaE4yVDRlOVV0dWdpZTNvZ2pieHpHYU10TTNFNkhSNSIsImp0aSI6IjExMTExMTExLTExMTEtNDExMS04MTExLTExMTExMTExMTExMSIsImlhdCI6MTc2NzIyNTYwMCwiZXhwIjoiNDEwMjQ0NDgwMCIsImF1dGhvcml6YXRpb25fZGV0YWlscyI6W3sidHlwZSI6ImFyb2hhX3NwZW5kaW5nX21hbmRhdGUiLCJtYW5kYXRlVGllciI6ImludGVudCIsImNvbnN0cmFpbnRzIjp7InNwZW5kTGltaXRVc2QiOjUwMCwibWVyY2hhbnRDYXRlZ29yeSI6IjQ1MTEiLCJjdXJyZW5jeSI6IlVTRCJ9LCJwYXJlbnRNYW5kYXRlSWQiOm51bGx9XX0.9MEJ-WWCUl6rR2ML1L-WXXN3AW4NCUS95WyG-nt-aON7HpxgkdVG1cRWgn23F6cOwOZQQnW0A8XftzTSk-YeDg",
+      "expect": {
+        "valid": false
+      }
+    },
+    {
+      "name": "exp missing",
+      "kind": "spending",
+      "token": "eyJhbGciOiJFZERTQSIsInR5cCI6ImFyb2hhLW1hbmRhdGUrand0Iiwia2lkIjoia1ByS19xbXhWV2FZVkE5d3dCRjZJdW8zdlZ6ejdUeEhDVHdYQnlnclM0ayJ9.eyJpc3MiOiJkaWQ6YXJvaGE6ekZWZW4zWDY2OXhMenNpNk4yVjkxRG9peXpIemcxdUFncWlUOGpaOW5TOTZaIiwic3ViIjoiZGlkOmFyb2hhOno1ODZaN0gydnBYOXFOaE4yVDRlOVV0dWdpZTNvZ2pieHpHYU10TTNFNkhSNSIsImp0aSI6IjExMTExMTExLTExMTEtNDExMS04MTExLTExMTExMTExMTExMSIsImlhdCI6MTc2NzIyNTYwMCwiYXV0aG9yaXphdGlvbl9kZXRhaWxzIjpbeyJ0eXBlIjoiYXJvaGFfc3BlbmRpbmdfbWFuZGF0ZSIsIm1hbmRhdGVUaWVyIjoiaW50ZW50IiwiY29uc3RyYWludHMiOnsic3BlbmRMaW1pdFVzZCI6NTAwLCJtZXJjaGFudENhdGVnb3J5IjoiNDUxMSIsImN1cnJlbmN5IjoiVVNEIn0sInBhcmVudE1hbmRhdGVJZCI6bnVsbH1dfQ.G7WMW8PDCeUrigVWKhH6aQ-BzU8-WYydpn4DB9ECn_nm9p_RjnlrKZNtWHV28JIe_HnhYGn7uM0ri3wLi8tFDA",
+      "expect": {
+        "valid": false
+      }
+    },
+    {
+      "name": "sub missing",
+      "kind": "spending",
+      "token": "eyJhbGciOiJFZERTQSIsInR5cCI6ImFyb2hhLW1hbmRhdGUrand0Iiwia2lkIjoia1ByS19xbXhWV2FZVkE5d3dCRjZJdW8zdlZ6ejdUeEhDVHdYQnlnclM0ayJ9.eyJpc3MiOiJkaWQ6YXJvaGE6ekZWZW4zWDY2OXhMenNpNk4yVjkxRG9peXpIemcxdUFncWlUOGpaOW5TOTZaIiwianRpIjoiMTExMTExMTEtMTExMS00MTExLTgxMTEtMTExMTExMTExMTExIiwiaWF0IjoxNzY3MjI1NjAwLCJleHAiOjQxMDI0NDQ4MDAsImF1dGhvcml6YXRpb25fZGV0YWlscyI6W3sidHlwZSI6ImFyb2hhX3NwZW5kaW5nX21hbmRhdGUiLCJtYW5kYXRlVGllciI6ImludGVudCIsImNvbnN0cmFpbnRzIjp7InNwZW5kTGltaXRVc2QiOjUwMCwibWVyY2hhbnRDYXRlZ29yeSI6IjQ1MTEiLCJjdXJyZW5jeSI6IlVTRCJ9LCJwYXJlbnRNYW5kYXRlSWQiOm51bGx9XX0.mnWljKn7dRGVF-q7YtkrElANLKJNwyOpM4zzLB1XNTdtyT37SsvoEUMCaDTNgKnUSdTwa38XFH1uXiPrCvZdAA",
+      "expect": {
+        "valid": false
+      }
+    },
+    {
+      "name": "authorization_details missing",
+      "kind": "spending",
+      "token": "eyJhbGciOiJFZERTQSIsInR5cCI6ImFyb2hhLW1hbmRhdGUrand0Iiwia2lkIjoia1ByS19xbXhWV2FZVkE5d3dCRjZJdW8zdlZ6ejdUeEhDVHdYQnlnclM0ayJ9.eyJpc3MiOiJkaWQ6YXJvaGE6ekZWZW4zWDY2OXhMenNpNk4yVjkxRG9peXpIemcxdUFncWlUOGpaOW5TOTZaIiwic3ViIjoiZGlkOmFyb2hhOno1ODZaN0gydnBYOXFOaE4yVDRlOVV0dWdpZTNvZ2pieHpHYU10TTNFNkhSNSIsImp0aSI6IjExMTExMTExLTExMTEtNDExMS04MTExLTExMTExMTExMTExMSIsImlhdCI6MTc2NzIyNTYwMCwiZXhwIjo0MTAyNDQ0ODAwfQ.tdt0J2dxiSKp20mgt-5REO7-BGRjldnHgXmevTIg3uQPUKUurhP8TUTa_IujjBWkqcTZ23xMxgKFJT38aICZBA",
+      "expect": {
+        "valid": false
+      }
+    },
+    {
+      "name": "authorization_details with two entries",
+      "kind": "spending",
+      "token": "eyJhbGciOiJFZERTQSIsInR5cCI6ImFyb2hhLW1hbmRhdGUrand0Iiwia2lkIjoia1ByS19xbXhWV2FZVkE5d3dCRjZJdW8zdlZ6ejdUeEhDVHdYQnlnclM0ayJ9.eyJpc3MiOiJkaWQ6YXJvaGE6ekZWZW4zWDY2OXhMenNpNk4yVjkxRG9peXpIemcxdUFncWlUOGpaOW5TOTZaIiwic3ViIjoiZGlkOmFyb2hhOno1ODZaN0gydnBYOXFOaE4yVDRlOVV0dWdpZTNvZ2pieHpHYU10TTNFNkhSNSIsImp0aSI6IjExMTExMTExLTExMTEtNDExMS04MTExLTExMTExMTExMTExMSIsImlhdCI6MTc2NzIyNTYwMCwiZXhwIjo0MTAyNDQ0ODAwLCJhdXRob3JpemF0aW9uX2RldGFpbHMiOlt7InR5cGUiOiJhcm9oYV9zcGVuZGluZ19tYW5kYXRlIiwibWFuZGF0ZVRpZXIiOiJpbnRlbnQiLCJjb25zdHJhaW50cyI6eyJzcGVuZExpbWl0VXNkIjo1MDAsIm1lcmNoYW50Q2F0ZWdvcnkiOiI0NTExIiwiY3VycmVuY3kiOiJVU0QifSwicGFyZW50TWFuZGF0ZUlkIjpudWxsfSx7InR5cGUiOiJhcm9oYV9zcGVuZGluZ19tYW5kYXRlIiwibWFuZGF0ZVRpZXIiOiJpbnRlbnQiLCJjb25zdHJhaW50cyI6eyJzcGVuZExpbWl0VXNkIjo1MDAsIm1lcmNoYW50Q2F0ZWdvcnkiOiI0NTExIiwiY3VycmVuY3kiOiJVU0QifSwicGFyZW50TWFuZGF0ZUlkIjpudWxsfV19.AAbIkRHoWacfx3TmolXYG6XpCBsIE-ItHX60udCrKkwxe3fmgzze5p1Y4jL7eYS8xzPjD8_VvVk-KHUsUWGHCw",
+      "expect": {
+        "valid": false
+      }
+    },
+    {
+      "name": "authorization_details type is not a mandate",
+      "kind": "spending",
+      "token": "eyJhbGciOiJFZERTQSIsInR5cCI6ImFyb2hhLW1hbmRhdGUrand0Iiwia2lkIjoia1ByS19xbXhWV2FZVkE5d3dCRjZJdW8zdlZ6ejdUeEhDVHdYQnlnclM0ayJ9.eyJpc3MiOiJkaWQ6YXJvaGE6ekZWZW4zWDY2OXhMenNpNk4yVjkxRG9peXpIemcxdUFncWlUOGpaOW5TOTZaIiwic3ViIjoiZGlkOmFyb2hhOno1ODZaN0gydnBYOXFOaE4yVDRlOVV0dWdpZTNvZ2pieHpHYU10TTNFNkhSNSIsImp0aSI6IjExMTExMTExLTExMTEtNDExMS04MTExLTExMTExMTExMTExMSIsImlhdCI6MTc2NzIyNTYwMCwiZXhwIjo0MTAyNDQ0ODAwLCJhdXRob3JpemF0aW9uX2RldGFpbHMiOlt7InR5cGUiOiJwYXltZW50X2luaXRpYXRpb24iLCJtYW5kYXRlVGllciI6ImludGVudCIsImNvbnN0cmFpbnRzIjp7InNwZW5kTGltaXRVc2QiOjUwMCwibWVyY2hhbnRDYXRlZ29yeSI6IjQ1MTEiLCJjdXJyZW5jeSI6IlVTRCJ9LCJwYXJlbnRNYW5kYXRlSWQiOm51bGx9XX0.zDZqv4IYy6FC4-vTkv-8eJgbu6NorhjR0GRYf8AIYD3vgwvZ1SER-KTOsYAKP8wBCzonTOwHa77fJ90U_HNEAw",
+      "expect": {
+        "valid": false
+      }
+    },
+    {
+      "name": "authorization_details restates the grantor",
+      "kind": "spending",
+      "token": "eyJhbGciOiJFZERTQSIsInR5cCI6ImFyb2hhLW1hbmRhdGUrand0Iiwia2lkIjoia1ByS19xbXhWV2FZVkE5d3dCRjZJdW8zdlZ6ejdUeEhDVHdYQnlnclM0ayJ9.eyJpc3MiOiJkaWQ6YXJvaGE6ekZWZW4zWDY2OXhMenNpNk4yVjkxRG9peXpIemcxdUFncWlUOGpaOW5TOTZaIiwic3ViIjoiZGlkOmFyb2hhOno1ODZaN0gydnBYOXFOaE4yVDRlOVV0dWdpZTNvZ2pieHpHYU10TTNFNkhSNSIsImp0aSI6IjExMTExMTExLTExMTEtNDExMS04MTExLTExMTExMTExMTExMSIsImlhdCI6MTc2NzIyNTYwMCwiZXhwIjo0MTAyNDQ0ODAwLCJhdXRob3JpemF0aW9uX2RldGFpbHMiOlt7InR5cGUiOiJhcm9oYV9zcGVuZGluZ19tYW5kYXRlIiwibWFuZGF0ZVRpZXIiOiJpbnRlbnQiLCJjb25zdHJhaW50cyI6eyJzcGVuZExpbWl0VXNkIjo1MDAsIm1lcmNoYW50Q2F0ZWdvcnkiOiI0NTExIiwiY3VycmVuY3kiOiJVU0QifSwicGFyZW50TWFuZGF0ZUlkIjpudWxsLCJncmFudG9yIjoiZGlkOmFyb2hhOno1ODZaN0gydnBYOXFOaE4yVDRlOVV0dWdpZTNvZ2pieHpHYU10TTNFNkhSNSJ9XX0.PnVLB4aUulOhq1btBdjZov637Zei6rxTVxK96i-mYACaMobQnPFiZwDILppQKMIInFCuVxtKtVzSAf3Ppng9AQ",
+      "expect": {
+        "valid": false
+      }
+    },
+    {
+      "name": "spending detail carries mandateType",
+      "kind": "spending",
+      "token": "eyJhbGciOiJFZERTQSIsInR5cCI6ImFyb2hhLW1hbmRhdGUrand0Iiwia2lkIjoia1ByS19xbXhWV2FZVkE5d3dCRjZJdW8zdlZ6ejdUeEhDVHdYQnlnclM0ayJ9.eyJpc3MiOiJkaWQ6YXJvaGE6ekZWZW4zWDY2OXhMenNpNk4yVjkxRG9peXpIemcxdUFncWlUOGpaOW5TOTZaIiwic3ViIjoiZGlkOmFyb2hhOno1ODZaN0gydnBYOXFOaE4yVDRlOVV0dWdpZTNvZ2pieHpHYU10TTNFNkhSNSIsImp0aSI6IjExMTExMTExLTExMTEtNDExMS04MTExLTExMTExMTExMTExMSIsImlhdCI6MTc2NzIyNTYwMCwiZXhwIjo0MTAyNDQ0ODAwLCJhdXRob3JpemF0aW9uX2RldGFpbHMiOlt7InR5cGUiOiJhcm9oYV9zcGVuZGluZ19tYW5kYXRlIiwibWFuZGF0ZVRpZXIiOiJpbnRlbnQiLCJjb25zdHJhaW50cyI6eyJzcGVuZExpbWl0VXNkIjo1MDAsIm1lcmNoYW50Q2F0ZWdvcnkiOiI0NTExIiwiY3VycmVuY3kiOiJVU0QifSwicGFyZW50TWFuZGF0ZUlkIjpudWxsLCJtYW5kYXRlVHlwZSI6InRhc2sifV19.cWKLYdJ1f2E8neZ9zA--kEJOQazft0qRf-N0EDgFYxKBw_rYnmOg9WIr1ALgPtHSHQWJR2p8HGDL0JBiRmUUCg",
+      "expect": {
+        "valid": false
+      }
+    },
+    {
+      "name": "constraints missing",
+      "kind": "spending",
+      "token": "eyJhbGciOiJFZERTQSIsInR5cCI6ImFyb2hhLW1hbmRhdGUrand0Iiwia2lkIjoia1ByS19xbXhWV2FZVkE5d3dCRjZJdW8zdlZ6ejdUeEhDVHdYQnlnclM0ayJ9.eyJpc3MiOiJkaWQ6YXJvaGE6ekZWZW4zWDY2OXhMenNpNk4yVjkxRG9peXpIemcxdUFncWlUOGpaOW5TOTZaIiwic3ViIjoiZGlkOmFyb2hhOno1ODZaN0gydnBYOXFOaE4yVDRlOVV0dWdpZTNvZ2pieHpHYU10TTNFNkhSNSIsImp0aSI6IjExMTExMTExLTExMTEtNDExMS04MTExLTExMTExMTExMTExMSIsImlhdCI6MTc2NzIyNTYwMCwiZXhwIjo0MTAyNDQ0ODAwLCJhdXRob3JpemF0aW9uX2RldGFpbHMiOlt7InR5cGUiOiJhcm9oYV9zcGVuZGluZ19tYW5kYXRlIiwibWFuZGF0ZVRpZXIiOiJpbnRlbnQiLCJwYXJlbnRNYW5kYXRlSWQiOm51bGx9XX0.Q9pPPBUcuLyxr3xLqUi0bLnqJhP_z1rAaLLe556FNXk33_YHxrGSd4a8mjarYwIatQlUkNZCYGkvjTeEhjK8AA",
+      "expect": {
+        "valid": false
+      }
+    },
+    {
+      "name": "payload is not JSON",
+      "kind": "spending",
+      "token": "eyJhbGciOiJFZERTQSIsInR5cCI6ImFyb2hhLW1hbmRhdGUrand0Iiwia2lkIjoia1ByS19xbXhWV2FZVkE5d3dCRjZJdW8zdlZ6ejdUeEhDVHdYQnlnclM0ayJ9.bm90IGpzb24.mHwXtTOpG65caIS_rnNXuMUfr_5_wJ4-3KJ2JxvWykEsDnQBZ0wsZw-w1VyZrfB-qtfi8C3sAeaWi8nHvwy_Dw",
+      "expect": {
+        "valid": false
+      }
+    },
+    {
+      "name": "payload is a JSON array",
+      "kind": "spending",
+      "token": "eyJhbGciOiJFZERTQSIsInR5cCI6ImFyb2hhLW1hbmRhdGUrand0Iiwia2lkIjoia1ByS19xbXhWV2FZVkE5d3dCRjZJdW8zdlZ6ejdUeEhDVHdYQnlnclM0ayJ9.W3siaXNzIjoiZGlkOmFyb2hhOnpGVmVuM1g2Njl4THpzaTZOMlY5MURvaXl6SHpnMXVBZ3FpVDhqWjluUzk2WiIsInN1YiI6ImRpZDphcm9oYTp6NTg2WjdIMnZwWDlxTmhOMlQ0ZTlVdHVnaWUzb2dqYnh6R2FNdE0zRTZIUjUiLCJqdGkiOiIxMTExMTExMS0xMTExLTQxMTEtODExMS0xMTExMTExMTExMTEiLCJpYXQiOjE3NjcyMjU2MDAsImV4cCI6NDEwMjQ0NDgwMCwiYXV0aG9yaXphdGlvbl9kZXRhaWxzIjpbeyJ0eXBlIjoiYXJvaGFfc3BlbmRpbmdfbWFuZGF0ZSIsIm1hbmRhdGVUaWVyIjoiaW50ZW50IiwiY29uc3RyYWludHMiOnsic3BlbmRMaW1pdFVzZCI6NTAwLCJtZXJjaGFudENhdGVnb3J5IjoiNDUxMSIsImN1cnJlbmN5IjoiVVNEIn0sInBhcmVudE1hbmRhdGVJZCI6bnVsbH1dfV0.oSLPu2XpToy6E6K8UlpIIYrVcTSvPw0-Fmsw63nOcY4ps_b0Ad8AcxHmefBeNRYxRTBQ7cIR_X4YQx9aWkCvAQ",
+      "expect": {
+        "valid": false
+      }
+    },
+    {
+      "name": "payload base64url with padding",
+      "kind": "spending",
+      "token": "eyJhbGciOiJFZERTQSIsInR5cCI6ImFyb2hhLW1hbmRhdGUrand0Iiwia2lkIjoia1ByS19xbXhWV2FZVkE5d3dCRjZJdW8zdlZ6ejdUeEhDVHdYQnlnclM0ayJ9.eyJpc3MiOiJkaWQ6YXJvaGE6ekZWZW4zWDY2OXhMenNpNk4yVjkxRG9peXpIemcxdUFncWlUOGpaOW5TOTZaIiwic3ViIjoiZGlkOmFyb2hhOno1ODZaN0gydnBYOXFOaE4yVDRlOVV0dWdpZTNvZ2pieHpHYU10TTNFNkhSNSIsImp0aSI6IjExMTExMTExLTExMTEtNDExMS04MTExLTExMTExMTExMTExMSIsImlhdCI6MTc2NzIyNTYwMCwiZXhwIjo0MTAyNDQ0ODAwLCJhdXRob3JpemF0aW9uX2RldGFpbHMiOlt7InR5cGUiOiJhcm9oYV9zcGVuZGluZ19tYW5kYXRlIiwibWFuZGF0ZVRpZXIiOiJpbnRlbnQiLCJjb25zdHJhaW50cyI6eyJzcGVuZExpbWl0VXNkIjo1MDAsIm1lcmNoYW50Q2F0ZWdvcnkiOiI0NTExIiwiY3VycmVuY3kiOiJVU0QifSwicGFyZW50TWFuZGF0ZUlkIjpudWxsfV19=.mHwXtTOpG65caIS_rnNXuMUfr_5_wJ4-3KJ2JxvWykEsDnQBZ0wsZw-w1VyZrfB-qtfi8C3sAeaWi8nHvwy_Dw",
+      "expect": {
+        "valid": false
+      }
+    },
+    {
+      "name": "two parts instead of three",
+      "kind": "spending",
+      "token": "eyJhbGciOiJFZERTQSIsInR5cCI6ImFyb2hhLW1hbmRhdGUrand0Iiwia2lkIjoia1ByS19xbXhWV2FZVkE5d3dCRjZJdW8zdlZ6ejdUeEhDVHdYQnlnclM0ayJ9.eyJpc3MiOiJkaWQ6YXJvaGE6ekZWZW4zWDY2OXhMenNpNk4yVjkxRG9peXpIemcxdUFncWlUOGpaOW5TOTZaIiwic3ViIjoiZGlkOmFyb2hhOno1ODZaN0gydnBYOXFOaE4yVDRlOVV0dWdpZTNvZ2pieHpHYU10TTNFNkhSNSIsImp0aSI6IjExMTExMTExLTExMTEtNDExMS04MTExLTExMTExMTExMTExMSIsImlhdCI6MTc2NzIyNTYwMCwiZXhwIjo0MTAyNDQ0ODAwLCJhdXRob3JpemF0aW9uX2RldGFpbHMiOlt7InR5cGUiOiJhcm9oYV9zcGVuZGluZ19tYW5kYXRlIiwibWFuZGF0ZVRpZXIiOiJpbnRlbnQiLCJjb25zdHJhaW50cyI6eyJzcGVuZExpbWl0VXNkIjo1MDAsIm1lcmNoYW50Q2F0ZWdvcnkiOiI0NTExIiwiY3VycmVuY3kiOiJVU0QifSwicGFyZW50TWFuZGF0ZUlkIjpudWxsfV19",
+      "expect": {
+        "valid": false
+      }
+    },
+    {
+      "name": "four parts",
+      "kind": "spending",
+      "token": "eyJhbGciOiJFZERTQSIsInR5cCI6ImFyb2hhLW1hbmRhdGUrand0Iiwia2lkIjoia1ByS19xbXhWV2FZVkE5d3dCRjZJdW8zdlZ6ejdUeEhDVHdYQnlnclM0ayJ9.eyJpc3MiOiJkaWQ6YXJvaGE6ekZWZW4zWDY2OXhMenNpNk4yVjkxRG9peXpIemcxdUFncWlUOGpaOW5TOTZaIiwic3ViIjoiZGlkOmFyb2hhOno1ODZaN0gydnBYOXFOaE4yVDRlOVV0dWdpZTNvZ2pieHpHYU10TTNFNkhSNSIsImp0aSI6IjExMTExMTExLTExMTEtNDExMS04MTExLTExMTExMTExMTExMSIsImlhdCI6MTc2NzIyNTYwMCwiZXhwIjo0MTAyNDQ0ODAwLCJhdXRob3JpemF0aW9uX2RldGFpbHMiOlt7InR5cGUiOiJhcm9oYV9zcGVuZGluZ19tYW5kYXRlIiwibWFuZGF0ZVRpZXIiOiJpbnRlbnQiLCJjb25zdHJhaW50cyI6eyJzcGVuZExpbWl0VXNkIjo1MDAsIm1lcmNoYW50Q2F0ZWdvcnkiOiI0NTExIiwiY3VycmVuY3kiOiJVU0QifSwicGFyZW50TWFuZGF0ZUlkIjpudWxsfV19.mHwXtTOpG65caIS_rnNXuMUfr_5_wJ4-3KJ2JxvWykEsDnQBZ0wsZw-w1VyZrfB-qtfi8C3sAeaWi8nHvwy_Dw.mHwXtTOpG65caIS_rnNXuMUfr_5_wJ4-3KJ2JxvWykEsDnQBZ0wsZw-w1VyZrfB-qtfi8C3sAeaWi8nHvwy_Dw",
+      "expect": {
+        "valid": false
+      }
+    },
+    {
+      "name": "signature too short",
+      "kind": "spending",
+      "token": "eyJhbGciOiJFZERTQSIsInR5cCI6ImFyb2hhLW1hbmRhdGUrand0Iiwia2lkIjoia1ByS19xbXhWV2FZVkE5d3dCRjZJdW8zdlZ6ejdUeEhDVHdYQnlnclM0ayJ9.eyJpc3MiOiJkaWQ6YXJvaGE6ekZWZW4zWDY2OXhMenNpNk4yVjkxRG9peXpIemcxdUFncWlUOGpaOW5TOTZaIiwic3ViIjoiZGlkOmFyb2hhOno1ODZaN0gydnBYOXFOaE4yVDRlOVV0dWdpZTNvZ2pieHpHYU10TTNFNkhSNSIsImp0aSI6IjExMTExMTExLTExMTEtNDExMS04MTExLTExMTExMTExMTExMSIsImlhdCI6MTc2NzIyNTYwMCwiZXhwIjo0MTAyNDQ0ODAwLCJhdXRob3JpemF0aW9uX2RldGFpbHMiOlt7InR5cGUiOiJhcm9oYV9zcGVuZGluZ19tYW5kYXRlIiwibWFuZGF0ZVRpZXIiOiJpbnRlbnQiLCJjb25zdHJhaW50cyI6eyJzcGVuZExpbWl0VXNkIjo1MDAsIm1lcmNoYW50Q2F0ZWdvcnkiOiI0NTExIiwiY3VycmVuY3kiOiJVU0QifSwicGFyZW50TWFuZGF0ZUlkIjpudWxsfV19.mHwXtTOpG65caIS_rnNXuMUfr_5_wJ4-3KJ2JxvW",
+      "expect": {
+        "valid": false
+      }
+    },
+    {
+      "name": "task mandate signed by a key that is not its grantor's",
+      "kind": "task",
+      "token": "eyJhbGciOiJFZERTQSIsInR5cCI6ImFyb2hhLW1hbmRhdGUrand0Iiwia2lkIjoiRnRJdS1WYkdyZmVfS0I2Q0g3R053T0RCNzJNTnhqX21sMTFkRXZPLTdrayJ9.eyJpc3MiOiJkaWQ6YXJvaGE6ekZWZW4zWDY2OXhMenNpNk4yVjkxRG9peXpIemcxdUFncWlUOGpaOW5TOTZaIiwic3ViIjoiZGlkOmFyb2hhOno1ODZaN0gydnBYOXFOaE4yVDRlOVV0dWdpZTNvZ2pieHpHYU10TTNFNkhSNSIsImp0aSI6IjU1NTU1NTU1LTU1NTUtNDU1NS04NTU1LTU1NTU1NTU1NTU1NSIsImlhdCI6MTc2NzIyNTYwMCwiZXhwIjo0MTAyNDQ0ODAwLCJhdXRob3JpemF0aW9uX2RldGFpbHMiOlt7InR5cGUiOiJhcm9oYV90YXNrX21hbmRhdGUiLCJtYW5kYXRlVHlwZSI6InRhc2siLCJtYW5kYXRlVGllciI6ImludGVudCIsImFsbG93ZWQiOlsiaW5ib3gucmVhZCIsImluYm94LmFyY2hpdmUiXSwiYmxvY2tlZCI6WyJpbmJveC5kZWxldGUiXSwidGFza0NvbnN0cmFpbnRzIjp7ImFjdGlvbkxpbWl0cyI6eyJpbmJveC5hcmNoaXZlIjoyMH0sIm1heERlbGVnYXRpb25EZXB0aCI6Mn0sInBhcmVudE1hbmRhdGVJZCI6bnVsbH1dfQ.8tXtdZtQPdui__C5rb8tHf1veLEMclOV85x-ddWdKWb-sSpvHWEAf4J3NBZgs3kQh1CmJDQsJcPY7LFzu91eCQ",
+      "signer": "human",
+      "expect": {
+        "valid": false
+      }
+    },
+    {
+      "name": "a spending mandate presented as a task mandate",
+      "kind": "task",
+      "token": "eyJhbGciOiJFZERTQSIsInR5cCI6ImFyb2hhLW1hbmRhdGUrand0Iiwia2lkIjoia1ByS19xbXhWV2FZVkE5d3dCRjZJdW8zdlZ6ejdUeEhDVHdYQnlnclM0ayJ9.eyJpc3MiOiJkaWQ6YXJvaGE6ekZWZW4zWDY2OXhMenNpNk4yVjkxRG9peXpIemcxdUFncWlUOGpaOW5TOTZaIiwic3ViIjoiZGlkOmFyb2hhOno1ODZaN0gydnBYOXFOaE4yVDRlOVV0dWdpZTNvZ2pieHpHYU10TTNFNkhSNSIsImp0aSI6IjExMTExMTExLTExMTEtNDExMS04MTExLTExMTExMTExMTExMSIsImlhdCI6MTc2NzIyNTYwMCwiZXhwIjo0MTAyNDQ0ODAwLCJhdXRob3JpemF0aW9uX2RldGFpbHMiOlt7InR5cGUiOiJhcm9oYV9zcGVuZGluZ19tYW5kYXRlIiwibWFuZGF0ZVRpZXIiOiJpbnRlbnQiLCJjb25zdHJhaW50cyI6eyJzcGVuZExpbWl0VXNkIjo1MDAsIm1lcmNoYW50Q2F0ZWdvcnkiOiI0NTExIiwiY3VycmVuY3kiOiJVU0QifSwicGFyZW50TWFuZGF0ZUlkIjpudWxsfV19.mHwXtTOpG65caIS_rnNXuMUfr_5_wJ4-3KJ2JxvWykEsDnQBZ0wsZw-w1VyZrfB-qtfi8C3sAeaWi8nHvwy_Dw",
+      "signer": "human",
+      "expect": {
+        "valid": false
+      }
+    },
+    {
+      "name": "task detail without allowed",
+      "kind": "task",
+      "token": "eyJhbGciOiJFZERTQSIsInR5cCI6ImFyb2hhLW1hbmRhdGUrand0Iiwia2lkIjoia1ByS19xbXhWV2FZVkE5d3dCRjZJdW8zdlZ6ejdUeEhDVHdYQnlnclM0ayJ9.eyJpc3MiOiJkaWQ6YXJvaGE6ekZWZW4zWDY2OXhMenNpNk4yVjkxRG9peXpIemcxdUFncWlUOGpaOW5TOTZaIiwic3ViIjoiZGlkOmFyb2hhOno1ODZaN0gydnBYOXFOaE4yVDRlOVV0dWdpZTNvZ2pieHpHYU10TTNFNkhSNSIsImp0aSI6IjU1NTU1NTU1LTU1NTUtNDU1NS04NTU1LTU1NTU1NTU1NTU1NSIsImlhdCI6MTc2NzIyNTYwMCwiZXhwIjo0MTAyNDQ0ODAwLCJhdXRob3JpemF0aW9uX2RldGFpbHMiOlt7InR5cGUiOiJhcm9oYV90YXNrX21hbmRhdGUiLCJtYW5kYXRlVHlwZSI6InRhc2siLCJtYW5kYXRlVGllciI6ImludGVudCIsInRhc2tDb25zdHJhaW50cyI6e30sInBhcmVudE1hbmRhdGVJZCI6bnVsbH1dfQ.C6M7tOSuRTq4_u08WyxJjOfL5gQtwWwHw5R-_ZG3Y_vT8MHcXe2IwmccA_fyR5vWx2_0NA17AJWhPlSJsZMsAg",
+      "signer": "human",
+      "expect": {
+        "valid": false
+      }
+    }
+  ]
+}

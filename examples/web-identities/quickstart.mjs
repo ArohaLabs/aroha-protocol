@@ -77,6 +77,21 @@ const stranger = await generateKeyPair();
 const forged = await attenuateToPayment(intent, FLIGHT_AGENT, { spendLimitUsd: 300, merchantCategory: "4511" }, stranger.privateKey);
 console.log("forged link  → valid:", (await check(forged.token)).valid);
 
+// ── The same grant as JWTs ────────────────────────────────────────────────────
+// For a service that already verifies OAuth access tokens: ask for the JWT form
+// at the root, and every link is a JWT a stock JWT library can read. The chain
+// is the link JWTs joined by "~". The same verifier checks it.
+const jwtIntent = await issueIntentMandate(HUMAN, ASSISTANT, { spendLimitUsd: 500, merchantCategory: "4511" }, human.privateKey, 3_600_000, { format: "jwt" });
+const jwtPayment = await attenuateToPayment(jwtIntent, FLIGHT_AGENT, { spendLimitUsd: 300, merchantCategory: "4511" }, assistant.privateKey);
+const links = jwtPayment.token.split("~");
+const leafClaims = JSON.parse(Buffer.from(links.at(-1).split(".")[1], "base64url").toString("utf8"));
+console.log(
+  "as JWTs      → valid:", (await check(jwtPayment.token)).valid,
+  "links:", links.length,
+  "leaf iss is the assistant:", leafClaims.iss === ASSISTANT,
+  "limit:", leafClaims.authorization_details[0].constraints.spendLimitUsd,
+);
+
 // When the assistant replaces its key, what it signed with the old one stops verifying.
 publish("/agents/assistant", (await generateKeyPair()).publicKey, "Assistant");
 console.log("after the assistant changes its key → valid:", (await check(payment.token)).valid);

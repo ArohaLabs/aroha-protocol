@@ -117,6 +117,22 @@ Legacy v1 tokens (`{ mandate, signature }`, no chain) still verify with
 `verifyMandate`, but a v1 token that is not itself a root carries no ancestry and
 **cannot** prove that a human authorised it (`chainVerified: false`).
 
+### JWT form (unreleased)
+
+A mandate can also be issued as a JSON Web Token, for services that already verify OAuth access tokens. It is the same mandate under the same chain rules; only the way a link is written and signed differs.
+
+```typescript
+import { issueIntentMandate, attenuateToCart, verifyMandateChain } from "@aroha-sdk/credentials";
+
+const intent = await issueIntentMandate(humanDID, agentDID, { spendLimitUsd: 500 }, humanPrivateKey, 3_600_000, { format: "jwt" });
+const cart = await attenuateToCart(intent, providerDID, { spendLimitUsd: 300 }, agentPrivateKey); // also a JWT
+// cart.token is "<intent JWT>~<cart JWT>": link JWTs joined by "~", root first.
+
+const result = await verifyMandateChain(cart.token, resolveKey, { expectedRoot: humanDID, isRevoked: null });
+```
+
+Each link has `alg: EdDSA`, `typ: aroha-mandate+jwt`, the claims `iss` (grantor), `sub` (grantee), `jti` (mandateId), `iat`, `exp`, and the rest of the body in `authorization_details`. A stock JWT library can verify one link. It cannot check that a child narrows its parent or that the chain reaches your root, so gate money on `verifyMandateChain`, which accepts both forms. Details: [Mandates as JWTs](https://github.com/ArohaLabs/aroha-protocol/blob/main/docs/integrations/mandate-jwt.md) and spec §6.10.
+
 ## Presenting a mandate to an HTTP API
 
 A mandate token on its own is a bearer credential: whoever copies it can use it.
@@ -332,7 +348,7 @@ const wrongKey = await buildHttpPresentationHeader({
 
 ## API
 
-- `issueIntentMandate(grantorDID, granteeDID, constraints, privateKey, ttlMs?, { ledger? })` — root intent mandate. Returns `SignedMandate` (`{ mandate, signature, token, v: 2, chain: [] }`).
+- `issueIntentMandate(grantorDID, granteeDID, constraints, privateKey, ttlMs?, { ledger?, format? })` — root intent mandate. `format: "jwt"` issues it, and everything attenuated from it, in the JWT form (unreleased). Returns `SignedMandate` (`{ mandate, signature, token, v: 2, chain: [] }`).
 - `attenuateToCart(parent, granteeDID, constraints, grantorPrivateKey, ttlMs?, { ledger? })` — narrower cart mandate carrying the parent's chain.
 - `attenuateToPayment(parent, granteeDID, constraints, grantorPrivateKey, ttlMs?, { ledger? })` — narrower payment mandate carrying the parent's chain.
 - `verifyMandateChain(token, resolveKey?, { expectedRoot?, expectedGrantee?, isRevoked?, clockToleranceMs?, now?, maxDepth? })` — **the check to gate money on.** Returns `{ valid, mandate?, reason?, chainVerified?, chain?, rootGrantor? }`.
@@ -346,7 +362,8 @@ const wrongKey = await buildHttpPresentationHeader({
 - `revokeMandate(registryUrl, token, grantorPrivateKey, { revokerDid? })` — revoke the token's mandate as its grantor or any ancestor grantor (`POST /v1/mandates/:id/revoke`). Revoking a mandate invalidates every mandate beneath it.
 - `createMandateKeyResolver({ kelSource?, kelStore?, web?, fallback? })` — one key resolver for `did:aroha:z…` (derived), `did:aroha:E…` (Key Event Log), web addresses (`web: true` or options; off by default) and anything else (`fallback`).
 - `createWebIdentityResolver({ fetch?, allowHost?, lookup?, timeoutMs?, maxDocumentBytes?, maxJwksBytes?, maxCacheMs?, onFailure?, allowLoopbackHttp? })`, `resolveWebIdentity(identity, options?)`, `buildWebIdentityDocument({ identity, publicKey, kid?, name?, uri?, extra? })`, `checkWebIdentity(identity)` / `isWebIdentity(identity)`, `ed25519PublicKeyToJwk(publicKey, kid?)`, `ed25519JwkThumbprint(publicKey)`, `isSpecialUseAddress(address)` — web identities (unreleased; see above).
-- `decodeMandateToken(token)` — decode (without verifying) into a `SignedMandate` you can attenuate.
+- `decodeMandateToken(token)` — decode (without verifying) into a `SignedMandate` you can attenuate. Either form.
+- `peekMandateToken(token)` — the leaf's kind, form, id, grantor and grantee, unverified; `decodeMandateJwt(jwt)`, `signMandateJwt(kind, body, privateKey, kid?)`, `verifyMandateJwtSignature(jwt, publicKey)`, `mandateBodyToJwtClaims(kind, body)`, `jwtClaimsToMandateBody(claims)`, `decodeTaskMandateToken(token)` — the JWT form (unreleased; see above).
 - `checkNarrowing(parent, child, parentTier, childTier)` — returns the reason a child widens its parent, or `null`.
 - `canonicalizeJcs(value)`, `mandateSigningPayloadV2(mandate)` — canonicalisation primitives.
 

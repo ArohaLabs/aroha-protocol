@@ -33,6 +33,7 @@ README is the source of truth at a given commit.
 | Envelope validation rules (5-min max TTL, `created` skew check, signature before nonce, per-sender nonce keys) | ✅ | ✅ | ✅ | ✅ |
 | Rotatable DIDs (`did:aroha:E…`) and Key Event Log verification | ✅ | ✅ | ✅ | ✅ |
 | `did:aroha-web` (current schema) | ✅ | ✅ | ✅ | ✅ |
+| Mandate token JWT form: each link a JWT, chain joined by `~` (spec §6.10; shared vectors `mandate-jwt-v1.json`) | ✅ (`format: "jwt"`; unreleased) | ✅ (`format="jwt"`; unreleased) | ❌ | ❌ |
 | Web identities: `https://` mandate parties resolved from a published key (spec §4.7; shared vectors `web-identity-v1.json`) | ✅ (`createWebIdentityResolver`; unreleased) | ✅ (`aroha.web_identity`; unreleased) | ❌ | ❌ |
 | Task mandates (issue, attenuate, verify, enforce) | ✅ | ✅ (`aroha.task_mandate`) | ✅ (`mandate.IssueTaskMandate`, `EnforceTaskConstraints`) | ✅ (`TaskMandate`) |
 | Saga (Reserve → Commit → Cancel, compensation) — orchestration extension | ✅ (`@aroha-sdk/orchestrator` 1.4.0 on npm; source no longer in this repository) | ✅ | ✅ | ✅ |

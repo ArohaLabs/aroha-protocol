@@ -63,6 +63,8 @@ const result = await verifyMandateChain(payment.token, undefined, {
 // A link that widens scope, or is signed by anyone but its grantor, fails.
 ```
 
+The example names each party with a `did:aroha:z…` identifier, which commits to its own key and verifies offline. On `main` (unreleased) a party can also be named by an HTTPS address that publishes its key, such as `https://agents.example.com/assistant`, for agents that already have one: see [Web identities](docs/integrations/web-identities.md) and the runnable [`examples/web-identities`](examples/web-identities/README.md).
+
 ---
 
 ## The problem

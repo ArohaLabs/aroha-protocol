@@ -54,6 +54,37 @@ DIDs (`did:aroha:z<base58btc(pubkey)>`) you can omit it — the default,
 `resolveContentAddressedKey`, derives the key from the DID itself. Namespaced DIDs
 (`did:aroha:acme.agent`) need a registry-backed resolver.
 
+## Naming the parties: a web address or a DID
+
+A mandate's grantor and grantee can be named in two ways. Both work with every function in this package, and one chain can mix them.
+
+- **A web address** (`https://agents.example.com/shopper`) that serves a small JSON document with the signing key: the OAuth Client ID Metadata Document many agents already publish. Use it when the party already has a web address. The verifier makes an HTTPS request and trusts that host.
+- **A `did:aroha` identifier.** The `z…` and `E…` forms commit to their own key, so a verifier needs no network and trusts no third party. Use it for offline checks and governed deployments.
+
+Web addresses are unreleased (on `main`, in the next release). A verifier opts in, because resolving one means a request to a host named in the token:
+
+```typescript
+import { buildWebIdentityDocument, createMandateKeyResolver, issueIntentMandate, verifyMandateChain } from "@aroha-sdk/credentials";
+
+// Publisher: serve this JSON at the address (HTTP 200, no redirect).
+const document = buildWebIdentityDocument({ identity: "https://accounts.example.com/people/kiri", publicKey: humanPublicKey });
+
+// Issuer: pass the address where a DID would go.
+const intent = await issueIntentMandate(
+  "https://accounts.example.com/people/kiri", "https://agents.example.com/assistant",
+  { spendLimitUsd: 200 }, humanPrivateKey,
+);
+
+// Verifier: one resolver for did:aroha identifiers and web addresses.
+const resolveKey = createMandateKeyResolver({ web: { allowHost: (hostname) => hostname.endsWith(".example.com") } });
+const result = await verifyMandateChain(intent.token, resolveKey, {
+  expectedRoot: "https://accounts.example.com/people/kiri",
+  isRevoked: null, // or your revocation hook
+});
+```
+
+The token format is the same for both. Rules, limits and what is not included: [Web identities](https://github.com/ArohaLabs/aroha-protocol/blob/main/docs/integrations/web-identities.md) and spec §4.7.
+
 ## What each check guarantees
 
 | Property | Where it is enforced |
@@ -313,6 +344,8 @@ const wrongKey = await buildHttpPresentationHeader({
 - `checkSpendAgainstConstraints(constraints, { amountUsd, currency?, merchant?, merchantCategory?, humanApproved? })`, `checkSpendAmount(amountUsd)`, `mandateCumulativeLimitUsd(constraints)` — the per-spend checks the spending gates share.
 - `httpRevocationCheck(registryUrl, { cacheMs?, failOpen?, onError? })` — a `MandateRevocationCheck` for `isRevoked`, backed by `GET /v1/mandates/:id/revoked?grantor=…`. The hook is called as `isRevoked(mandateId, grantor)`; revocations are per (grantor, mandateId). Fails closed (throws → chain rejected) when the registry cannot be reached unless `failOpen: true`.
 - `revokeMandate(registryUrl, token, grantorPrivateKey, { revokerDid? })` — revoke the token's mandate as its grantor or any ancestor grantor (`POST /v1/mandates/:id/revoke`). Revoking a mandate invalidates every mandate beneath it.
+- `createMandateKeyResolver({ kelSource?, kelStore?, web?, fallback? })` — one key resolver for `did:aroha:z…` (derived), `did:aroha:E…` (Key Event Log), web addresses (`web: true` or options; off by default) and anything else (`fallback`).
+- `createWebIdentityResolver({ fetch?, allowHost?, lookup?, timeoutMs?, maxDocumentBytes?, maxJwksBytes?, maxCacheMs?, onFailure?, allowLoopbackHttp? })`, `resolveWebIdentity(identity, options?)`, `buildWebIdentityDocument({ identity, publicKey, kid?, name?, uri?, extra? })`, `checkWebIdentity(identity)` / `isWebIdentity(identity)`, `ed25519PublicKeyToJwk(publicKey, kid?)`, `ed25519JwkThumbprint(publicKey)`, `isSpecialUseAddress(address)` — web identities (unreleased; see above).
 - `decodeMandateToken(token)` — decode (without verifying) into a `SignedMandate` you can attenuate.
 - `checkNarrowing(parent, child, parentTier, childTier)` — returns the reason a child widens its parent, or `null`.
 - `canonicalizeJcs(value)`, `mandateSigningPayloadV2(mandate)` — canonicalisation primitives.

@@ -219,6 +219,8 @@ if (result.valid) {
 
 `verifyMandate` checks a single link. To accept a mandate from another party, use `verifyMandateChain`, which walks every link back to a root you trust (see the [package README](https://github.com/ArohaLabs/aroha-protocol/tree/main/packages/aroha-credentials#readme)).
 
+A grantor or grantee can be a `did:aroha` identifier or, on `main` (unreleased), an HTTPS address that publishes its signing key. See [Web identities](../integrations/web-identities.md).
+
 ### Constraint narrowing rules
 
 | Constraint | Rule |

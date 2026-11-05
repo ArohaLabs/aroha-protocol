@@ -114,6 +114,8 @@ Environment variables win over the JSON file named by `AROHA_MCP_CONFIG`
 | `AROHA_MCP_KEY_DIR` | `keys.dir` | `~/.aroha/mcp-server` | Key store directory |
 | `AROHA_MCP_REGISTRY_KEYS` | `registry.keys` | none | Registry signing keys (JSON or file) for signed revocation status |
 | `AROHA_MCP_GOVERNED=1` + `AROHA_MCP_EXPECTED_ROOT` / `AROHA_MCP_TRUSTED_ROOTS` | `governed.*` | off | `verify_mandate` uses the governed profile |
+| `AROHA_MCP_WEB_IDENTITIES=1` | `webIdentities.enabled` | off | `verify_mandate` resolves web identities: `https://` grantors that publish their key (spec §4.7; unreleased) |
+| `AROHA_MCP_WEB_IDENTITY_HOSTS` | `webIdentities.allowedHosts` | any public host | Host names whose identity documents may be fetched |
 | `AROHA_MCP_VERIFY_RESPONSES=0` | `verifyResponses` | on | DEVELOPMENT ONLY: skip agent response verification |
 | `AROHA_ALLOW_PRIVATE_ENDPOINTS=1` | `allowPrivateEndpoints` | off | DEVELOPMENT ONLY: allow private/loopback agent endpoints |
 | `AROHA_MCP_ALLOW_UNAUTHENTICATED=1` | `http.allowUnauthenticated` | off | DEVELOPMENT ONLY, loopback only: HTTP without OAuth |
@@ -159,6 +161,8 @@ aroha_get_receipt(receiptId)
 
 ### `verify_mandate`
 Verify a mandate token: spending chains link by link to the root (governed profile when configured), task mandates against their grantor's key; time window, revocation and expected grantee.
+
+A mandate whose grantor is a web identity (an `https://` address that publishes its key) verifies only when `AROHA_MCP_WEB_IDENTITIES=1`. The identity document is fetched through the same address-vetting fetch as agent endpoints: no redirects, and no loopback, private or link-local addresses.
 
 ### `revoke_mandate`
 Revoke a spending mandate the user granted (or one beneath it), signed with the user's key and recorded at the registry.

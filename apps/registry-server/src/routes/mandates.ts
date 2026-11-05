@@ -31,7 +31,8 @@
  * elsewhere: a content-addressed `did:aroha:z…` from the DID itself; a
  * rotatable `did:aroha:E…` from the registry's stored, verified KEL (current
  * key; revoked identities and revoked controllers refuse); a named DID from
- * its ACTIVE agent row.
+ * its ACTIVE agent row; and, only when the operator sets WEB_IDENTITIES=1, a
+ * web identity (an https URL, spec §4.7) from the document at that URL.
  *
  * WHO MAY REVOKE. The revoker must be the grantor of the token's leaf or of
  * any ancestor — authority flows down a chain, so anyone above a mandate may
@@ -83,6 +84,8 @@ import {
   mandateRevocationPayload,
   mandateRedemptionKey,
   D1RedemptionStore,
+  createWebIdentityResolver,
+  looksLikeWebIdentity,
   type MandateKeyResolver,
 } from "@aroha-sdk/credentials/mandates";
 import type { HonoEnv } from "../index.js";
@@ -134,13 +137,53 @@ function b64ToBytes(b64: string): Uint8Array | null {
   }
 }
 
-/** Resolver for chain keys — see "KEYS" above. E-DIDs go through kelSource instead. */
-export function registryKeyResolver(repo: RegistryRepository): MandateKeyResolver {
+let webResolver: { config: string; resolve: MandateKeyResolver } | null = null;
+
+/**
+ * The resolver for web identities (spec §4.7), or null when the operator has
+ * not turned them on (WEB_IDENTITIES=1).
+ *
+ * WHY OFF BY DEFAULT. Resolving a web identity sends an HTTPS request to a
+ * host named in a token, and /revoke takes tokens from anyone. Turned on, the
+ * registry can be asked to fetch public URLs: at most two small GETs per link,
+ * within the revoke rate limit. WEB_IDENTITY_HOSTS narrows that to the hosts
+ * an operator expects.
+ *
+ * One resolver per isolate and configuration, so its key cache (at most five
+ * minutes) is shared across requests. A Worker has no resolver to ask about
+ * the addresses a name maps to, and cannot reach a private network anyway;
+ * on Node.js the SDK's address check applies.
+ */
+export function webIdentityResolverFor(env: { WEB_IDENTITIES?: string; WEB_IDENTITY_HOSTS?: string }): MandateKeyResolver | null {
+  if (env.WEB_IDENTITIES !== "1") return null;
+  const hosts = (env.WEB_IDENTITY_HOSTS ?? "").split(",").map((h) => h.trim().toLowerCase()).filter((h) => h.length > 0);
+  const config = hosts.join(",");
+  if (!webResolver || webResolver.config !== config) {
+    webResolver = {
+      config,
+      resolve: createWebIdentityResolver(hosts.length > 0 ? { allowHost: (hostname) => hosts.includes(hostname) } : {}),
+    };
+  }
+  return webResolver.resolve;
+}
+
+/** Drop the cached web identity resolver and the keys it holds. For tests. */
+export function resetWebIdentityResolver(): void {
+  webResolver = null;
+}
+
+/**
+ * Resolver for chain keys — see "KEYS" above. E-DIDs go through kelSource
+ * instead. `web`, when given, answers for https names; without it they have
+ * no key here. An https name never falls through to an agent row.
+ */
+export function registryKeyResolver(repo: RegistryRepository, web: MandateKeyResolver | null = null): MandateKeyResolver {
   return async (did) => {
     if (isInceptionDid(did)) return null; // only via the verified KEL (kelSource)
     const derived = await resolveContentAddressedKey(did);
     if (derived) return derived;
     if (did.startsWith("did:aroha:z")) return null; // look-alike; never fall through to a row
+    if (looksLikeWebIdentity(did)) return web ? web(did) : null;
     const agent = await repo.getAgent(hashDID(did));
     if (!agent || !agent.active || agent.did !== did) return null;
     const key = b64ToBytes(agent.publicKeyB64);
@@ -213,7 +256,7 @@ mandateRoutes.post("/:mandateId/revoke", revokeLimiter, mandateBodyLimit, async 
   }
 
   const repo = c.get("repo");
-  const resolveKey = registryKeyResolver(repo);
+  const resolveKey = registryKeyResolver(repo, webIdentityResolverFor(c.env));
   const kelSource = kelSourceFor(repo);
   const verified = await verifyMandateChain(token, resolveKey, { kelSource });
   if (!verified.valid || !verified.chain || !verified.mandate) {
@@ -339,7 +382,7 @@ mandateRoutes.post("/:mandateId/redeem", redeemLimiter, authMiddleware, mandateB
 
   const db = c.env.DB;
   const repo = c.get("repo");
-  const verified = await verifyMandateChain(token, registryKeyResolver(repo), {
+  const verified = await verifyMandateChain(token, registryKeyResolver(repo, webIdentityResolverFor(c.env)), {
     kelSource: kelSourceFor(repo),
     // This registry's own revocations, on every link.
     isRevoked: async (id, grantor) => (await revocationRow(db, id, grantor)) !== null,

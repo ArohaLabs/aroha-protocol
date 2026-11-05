@@ -59,6 +59,19 @@ jobs:
       - name: Run tests
         run: npm test
 
+      # The web identities quickstart needs an API that is not in a published
+      # package yet, so it runs here against this checkout's build (it has no
+      # node_modules of its own and resolves the workspace packages). Move it
+      # to the "examples" job, against published packages, after the release.
+      - name: Web identities quickstart — run against this build
+        run: |
+          set -euo pipefail
+          node examples/web-identities/quickstart.mjs | tee "$RUNNER_TEMP/web-identities.out"
+          grep -q 'valid: true chainVerified: true limit: 300' "$RUNNER_TEMP/web-identities.out"
+          grep -q 'widening to \$600 → Cannot attenuate' "$RUNNER_TEMP/web-identities.out"
+          grep -q 'forged link  → valid: false' "$RUNNER_TEMP/web-identities.out"
+          grep -q 'after the assistant changes its key → valid: false' "$RUNNER_TEMP/web-identities.out"
+
   # ── Durable stores against real backends ──────────────────────────────────
   # @aroha-sdk/store-postgres and @aroha-sdk/store-redis skip their backend
   # suites when the URLs below are unset (so `npm test` passes without

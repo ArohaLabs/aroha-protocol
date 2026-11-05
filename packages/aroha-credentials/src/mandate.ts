@@ -68,6 +68,8 @@ import { type ISpendingLedger, BudgetExhaustedError } from "./spending-ledger.js
 import { canonicalizeJcs } from "./jcs.js";
 // governed.ts imports only TYPES from this module, so there is no runtime cycle.
 import { checkGovernedPrerequisites } from "./governed.js";
+// web-identity.ts imports only TYPES from this module, so there is no runtime cycle.
+import { createWebIdentityResolver, looksLikeWebIdentity, type WebIdentityResolverOptions } from "./web-identity.js";
 
 // re-export so callers don't need a separate import
 export { BudgetExhaustedError };
@@ -202,15 +204,29 @@ export interface MandateKeyResolverOptions {
   kelSource?: KelSource;
   /** Highest-seen KEL memory (aroha-core KelStore) — rejects stale / forked logs. */
   kelStore?: KelStore;
-  /** Resolver for every OTHER DID form (named, registry-trusted). */
+  /**
+   * Resolve web identities (spec §4.7): `https://…` identifiers whose URL
+   * serves a document publishing the signing key. `true` uses the defaults;
+   * an options object sets the fetch, limits, cache and `allowHost`.
+   *
+   * Off unless set: resolving a web identity makes an HTTPS request to a host
+   * named inside the token being verified, which a verifier must opt into.
+   * When set, EVERY http(s) identifier goes to this resolver and never to
+   * `fallback`, so a registry cannot answer for a name that HTTPS answers for.
+   */
+  web?: boolean | WebIdentityResolverOptions;
+  /** Resolver for every OTHER identifier form (named, registry-trusted, pinned). */
   fallback?: MandateKeyResolver;
 }
 
 /**
- * Resolver covering all three `did:aroha:` forms:
+ * Resolver covering all three `did:aroha:` forms and, when `web` is set, web
+ * identities:
  *   - `E…` (rotatable, self-certifying): the CURRENT key from the verified
  *     KEL via `kelSource`; null if the identity or its controller is revoked;
  *   - `z…` (legacy content-addressed): derived from the DID itself;
+ *   - `https://…` (web identity): the key published at that URL, when `web`
+ *     is set;
  *   - anything else: `fallback`, if given.
  *
  * The self-certifying forms NEVER fall through to `fallback`. That is the
@@ -219,10 +235,12 @@ export interface MandateKeyResolverOptions {
  */
 export function createMandateKeyResolver(options: MandateKeyResolverOptions = {}): MandateKeyResolver {
   const kel = options.kelSource ? kelKeyResolver(options.kelSource, { store: options.kelStore }) : null;
+  const web = options.web ? createWebIdentityResolver(options.web === true ? {} : options.web) : null;
   return async (did) => {
     if (isInceptionDid(did)) return kel ? kel(did) : null;
     const derived = await resolveContentAddressedKey(did);
     if (derived) return derived;
+    if (web && looksLikeWebIdentity(did)) return web(did);
     return options.fallback ? options.fallback(did) : null;
   };
 }

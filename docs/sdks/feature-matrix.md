@@ -33,6 +33,7 @@ README is the source of truth at a given commit.
 | Envelope validation rules (5-min max TTL, `created` skew check, signature before nonce, per-sender nonce keys) | ✅ | ✅ | ✅ | ✅ |
 | Rotatable DIDs (`did:aroha:E…`) and Key Event Log verification | ✅ | ✅ | ✅ | ✅ |
 | `did:aroha-web` (current schema) | ✅ | ✅ | ✅ | ✅ |
+| Web identities: `https://` mandate parties resolved from a published key (spec §4.7; shared vectors `web-identity-v1.json`) | ✅ (`createWebIdentityResolver`; unreleased) | ✅ (`aroha.web_identity`; unreleased) | ❌ | ❌ |
 | Task mandates (issue, attenuate, verify, enforce) | ✅ | ✅ (`aroha.task_mandate`) | ✅ (`mandate.IssueTaskMandate`, `EnforceTaskConstraints`) | ✅ (`TaskMandate`) |
 | Saga (Reserve → Commit → Cancel, compensation) — orchestration extension | ✅ (`@aroha-sdk/orchestrator` 1.4.0 on npm; source no longer in this repository) | ✅ | ✅ | ✅ |
 | Registry client (register / discover / resolve) | ✅ (`@aroha-sdk/registry`) | ✅ (`aroha.hub`, HTTP) | ✅ (`registry`) | ✅ (`ArohaRegistryClient`) |

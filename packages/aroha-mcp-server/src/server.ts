@@ -58,6 +58,9 @@ import {
   governedVerification,
   httpRevocationCheck,
   revokeMandate,
+  createWebIdentityResolver,
+  looksLikeWebIdentity,
+  type MandateKeyResolver,
   type MandateRevocationCheck,
 } from "@aroha-sdk/credentials/mandates";
 import { httpKelSource } from "@aroha-sdk/registry";
@@ -126,6 +129,8 @@ export interface ArohaMcpRuntime {
   fetch: typeof fetch;
   /** DNS resolver for agent endpoints (tests). */
   lookup?: HostLookup;
+  /** Resolver for web identities (spec §4.7); absent unless the operator turned them on. */
+  webIdentityKey?: MandateKeyResolver;
   /** MCP Tasks state; absent when tasks are disabled. */
   tasks?: TaskStore;
   /** Local diagnostics (never sent to the MCP caller). */
@@ -170,6 +175,8 @@ export function createRuntime(
     fetch?: typeof fetch; kelSource?: KelSource; isRevoked?: MandateRevocationCheck; lookup?: HostLookup; log?: (line: string) => void;
     /** Replace the task store (tests: an injected clock). Ignored when tasks are disabled. */
     tasks?: TaskStore;
+    /** Replace the fetch used for web identity documents (tests). Default: safeFetch. */
+    webIdentityFetch?: typeof fetch;
   } = {},
 ): ArohaMcpRuntime {
   assertSecureEndpoint(config.registry.url, { allowInsecureHttp: config.registry.allowInsecureHttp, label: "AROHA_REGISTRY_URL" });
@@ -192,6 +199,23 @@ export function createRuntime(
   const log = opts.log ?? ((line: string) => process.stderr.write(`${line}
 `));
   const tasks = config.tasks ? (opts.tasks ?? new TaskStore({ ...config.tasks, log })) : undefined;
+  // A web identity names a host inside a token the caller supplied, so its
+  // document is fetched like an agent endpoint: through safeFetch, which
+  // refuses private, loopback and link-local addresses and pins the
+  // connection to the address it vetted.
+  const allowedHosts = config.webIdentities?.allowedHosts;
+  const webIdentityKey = config.webIdentities
+    ? createWebIdentityResolver({
+        fetch: opts.webIdentityFetch ?? ((async (input: string | URL | Request) => {
+          const r = await safeFetch(String(input), { method: "GET", headers: { accept: "application/json" } }, {
+            allowPrivate: config.allowPrivateEndpoints, lookup: opts.lookup, maxBytes: 64 * 1024, timeoutMs: 5_000,
+          });
+          return new Response(r.text, { status: r.status, headers: r.headers });
+        }) as typeof fetch),
+        ...(allowedHosts ? { allowHost: (hostname: string) => allowedHosts.includes(hostname) } : {}),
+        onFailure: (identity, reason) => log(`[aroha-mcp-server] web identity ${identity} not resolved: ${reason}`),
+      })
+    : undefined;
   return {
     config,
     keyStore,
@@ -202,6 +226,7 @@ export function createRuntime(
     isRevoked,
     fetch: doFetch,
     lookup: opts.lookup,
+    ...(webIdentityKey ? { webIdentityKey } : {}),
     tasks,
     log,
   };
@@ -224,6 +249,9 @@ async function resolveAgentKey(rt: ArohaMcpRuntime, did: string, registryRecord?
   if (isInceptionDid(did)) return kelKeyResolver(rt.kelSource)(did);
   const derived = await resolveContentAddressedKey(did);
   if (derived) return derived;
+  // An https name is answered by HTTPS or not at all: never by a registry
+  // record, and never when the operator has not turned web identities on.
+  if (looksLikeWebIdentity(did)) return rt.webIdentityKey ? rt.webIdentityKey(did) : null;
   const b64 = registryRecord?.publicKeyB64;
   if (typeof b64 !== "string") return null;
   try {
@@ -706,13 +734,14 @@ export function createArohaMcpServer(rt: ArohaMcpRuntime, principal: string, con
       description:
         "Verify a mandate token: signatures (spending chains link by link back to the root), time window, " +
         "revocation of every link, and the expected grantee. Uses the governed profile (person root, KEL, " +
-        "revocation, pinned root) when the server is configured for it.",
+        "revocation, pinned root) when the server is configured for it. Mandates signed by a web identity " +
+        "(an https URL that publishes its key) verify only when the operator has turned web identities on.",
       inputSchema: fromJsonSchema<{ token: string; expectedGrantee?: string }>({
         type: "object",
         required: ["token"],
         properties: {
           token: { type: "string", description: "The mandate token" },
-          expectedGrantee: { type: "string", description: "DID the mandate must be granted to" },
+          expectedGrantee: { type: "string", description: "DID or web identity the mandate must be granted to" },
         },
       }),
       annotations: READ_ONLY,

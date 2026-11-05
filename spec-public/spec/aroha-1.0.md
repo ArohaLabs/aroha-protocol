@@ -230,6 +230,50 @@ See the `@aroha-sdk/credentials` extension for details on how human users authen
 
 See the `@aroha-sdk/credentials` extension for details on the standard role system that governs which principals may invoke which message types.
 
+### 4.7 Web Identities (Optional)
+
+A web identity is an HTTPS URL that names a party to a mandate and serves a document publishing that party's signing key. A party that already publishes an OAuth Client ID Metadata Document (draft-ietf-oauth-client-id-metadata-document) at a URL can sign and hold mandates under that URL, with no `did:aroha` identifier. That draft defines the document for OAuth clients only; using it to name a mandate party is defined here, and no OAuth flow is involved. Support for this section is OPTIONAL. A verifier that does not support it cannot resolve a key for a web identity and therefore rejects the mandate.
+
+**Where it may appear.** A web identity MAY be the `grantor` or `grantee` of a spending mandate (§6.5) or a task mandate (§6.6), and the `holder` of a mandate presentation (§6.9). One chain MAY mix web identities and DIDs. Where §6.5, §6.6 and §6.9 say that a key is resolved from a DID, the key of a web identity is resolved as this section defines, and never taken from the token or the presentation. A web identity is not an Agent DID (§4.1): message envelopes (§6.1) and registry records (§5) name agents by DID. A verifier applying the governed profile (§6.8) MUST reject a chain whose root grantor is a web identity, because that profile requires an E-form person root.
+
+**Identifier.** A web identity MUST match the grammar below. Identifiers are compared as strings, character for character; a verifier MUST NOT normalise a web identity before comparing it.
+
+```
+identity = "https://" host [ ":" port ] path
+host     = label 1*( "." label )
+label    = 1*63( %x61-7A / DIGIT / "-" )      ; not starting or ending with "-"
+port     = 1*5DIGIT
+path     = 1*( "/" segment ) [ "/" ]
+segment  = 1*( unreserved / sub-delims / ":" / "@" / "%" HEXDIG HEXDIG )
+```
+
+The following rules also apply. The host is in lower case and at most 253 characters long, and its last label is either 2 to 63 letters or a label beginning `xn--`. An IP address literal is not a host, and neither is `localhost` or a name ending in `.localhost`. The port has no leading zero, is at most 65535 and is not 443. No segment is `.` or `..`, also when a dot is written `%2e` or `%2E`. A web identity is at most 2048 characters long. It follows that a web identity has no user information, no query and no fragment, and that its path is never `/`.
+
+**Identity document.** A web identity resolves only if a GET request to it returns status 200 and a JSON object, the identity document, that meets every rule in this list:
+
+1. Its `client_id` member is a string equal to the web identity.
+2. Exactly one of the members `jwks` and `jwks_uri` is present. `jwks` is a JWK Set (RFC 7517). `jwks_uri` is an HTTPS URL that follows the host, port and segment rules above; its path may be `/` and it may have a query. A GET request to `jwks_uri` returns status 200 and a JWK Set.
+3. Neither `client_secret` nor `client_secret_expires_at` is present.
+4. No key in the JWK Set has any of the members `d`, `p`, `q`, `dp`, `dq`, `qi`, `oth` or `k`, which carry private or symmetric key material.
+
+A verifier MUST ignore members of the identity document that this section does not name.
+
+**Signing key.** The key of a web identity is the first entry of the JWK Set's `keys` array that meets all of these conditions: `kty` is `OKP`; `crv` is `Ed25519`; `x` is 43 base64url characters that are the canonical encoding of 32 bytes (RFC 8037); `use`, if present, is `sig`; `key_ops`, if present, contains `verify`; and `alg`, if present, is `EdDSA` or `Ed25519`. If no entry meets them, the web identity does not resolve. A publisher SHOULD set `kid` to the key's JWK thumbprint (RFC 7638). To replace its key, a publisher lists the new key first; mandates signed with the earlier key then stop verifying and are issued again, as after an E-form key rotation.
+
+**Fetching.** A verifier that resolves web identities MUST follow these rules for the identity document and for a `jwks_uri`:
+
+1. It MUST NOT follow a redirect, and it MUST treat every status other than 200 as a failure.
+2. It MUST limit the number of bytes it reads from a response and the time it waits for one. Limits of 5 kilobytes for an identity document and 16 kilobytes for a key set are RECOMMENDED.
+3. In production it MUST NOT send a request to a special-use address (RFC 6890), such as a loopback, private or link-local address.
+4. It MAY reuse a resolved key, for no longer than the `max-age` of the response's `Cache-Control` header and for no longer than a ceiling it sets; a ceiling of 5 minutes is RECOMMENDED. It MUST NOT reuse a key from a response marked `no-store` or `no-cache`, and it MUST NOT cache a failure.
+5. It MUST treat a web identity that does not resolve as an identifier with no known key, and reject the mandate or presentation.
+
+A verifier SHOULD send the request header `Accept: application/json`. For local development only, a verifier MAY also accept identities of the form `http://localhost[:port]/path` and `http://127.0.0.1[:port]/path`.
+
+**Trust (non-normative).** A z-form or E-form DID commits to its own key, so a verifier needs no network access and trusts no third party to learn it. A web identity is as trustworthy as HTTPS to its origin: whoever controls the host, its DNS records or a certificate for it can publish a key, and the key in force is the one published when the verifier looks. Verifiers that need offline verification, or protection against a compromised web host, use DIDs. Pinning the expected root grantor (§6.5, rule 2) limits which web identities can start a chain. For fetching rule 3, the reference implementations resolve the host name before each request and refuse the request if any of its addresses is special-use, on Node.js and in Python. They do not pin the connection to the address they checked, and a runtime with no resolver to ask, such as a Cloudflare Worker or a browser, cannot make the check at all. Such deployments rely on the `allowHost` option, a network egress policy, or a client that pins the connection, as the address-vetting fetch of the reference MCP server does.
+
+The conformance vectors are in `packages/aroha-credentials/test-vectors/web-identity-v1.json` in the reference repository. The reference implementations are `createWebIdentityResolver` in `@aroha-sdk/credentials` and `create_web_identity_resolver` in the Python SDK.
+
 ---
 
 ## 5. Layer 2 — Registry

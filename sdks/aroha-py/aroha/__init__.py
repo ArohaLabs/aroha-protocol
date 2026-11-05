@@ -99,6 +99,10 @@ from aroha.http_mandate import (
     present_mandate_http, verify_http_presentation, verify_http_mandate_request,
     InMemoryHttpPresentationNonces, HTTP_MANDATE_HEADER, verify_http_spend_request,
 )
+from aroha.web_identity import (
+    is_web_identity, check_web_identity, build_web_identity_document,
+    resolve_web_identity, create_web_identity_resolver,
+)
 from aroha.spending_ledger import (
     InMemorySpendingLedger, BudgetExhaustedError,
 )
@@ -180,6 +184,12 @@ __all__ = [
     "InMemoryHttpPresentationNonces",
     "HTTP_MANDATE_HEADER",
     "verify_http_spend_request",
+    # Web identities (spec §4.7)
+    "is_web_identity",
+    "check_web_identity",
+    "build_web_identity_document",
+    "resolve_web_identity",
+    "create_web_identity_resolver",
     "issue_enrollment_challenge",
     "complete_enrollment",
     "enrolled_did",

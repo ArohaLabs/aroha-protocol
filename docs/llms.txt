@@ -23,6 +23,7 @@ To add Aroha to an existing agent, follow the `aroha-integrate` Agent Skill: wra
 - [Specification 1.0](spec/aroha-1.0.md)
 - [SDK feature matrix](sdks/feature-matrix.md): TypeScript, Python, Go, Java
 - [Remote MCP connector](integrations/remote-mcp-connector.md): Streamable HTTP + OAuth server and its verified scope
+- [Web identities](integrations/web-identities.md): name a mandate's parties by an HTTPS address that publishes its key, next to did:aroha (unreleased)
 - [Trust and status](trust.md): CI, standards status, security posture
 
 ## Optional

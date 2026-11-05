@@ -92,6 +92,15 @@ export interface Env {
   REGISTRY_SIGNING_KEY?: string;
   /** The seed REGISTRY_SIGNING_KEY replaced; published as retired so old signatures verify. */
   REGISTRY_SIGNING_KEY_PREVIOUS?: string;
+  /**
+   * "1" lets /v1/mandates verify chains whose parties are web identities
+   * (https URLs that publish their key, spec §4.7), so they can be revoked
+   * and redeemed here. Off by default: it makes the registry fetch a URL
+   * named in a token (routes/mandates.ts, webIdentityResolverFor).
+   */
+  WEB_IDENTITIES?: string;
+  /** Optional comma-separated host names; when set, only these are fetched for web identities. */
+  WEB_IDENTITY_HOSTS?: string;
 }
 
 // ─── Hono context variables ───────────────────────────────────────────────────

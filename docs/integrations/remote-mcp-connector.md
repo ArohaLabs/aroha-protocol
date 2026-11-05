@@ -165,6 +165,52 @@ declined approval, private-range endpoint, unverifiable agent response) as a
 starting point for the required test cases. A reviewer account must exist at
 your authorization server.
 
+## Test web identities from a hosted assistant (runbook, not yet run)
+
+**Status: not run.** Nobody has run this against Claude, ChatGPT, Muse or any
+other hosted assistant. It needs an account on the assistant, a public HTTPS
+address for the server and an authorization server, none of which this
+repository provides. Record the result in the [support matrix](../support-matrix.md)
+when it is run.
+
+What it checks: that a hosted assistant, through this server's
+`verify_mandate` tool, accepts a mandate signed by a
+[web identity](web-identities.md) and refuses a forged one.
+
+1. Deploy the server as in [Deploy](#deploy), with `AROHA_MCP_WEB_IDENTITIES=1`.
+   Optionally set `AROHA_MCP_WEB_IDENTITY_HOSTS` to the host used in step 2.
+2. Make the test material, from a built checkout:
+   ```bash
+   node scripts/web-identity-fixture.mjs https://you.example.com/agents/tester
+   ```
+   Serve the `identity.json` it writes at that address (HTTP 200, JSON, no
+   redirect). The address must be one you control.
+3. Add the server to the assistant as a custom connector and sign in.
+4. For each case in `mandates.json`, ask the assistant to call
+   `verify_mandate` with the case's `token` and `expectedGrantee`.
+
+Pass criteria, all four:
+
+| Case | `verify_mandate` must return |
+|---|---|
+| Spending mandate signed by the address | `valid: true`, `kind: "spending"`, `rootGrantor` equal to the address |
+| Task mandate signed by the address | `valid: true`, `kind: "task"` |
+| Wrong expected grantee | `valid: false` |
+| Signed by a key the address does not publish | `valid: false` |
+
+Also note which client registration method the assistant used and whether it
+showed the tool call for approval; both are open questions above.
+
+Three ways to run it, cheapest first:
+
+| Route | Needs | What it proves |
+|---|---|---|
+| A model API that connects to remote MCP servers by URL | An API key, and a public address for the server (a tunnel is enough) | A hosted model's MCP client calls the tool correctly. Not the consumer product's connector flow |
+| A consumer assistant's custom connector (Claude, ChatGPT Developer Mode) | An account, a public address, an authorization server the assistant can sign in to | The real connector flow, including sign-in |
+| A directory listing | All of the above, plus the product's review | What every user of that product would get |
+
+Afterwards delete the fixture folder: it holds a private key.
+
 ## Risks and assumptions
 
 - ASSUMPTION: platform clients support Client ID Metadata Documents; the

@@ -1,0 +1,1411 @@
+{
+  "description": "Web identity conformance vectors (spec section 4.7). `identifiers` are accepted or refused as web identities with default options; `loopbackIdentifiers` with the development-only loopback option. `addresses` are judged special-use (never fetched) or not; text that is not an address counts as special-use. `thumbprints` pin the RFC 7638 key id. Each entry of `documents` lists the HTTP responses a resolver receives (any URL not listed answers 404; `body` is JSON, `bodyText` is sent as is) and either the key it must return or that it must fail. Keys are the public RFC 8032 section 7.1 test keys.",
+  "version": 1,
+  "identifiers": [
+    {
+      "id": "https://agents.example.com/shopper",
+      "valid": true,
+      "note": "host and path"
+    },
+    {
+      "id": "https://example.com/agents/shopper.json",
+      "valid": true,
+      "note": "nested path"
+    },
+    {
+      "id": "https://example.com/a/",
+      "valid": true,
+      "note": "trailing slash"
+    },
+    {
+      "id": "https://example.com:8443/a",
+      "valid": true,
+      "note": "non-default port"
+    },
+    {
+      "id": "https://xn--bcher-kva.example/agent",
+      "valid": true,
+      "note": "A-label host"
+    },
+    {
+      "id": "https://example.com/~bot/%7Eid",
+      "valid": true,
+      "note": "unreserved and percent-encoded characters"
+    },
+    {
+      "id": "https://example.com/a:b@c",
+      "valid": true,
+      "note": "colon and at-sign in the path"
+    },
+    {
+      "id": "http://agents.example.com/shopper",
+      "valid": false,
+      "note": "http"
+    },
+    {
+      "id": "https://example.com",
+      "valid": false,
+      "note": "no path"
+    },
+    {
+      "id": "https://example.com/",
+      "valid": false,
+      "note": "root path"
+    },
+    {
+      "id": "https://Example.com/a",
+      "valid": false,
+      "note": "upper-case host"
+    },
+    {
+      "id": "https://example.com:443/a",
+      "valid": false,
+      "note": "default port written out"
+    },
+    {
+      "id": "https://example.com:0/a",
+      "valid": false,
+      "note": "port 0"
+    },
+    {
+      "id": "https://example.com:08443/a",
+      "valid": false,
+      "note": "port with a leading zero"
+    },
+    {
+      "id": "https://example.com:65536/a",
+      "valid": false,
+      "note": "port out of range"
+    },
+    {
+      "id": "https://user@example.com/a",
+      "valid": false,
+      "note": "user information"
+    },
+    {
+      "id": "https://user:pw@example.com/a",
+      "valid": false,
+      "note": "user information with password"
+    },
+    {
+      "id": "https://example.com/a?x=1",
+      "valid": false,
+      "note": "query"
+    },
+    {
+      "id": "https://example.com/a?",
+      "valid": false,
+      "note": "empty query"
+    },
+    {
+      "id": "https://example.com/a#frag",
+      "valid": false,
+      "note": "fragment"
+    },
+    {
+      "id": "https://example.com/a#",
+      "valid": false,
+      "note": "empty fragment"
+    },
+    {
+      "id": "https://example.com/a/../b",
+      "valid": false,
+      "note": "double-dot segment"
+    },
+    {
+      "id": "https://example.com/a/./b",
+      "valid": false,
+      "note": "single-dot segment"
+    },
+    {
+      "id": "https://example.com/a/%2e%2e/b",
+      "valid": false,
+      "note": "percent-encoded double-dot segment"
+    },
+    {
+      "id": "https://example.com/a/.%2E/b",
+      "valid": false,
+      "note": "half-encoded double-dot segment"
+    },
+    {
+      "id": "https://example.com//a",
+      "valid": false,
+      "note": "empty segment"
+    },
+    {
+      "id": "https://example.com/a//b",
+      "valid": false,
+      "note": "empty inner segment"
+    },
+    {
+      "id": "https://example.com/a b",
+      "valid": false,
+      "note": "space"
+    },
+    {
+      "id": "https://example.com/a\\b",
+      "valid": false,
+      "note": "backslash"
+    },
+    {
+      "id": "https://example.com/%zz",
+      "valid": false,
+      "note": "malformed percent-encoding"
+    },
+    {
+      "id": "https://example.com/café",
+      "valid": false,
+      "note": "non-ASCII path"
+    },
+    {
+      "id": "https://bücher.example/agent",
+      "valid": false,
+      "note": "U-label host"
+    },
+    {
+      "id": "https://192.0.2.1/a",
+      "valid": false,
+      "note": "IPv4 literal"
+    },
+    {
+      "id": "https://[2001:db8::1]/a",
+      "valid": false,
+      "note": "IPv6 literal"
+    },
+    {
+      "id": "https://localhost/a",
+      "valid": false,
+      "note": "localhost"
+    },
+    {
+      "id": "https://agents.localhost/a",
+      "valid": false,
+      "note": "a name under localhost"
+    },
+    {
+      "id": "https://agents.corp.internal/a",
+      "valid": true,
+      "note": "a private-use name is still a name; the address check decides"
+    },
+    {
+      "id": "https://intranet/a",
+      "valid": false,
+      "note": "single-label host"
+    },
+    {
+      "id": "https://example.123/a",
+      "valid": false,
+      "note": "numeric top-level label"
+    },
+    {
+      "id": "https://example.0x7f/a",
+      "valid": false,
+      "note": "hexadecimal top-level label"
+    },
+    {
+      "id": "https://example.com./a",
+      "valid": false,
+      "note": "trailing dot in host"
+    },
+    {
+      "id": "https://-example.com/a",
+      "valid": false,
+      "note": "label starting with a hyphen"
+    },
+    {
+      "id": "https://exa_mple.com/a",
+      "valid": false,
+      "note": "underscore in host"
+    },
+    {
+      "id": "HTTPS://example.com/a",
+      "valid": false,
+      "note": "upper-case scheme"
+    },
+    {
+      "id": " https://example.com/a",
+      "valid": false,
+      "note": "leading space"
+    },
+    {
+      "id": "https://example.com/a\n",
+      "valid": false,
+      "note": "trailing newline"
+    },
+    {
+      "id": "did:aroha:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK",
+      "valid": false,
+      "note": "a DID is not a web identity"
+    },
+    {
+      "id": "",
+      "valid": false,
+      "note": "empty string"
+    }
+  ],
+  "loopbackIdentifiers": [
+    {
+      "id": "http://localhost:8787/agent",
+      "valid": true,
+      "note": "localhost with a port"
+    },
+    {
+      "id": "http://127.0.0.1:8787/agent",
+      "valid": true,
+      "note": "IPv4 loopback with a port"
+    },
+    {
+      "id": "http://localhost/agent",
+      "valid": true,
+      "note": "localhost on the default port"
+    },
+    {
+      "id": "http://localhost:80/agent",
+      "valid": false,
+      "note": "default port written out"
+    },
+    {
+      "id": "https://localhost:8787/agent",
+      "valid": false,
+      "note": "loopback over https"
+    },
+    {
+      "id": "http://agents.example.com/shopper",
+      "valid": false,
+      "note": "http to a public host"
+    },
+    {
+      "id": "http://127.0.0.2:8787/agent",
+      "valid": false,
+      "note": "another loopback address"
+    },
+    {
+      "id": "https://agents.example.com/shopper",
+      "valid": true,
+      "note": "an ordinary identity is still accepted"
+    }
+  ],
+  "addresses": [
+    {
+      "address": "93.184.215.14",
+      "specialUse": false,
+      "note": "public IPv4"
+    },
+    {
+      "address": "8.8.8.8",
+      "specialUse": false,
+      "note": "public IPv4"
+    },
+    {
+      "address": "100.63.255.255",
+      "specialUse": false,
+      "note": "just below the shared address space"
+    },
+    {
+      "address": "100.128.0.0",
+      "specialUse": false,
+      "note": "just above the shared address space"
+    },
+    {
+      "address": "172.15.255.255",
+      "specialUse": false,
+      "note": "just below 172.16/12"
+    },
+    {
+      "address": "172.32.0.0",
+      "specialUse": false,
+      "note": "just above 172.16/12"
+    },
+    {
+      "address": "192.0.1.1",
+      "specialUse": false,
+      "note": "between the 192.0.0/24 and 192.0.2/24 blocks"
+    },
+    {
+      "address": "198.20.0.1",
+      "specialUse": false,
+      "note": "just above the benchmarking block"
+    },
+    {
+      "address": "223.255.255.255",
+      "specialUse": false,
+      "note": "last unicast IPv4 address"
+    },
+    {
+      "address": "2606:4700:4700::1111",
+      "specialUse": false,
+      "note": "public IPv6"
+    },
+    {
+      "address": "2001:4860:4860::8888",
+      "specialUse": false,
+      "note": "public IPv6 above 2001::/23"
+    },
+    {
+      "address": "2001:200::1",
+      "specialUse": false,
+      "note": "first address above 2001::/23"
+    },
+    {
+      "address": "::ffff:8.8.8.8",
+      "specialUse": false,
+      "note": "IPv4-mapped public address"
+    },
+    {
+      "address": "64:ff9b::808:808",
+      "specialUse": false,
+      "note": "NAT64 form of a public address"
+    },
+    {
+      "address": "0.0.0.0",
+      "specialUse": true,
+      "note": "unspecified"
+    },
+    {
+      "address": "0.1.2.3",
+      "specialUse": true,
+      "note": "this network"
+    },
+    {
+      "address": "10.0.0.5",
+      "specialUse": true,
+      "note": "private"
+    },
+    {
+      "address": "100.64.0.1",
+      "specialUse": true,
+      "note": "shared address space"
+    },
+    {
+      "address": "100.127.255.255",
+      "specialUse": true,
+      "note": "end of the shared address space"
+    },
+    {
+      "address": "127.0.0.1",
+      "specialUse": true,
+      "note": "loopback"
+    },
+    {
+      "address": "127.255.255.254",
+      "specialUse": true,
+      "note": "loopback"
+    },
+    {
+      "address": "169.254.169.254",
+      "specialUse": true,
+      "note": "link-local (cloud metadata)"
+    },
+    {
+      "address": "172.16.0.1",
+      "specialUse": true,
+      "note": "private"
+    },
+    {
+      "address": "172.31.255.255",
+      "specialUse": true,
+      "note": "private"
+    },
+    {
+      "address": "192.0.0.8",
+      "specialUse": true,
+      "note": "IETF protocol assignments"
+    },
+    {
+      "address": "192.0.2.1",
+      "specialUse": true,
+      "note": "documentation"
+    },
+    {
+      "address": "192.88.99.1",
+      "specialUse": true,
+      "note": "deprecated 6to4 relay"
+    },
+    {
+      "address": "192.168.1.1",
+      "specialUse": true,
+      "note": "private"
+    },
+    {
+      "address": "198.18.0.1",
+      "specialUse": true,
+      "note": "benchmarking"
+    },
+    {
+      "address": "198.19.255.255",
+      "specialUse": true,
+      "note": "benchmarking"
+    },
+    {
+      "address": "198.51.100.7",
+      "specialUse": true,
+      "note": "documentation"
+    },
+    {
+      "address": "203.0.113.9",
+      "specialUse": true,
+      "note": "documentation"
+    },
+    {
+      "address": "224.0.0.1",
+      "specialUse": true,
+      "note": "multicast"
+    },
+    {
+      "address": "240.0.0.1",
+      "specialUse": true,
+      "note": "reserved"
+    },
+    {
+      "address": "255.255.255.255",
+      "specialUse": true,
+      "note": "broadcast"
+    },
+    {
+      "address": "::",
+      "specialUse": true,
+      "note": "unspecified"
+    },
+    {
+      "address": "::1",
+      "specialUse": true,
+      "note": "loopback"
+    },
+    {
+      "address": "0:0:0:0:0:0:0:1",
+      "specialUse": true,
+      "note": "loopback, written out"
+    },
+    {
+      "address": "::10.0.0.5",
+      "specialUse": true,
+      "note": "deprecated IPv4-compatible form"
+    },
+    {
+      "address": "::ffff:10.0.0.5",
+      "specialUse": true,
+      "note": "IPv4-mapped private address"
+    },
+    {
+      "address": "::ffff:a00:5",
+      "specialUse": true,
+      "note": "IPv4-mapped private address in hexadecimal"
+    },
+    {
+      "address": "::ffff:169.254.169.254",
+      "specialUse": true,
+      "note": "IPv4-mapped link-local address"
+    },
+    {
+      "address": "::FFFF:127.0.0.1",
+      "specialUse": true,
+      "note": "IPv4-mapped loopback, upper case"
+    },
+    {
+      "address": "64:ff9b::a00:5",
+      "specialUse": true,
+      "note": "NAT64 form of a private address"
+    },
+    {
+      "address": "64:ff9b:1::1",
+      "specialUse": true,
+      "note": "local-use NAT64"
+    },
+    {
+      "address": "100::1",
+      "specialUse": true,
+      "note": "discard-only"
+    },
+    {
+      "address": "2001::1",
+      "specialUse": true,
+      "note": "Teredo"
+    },
+    {
+      "address": "2001:db8::1",
+      "specialUse": true,
+      "note": "documentation"
+    },
+    {
+      "address": "2002:a00:5::1",
+      "specialUse": true,
+      "note": "6to4"
+    },
+    {
+      "address": "fc00::1",
+      "specialUse": true,
+      "note": "unique local"
+    },
+    {
+      "address": "fd12:3456:789a::1",
+      "specialUse": true,
+      "note": "unique local"
+    },
+    {
+      "address": "fe80::1",
+      "specialUse": true,
+      "note": "link-local"
+    },
+    {
+      "address": "fe80::1%eth0",
+      "specialUse": true,
+      "note": "link-local with a zone"
+    },
+    {
+      "address": "febf::1",
+      "specialUse": true,
+      "note": "end of link-local"
+    },
+    {
+      "address": "ff02::1",
+      "specialUse": true,
+      "note": "multicast"
+    },
+    {
+      "address": "",
+      "specialUse": true,
+      "note": "empty string"
+    },
+    {
+      "address": "example.com",
+      "specialUse": true,
+      "note": "a name, not an address"
+    },
+    {
+      "address": "10.0.0",
+      "specialUse": true,
+      "note": "too few octets"
+    },
+    {
+      "address": "256.1.1.1",
+      "specialUse": true,
+      "note": "octet out of range"
+    },
+    {
+      "address": "08.8.8.8",
+      "specialUse": true,
+      "note": "octet with a leading zero"
+    },
+    {
+      "address": "1:2:3:4:5:6:7:8:9",
+      "specialUse": true,
+      "note": "too many groups"
+    },
+    {
+      "address": "1::2::3",
+      "specialUse": true,
+      "note": "two compressions"
+    },
+    {
+      "address": "12345::1",
+      "specialUse": true,
+      "note": "group too long"
+    }
+  ],
+  "thumbprints": [
+    {
+      "publicKeyHex": "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a",
+      "x": "11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo",
+      "thumbprint": "kPrK_qmxVWaYVA9wwBF6Iuo3vVzz7TxHCTwXBygrS4k"
+    },
+    {
+      "publicKeyHex": "3d4017c3e843895a92b70aa74d1b7ebc9c982ccf2ec4968cc0cd55f12af4660c",
+      "x": "PUAXw-hDiVqStwqnTRt-vJyYLM8uxJaMwM1V8Sr0Zgw",
+      "thumbprint": "FtIu-VbGrfe_KB6CH7GNwODB72MNxj_ml11dEvO-7kk"
+    },
+    {
+      "publicKeyHex": "fc51cd8e6218a1a38da47ed00230f0580816ed13ba3303ac5deb911548908025",
+      "x": "_FHNjmIYoaONpH7QAjDwWAgW7RO6MwOsXeuRFUiQgCU",
+      "thumbprint": "FVV5umTuau890q59V-4Ga_R6qWb7ON_ivJc4EjvCwTM"
+    }
+  ],
+  "documents": [
+    {
+      "name": "inline key set",
+      "identity": "https://agents.example.com/shopper",
+      "responses": {
+        "https://agents.example.com/shopper": {
+          "status": 200,
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "client_id": "https://agents.example.com/shopper",
+            "client_name": "Shopper",
+            "jwks": {
+              "keys": [
+                {
+                  "kty": "OKP",
+                  "crv": "Ed25519",
+                  "x": "11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo",
+                  "kid": "kPrK_qmxVWaYVA9wwBF6Iuo3vVzz7TxHCTwXBygrS4k",
+                  "use": "sig",
+                  "alg": "EdDSA"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "expect": {
+        "keyHex": "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a",
+        "kid": "kPrK_qmxVWaYVA9wwBF6Iuo3vVzz7TxHCTwXBygrS4k"
+      }
+    },
+    {
+      "name": "key set with only the three required JWK members",
+      "identity": "https://agents.example.com/shopper",
+      "responses": {
+        "https://agents.example.com/shopper": {
+          "status": 200,
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "client_id": "https://agents.example.com/shopper",
+            "jwks": {
+              "keys": [
+                {
+                  "kty": "OKP",
+                  "crv": "Ed25519",
+                  "x": "11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "expect": {
+        "keyHex": "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a"
+      }
+    },
+    {
+      "name": "alg Ed25519 (RFC 9864 name) is accepted",
+      "identity": "https://agents.example.com/shopper",
+      "responses": {
+        "https://agents.example.com/shopper": {
+          "status": 200,
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "client_id": "https://agents.example.com/shopper",
+            "jwks": {
+              "keys": [
+                {
+                  "kty": "OKP",
+                  "crv": "Ed25519",
+                  "x": "11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo",
+                  "kid": "kPrK_qmxVWaYVA9wwBF6Iuo3vVzz7TxHCTwXBygrS4k",
+                  "use": "sig",
+                  "alg": "Ed25519"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "expect": {
+        "keyHex": "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a",
+        "kid": "kPrK_qmxVWaYVA9wwBF6Iuo3vVzz7TxHCTwXBygrS4k"
+      }
+    },
+    {
+      "name": "first eligible key wins",
+      "identity": "https://agents.example.com/shopper",
+      "responses": {
+        "https://agents.example.com/shopper": {
+          "status": 200,
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "client_id": "https://agents.example.com/shopper",
+            "jwks": {
+              "keys": [
+                {
+                  "kty": "OKP",
+                  "crv": "Ed25519",
+                  "x": "PUAXw-hDiVqStwqnTRt-vJyYLM8uxJaMwM1V8Sr0Zgw",
+                  "kid": "FtIu-VbGrfe_KB6CH7GNwODB72MNxj_ml11dEvO-7kk",
+                  "use": "sig",
+                  "alg": "EdDSA"
+                },
+                {
+                  "kty": "OKP",
+                  "crv": "Ed25519",
+                  "x": "11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo",
+                  "kid": "kPrK_qmxVWaYVA9wwBF6Iuo3vVzz7TxHCTwXBygrS4k",
+                  "use": "sig",
+                  "alg": "EdDSA"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "expect": {
+        "keyHex": "3d4017c3e843895a92b70aa74d1b7ebc9c982ccf2ec4968cc0cd55f12af4660c",
+        "kid": "FtIu-VbGrfe_KB6CH7GNwODB72MNxj_ml11dEvO-7kk"
+      }
+    },
+    {
+      "name": "keys that cannot verify a mandate are skipped",
+      "identity": "https://agents.example.com/shopper",
+      "responses": {
+        "https://agents.example.com/shopper": {
+          "status": 200,
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "client_id": "https://agents.example.com/shopper",
+            "jwks": {
+              "keys": [
+                {
+                  "kty": "EC",
+                  "crv": "P-256",
+                  "x": "f83OJ3D2xF1Bg8vub9tLe1gHMzV76e8Tus9uPHvRVEU",
+                  "y": "x_FEzRu9m36HLN_tue659LNpXW6pCyStikYjKIWI5a0"
+                },
+                {
+                  "kty": "OKP",
+                  "crv": "Ed25519",
+                  "x": "PUAXw-hDiVqStwqnTRt-vJyYLM8uxJaMwM1V8Sr0Zgw",
+                  "kid": "FtIu-VbGrfe_KB6CH7GNwODB72MNxj_ml11dEvO-7kk",
+                  "use": "enc",
+                  "alg": "EdDSA"
+                },
+                {
+                  "kty": "OKP",
+                  "crv": "Ed25519",
+                  "x": "PUAXw-hDiVqStwqnTRt-vJyYLM8uxJaMwM1V8Sr0Zgw",
+                  "kid": "FtIu-VbGrfe_KB6CH7GNwODB72MNxj_ml11dEvO-7kk",
+                  "use": "sig",
+                  "alg": "EdDSA",
+                  "key_ops": [
+                    "sign"
+                  ]
+                },
+                {
+                  "kty": "OKP",
+                  "crv": "Ed25519",
+                  "x": "PUAXw-hDiVqStwqnTRt-vJyYLM8uxJaMwM1V8Sr0Zgw",
+                  "kid": "FtIu-VbGrfe_KB6CH7GNwODB72MNxj_ml11dEvO-7kk",
+                  "use": "sig",
+                  "alg": "ES256"
+                },
+                {
+                  "kty": "OKP",
+                  "crv": "X25519",
+                  "x": "PUAXw-hDiVqStwqnTRt-vJyYLM8uxJaMwM1V8Sr0Zgw"
+                },
+                {
+                  "kty": "OKP",
+                  "crv": "Ed25519",
+                  "x": "PUAXw-hDiVqStwqnTRt-vJyYLM8uxJaMwM1V8Sr0ZgwA"
+                },
+                "not a key",
+                {
+                  "kty": "OKP",
+                  "crv": "Ed25519",
+                  "x": "_FHNjmIYoaONpH7QAjDwWAgW7RO6MwOsXeuRFUiQgCU",
+                  "kid": "FVV5umTuau890q59V-4Ga_R6qWb7ON_ivJc4EjvCwTM",
+                  "use": "sig",
+                  "alg": "EdDSA",
+                  "key_ops": [
+                    "verify"
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      },
+      "expect": {
+        "keyHex": "fc51cd8e6218a1a38da47ed00230f0580816ed13ba3303ac5deb911548908025",
+        "kid": "FVV5umTuau890q59V-4Ga_R6qWb7ON_ivJc4EjvCwTM"
+      }
+    },
+    {
+      "name": "key set at jwks_uri",
+      "identity": "https://agents.example.com/shopper",
+      "responses": {
+        "https://agents.example.com/shopper": {
+          "status": 200,
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "client_id": "https://agents.example.com/shopper",
+            "jwks_uri": "https://keys.example.com/shopper/jwks.json?v=2"
+          }
+        },
+        "https://keys.example.com/shopper/jwks.json?v=2": {
+          "status": 200,
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "keys": [
+              {
+                "kty": "OKP",
+                "crv": "Ed25519",
+                "x": "11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo",
+                "kid": "kPrK_qmxVWaYVA9wwBF6Iuo3vVzz7TxHCTwXBygrS4k",
+                "use": "sig",
+                "alg": "EdDSA"
+              }
+            ]
+          }
+        }
+      },
+      "expect": {
+        "keyHex": "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a",
+        "kid": "kPrK_qmxVWaYVA9wwBF6Iuo3vVzz7TxHCTwXBygrS4k"
+      }
+    },
+    {
+      "name": "unknown members are ignored",
+      "identity": "https://agents.example.com/shopper",
+      "responses": {
+        "https://agents.example.com/shopper": {
+          "status": 200,
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "client_id": "https://agents.example.com/shopper",
+            "redirect_uris": [
+              "https://agents.example.com/cb"
+            ],
+            "grant_types": [
+              "authorization_code"
+            ],
+            "token_endpoint_auth_method": "private_key_jwt",
+            "jwks": {
+              "keys": [
+                {
+                  "kty": "OKP",
+                  "crv": "Ed25519",
+                  "x": "11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo",
+                  "kid": "kPrK_qmxVWaYVA9wwBF6Iuo3vVzz7TxHCTwXBygrS4k",
+                  "use": "sig",
+                  "alg": "EdDSA"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "expect": {
+        "keyHex": "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a",
+        "kid": "kPrK_qmxVWaYVA9wwBF6Iuo3vVzz7TxHCTwXBygrS4k"
+      }
+    },
+    {
+      "name": "client_id names another URL",
+      "identity": "https://agents.example.com/shopper",
+      "responses": {
+        "https://agents.example.com/shopper": {
+          "status": 200,
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "client_id": "https://agents.example.com/other",
+            "jwks": {
+              "keys": [
+                {
+                  "kty": "OKP",
+                  "crv": "Ed25519",
+                  "x": "11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo",
+                  "kid": "kPrK_qmxVWaYVA9wwBF6Iuo3vVzz7TxHCTwXBygrS4k",
+                  "use": "sig",
+                  "alg": "EdDSA"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "expect": {
+        "error": true
+      }
+    },
+    {
+      "name": "client_id differs only by a trailing slash",
+      "identity": "https://agents.example.com/shopper",
+      "responses": {
+        "https://agents.example.com/shopper": {
+          "status": 200,
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "client_id": "https://agents.example.com/shopper/",
+            "jwks": {
+              "keys": [
+                {
+                  "kty": "OKP",
+                  "crv": "Ed25519",
+                  "x": "11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo",
+                  "kid": "kPrK_qmxVWaYVA9wwBF6Iuo3vVzz7TxHCTwXBygrS4k",
+                  "use": "sig",
+                  "alg": "EdDSA"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "expect": {
+        "error": true
+      }
+    },
+    {
+      "name": "client_id missing",
+      "identity": "https://agents.example.com/shopper",
+      "responses": {
+        "https://agents.example.com/shopper": {
+          "status": 200,
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "jwks": {
+              "keys": [
+                {
+                  "kty": "OKP",
+                  "crv": "Ed25519",
+                  "x": "11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo",
+                  "kid": "kPrK_qmxVWaYVA9wwBF6Iuo3vVzz7TxHCTwXBygrS4k",
+                  "use": "sig",
+                  "alg": "EdDSA"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "expect": {
+        "error": true
+      }
+    },
+    {
+      "name": "both jwks and jwks_uri",
+      "identity": "https://agents.example.com/shopper",
+      "responses": {
+        "https://agents.example.com/shopper": {
+          "status": 200,
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "client_id": "https://agents.example.com/shopper",
+            "jwks": {
+              "keys": [
+                {
+                  "kty": "OKP",
+                  "crv": "Ed25519",
+                  "x": "11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo",
+                  "kid": "kPrK_qmxVWaYVA9wwBF6Iuo3vVzz7TxHCTwXBygrS4k",
+                  "use": "sig",
+                  "alg": "EdDSA"
+                }
+              ]
+            },
+            "jwks_uri": "https://keys.example.com/jwks.json"
+          }
+        }
+      },
+      "expect": {
+        "error": true
+      }
+    },
+    {
+      "name": "no keys published",
+      "identity": "https://agents.example.com/shopper",
+      "responses": {
+        "https://agents.example.com/shopper": {
+          "status": 200,
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "client_id": "https://agents.example.com/shopper"
+          }
+        }
+      },
+      "expect": {
+        "error": true
+      }
+    },
+    {
+      "name": "empty key set",
+      "identity": "https://agents.example.com/shopper",
+      "responses": {
+        "https://agents.example.com/shopper": {
+          "status": 200,
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "client_id": "https://agents.example.com/shopper",
+            "jwks": {
+              "keys": []
+            }
+          }
+        }
+      },
+      "expect": {
+        "error": true
+      }
+    },
+    {
+      "name": "jwks is not an object with a keys array",
+      "identity": "https://agents.example.com/shopper",
+      "responses": {
+        "https://agents.example.com/shopper": {
+          "status": 200,
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "client_id": "https://agents.example.com/shopper",
+            "jwks": [
+              {
+                "kty": "OKP",
+                "crv": "Ed25519",
+                "x": "11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo",
+                "kid": "kPrK_qmxVWaYVA9wwBF6Iuo3vVzz7TxHCTwXBygrS4k",
+                "use": "sig",
+                "alg": "EdDSA"
+              }
+            ]
+          }
+        }
+      },
+      "expect": {
+        "error": true
+      }
+    },
+    {
+      "name": "no Ed25519 signing key",
+      "identity": "https://agents.example.com/shopper",
+      "responses": {
+        "https://agents.example.com/shopper": {
+          "status": 200,
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "client_id": "https://agents.example.com/shopper",
+            "jwks": {
+              "keys": [
+                {
+                  "kty": "OKP",
+                  "crv": "Ed25519",
+                  "x": "11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo",
+                  "kid": "kPrK_qmxVWaYVA9wwBF6Iuo3vVzz7TxHCTwXBygrS4k",
+                  "use": "enc",
+                  "alg": "EdDSA"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "expect": {
+        "error": true
+      }
+    },
+    {
+      "name": "private key material in the set",
+      "identity": "https://agents.example.com/shopper",
+      "responses": {
+        "https://agents.example.com/shopper": {
+          "status": 200,
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "client_id": "https://agents.example.com/shopper",
+            "jwks": {
+              "keys": [
+                {
+                  "kty": "OKP",
+                  "crv": "Ed25519",
+                  "x": "PUAXw-hDiVqStwqnTRt-vJyYLM8uxJaMwM1V8Sr0Zgw",
+                  "kid": "FtIu-VbGrfe_KB6CH7GNwODB72MNxj_ml11dEvO-7kk",
+                  "use": "sig",
+                  "alg": "EdDSA"
+                },
+                {
+                  "kty": "OKP",
+                  "crv": "Ed25519",
+                  "x": "11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo",
+                  "kid": "kPrK_qmxVWaYVA9wwBF6Iuo3vVzz7TxHCTwXBygrS4k",
+                  "use": "sig",
+                  "alg": "EdDSA",
+                  "d": "nWGxne_9WmC6hEr0kuwsxERJxWl7MmkZcDusAxyuf2A"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "expect": {
+        "error": true
+      }
+    },
+    {
+      "name": "client secret in the document",
+      "identity": "https://agents.example.com/shopper",
+      "responses": {
+        "https://agents.example.com/shopper": {
+          "status": 200,
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "client_id": "https://agents.example.com/shopper",
+            "client_secret": "s3cret",
+            "jwks": {
+              "keys": [
+                {
+                  "kty": "OKP",
+                  "crv": "Ed25519",
+                  "x": "11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo",
+                  "kid": "kPrK_qmxVWaYVA9wwBF6Iuo3vVzz7TxHCTwXBygrS4k",
+                  "use": "sig",
+                  "alg": "EdDSA"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "expect": {
+        "error": true
+      }
+    },
+    {
+      "name": "document is a JSON array",
+      "identity": "https://agents.example.com/shopper",
+      "responses": {
+        "https://agents.example.com/shopper": {
+          "status": 200,
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": [
+            {
+              "client_id": "https://agents.example.com/shopper",
+              "jwks": {
+                "keys": [
+                  {
+                    "kty": "OKP",
+                    "crv": "Ed25519",
+                    "x": "11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo",
+                    "kid": "kPrK_qmxVWaYVA9wwBF6Iuo3vVzz7TxHCTwXBygrS4k",
+                    "use": "sig",
+                    "alg": "EdDSA"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "expect": {
+        "error": true
+      }
+    },
+    {
+      "name": "document is not JSON",
+      "identity": "https://agents.example.com/shopper",
+      "responses": {
+        "https://agents.example.com/shopper": {
+          "status": 200,
+          "headers": {
+            "content-type": "text/html"
+          },
+          "bodyText": "<!doctype html><title>Shopper</title>"
+        }
+      },
+      "expect": {
+        "error": true
+      }
+    },
+    {
+      "name": "HTTP 404",
+      "identity": "https://agents.example.com/shopper",
+      "responses": {
+        "https://agents.example.com/shopper": {
+          "status": 404,
+          "headers": {},
+          "body": {
+            "error": "not_found"
+          }
+        }
+      },
+      "expect": {
+        "error": true
+      }
+    },
+    {
+      "name": "HTTP 203 is not 200",
+      "identity": "https://agents.example.com/shopper",
+      "responses": {
+        "https://agents.example.com/shopper": {
+          "status": 203,
+          "headers": {},
+          "body": {
+            "client_id": "https://agents.example.com/shopper",
+            "jwks": {
+              "keys": [
+                {
+                  "kty": "OKP",
+                  "crv": "Ed25519",
+                  "x": "11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo",
+                  "kid": "kPrK_qmxVWaYVA9wwBF6Iuo3vVzz7TxHCTwXBygrS4k",
+                  "use": "sig",
+                  "alg": "EdDSA"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "expect": {
+        "error": true
+      }
+    },
+    {
+      "name": "redirect is not followed",
+      "identity": "https://agents.example.com/shopper",
+      "responses": {
+        "https://agents.example.com/shopper": {
+          "status": 302,
+          "headers": {
+            "location": "https://elsewhere.example.net/shopper"
+          },
+          "body": {}
+        },
+        "https://elsewhere.example.net/shopper": {
+          "status": 200,
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "client_id": "https://agents.example.com/shopper",
+            "jwks": {
+              "keys": [
+                {
+                  "kty": "OKP",
+                  "crv": "Ed25519",
+                  "x": "11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo",
+                  "kid": "kPrK_qmxVWaYVA9wwBF6Iuo3vVzz7TxHCTwXBygrS4k",
+                  "use": "sig",
+                  "alg": "EdDSA"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "expect": {
+        "error": true
+      }
+    },
+    {
+      "name": "jwks_uri is not https",
+      "identity": "https://agents.example.com/shopper",
+      "responses": {
+        "https://agents.example.com/shopper": {
+          "status": 200,
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "client_id": "https://agents.example.com/shopper",
+            "jwks_uri": "http://keys.example.com/jwks.json"
+          }
+        }
+      },
+      "expect": {
+        "error": true
+      }
+    },
+    {
+      "name": "jwks_uri names an IP literal",
+      "identity": "https://agents.example.com/shopper",
+      "responses": {
+        "https://agents.example.com/shopper": {
+          "status": 200,
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "client_id": "https://agents.example.com/shopper",
+            "jwks_uri": "https://169.254.169.254/jwks.json"
+          }
+        }
+      },
+      "expect": {
+        "error": true
+      }
+    },
+    {
+      "name": "jwks_uri returns 404",
+      "identity": "https://agents.example.com/shopper",
+      "responses": {
+        "https://agents.example.com/shopper": {
+          "status": 200,
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "client_id": "https://agents.example.com/shopper",
+            "jwks_uri": "https://keys.example.com/jwks.json"
+          }
+        },
+        "https://keys.example.com/jwks.json": {
+          "status": 404,
+          "headers": {},
+          "body": {}
+        }
+      },
+      "expect": {
+        "error": true
+      }
+    },
+    {
+      "name": "jwks_uri redirects",
+      "identity": "https://agents.example.com/shopper",
+      "responses": {
+        "https://agents.example.com/shopper": {
+          "status": 200,
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "client_id": "https://agents.example.com/shopper",
+            "jwks_uri": "https://keys.example.com/jwks.json"
+          }
+        },
+        "https://keys.example.com/jwks.json": {
+          "status": 301,
+          "headers": {
+            "location": "https://keys.example.com/v2/jwks.json"
+          },
+          "body": {}
+        }
+      },
+      "expect": {
+        "error": true
+      }
+    }
+  ]
+}

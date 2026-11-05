@@ -52,6 +52,15 @@ import { GoogleAuth, configFromEnv } from "./auth.js";
 import { GmailClient } from "./gmail.js";
 import { login, DEFAULT_SCOPES } from "./login.js";
 
+/**
+ * MCP tool annotations. All four hints are set on every tool, because clients
+ * and directories treat a missing hint as unknown. Every tool talks to the
+ * Gmail API, so all are open-world; only the draft writes, and it never
+ * changes or removes anything that already exists.
+ */
+const READ_ONLY = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true } as const;
+const CREATES_DRAFT = { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true } as const;
+
 export const TOOLS = [
   {
     name: "gmail_search_messages",
@@ -71,6 +80,7 @@ export const TOOLS = [
       },
       required: ["query"],
     },
+    annotations: READ_ONLY,
   },
   {
     name: "gmail_get_message",
@@ -82,11 +92,13 @@ export const TOOLS = [
       properties: { messageId: { type: "string", description: "The message id." } },
       required: ["messageId"],
     },
+    annotations: READ_ONLY,
   },
   {
     name: "gmail_list_labels",
     description: "List the mailbox's labels, with message and unread counts.",
     inputSchema: { type: "object", properties: {} },
+    annotations: READ_ONLY,
   },
   {
     name: "gmail_create_draft",
@@ -104,6 +116,7 @@ export const TOOLS = [
       },
       required: ["to", "subject", "body"],
     },
+    annotations: CREATES_DRAFT,
   },
 ] as const;
 

@@ -294,6 +294,32 @@ come from `resolve_key` (default: content-addressed `did:aroha:z…` DIDs);
 pass `kel_source=` to resolve rotatable `did:aroha:E…` DIDs through their Key
 Event Logs, and `require_person_root=True` to insist the root is a person.
 
+### Web identities (unreleased)
+
+A grantor or grantee can also be an HTTPS address that publishes its signing
+key (spec §4.7), next to `did:aroha` identifiers. The address serves an OAuth
+Client ID Metadata Document with an Ed25519 key. Resolving one makes an HTTPS
+request to a host named in the token, so a verifier opts in:
+
+```python
+from aroha.mandate import create_mandate_key_resolver, verify_mandate_chain
+from aroha.web_identity import build_web_identity_document, create_web_identity_resolver
+
+# Publisher: serve this JSON at the address (HTTP 200, no redirect).
+document = build_web_identity_document("https://agents.example.com/shopper", public_key)
+
+# Verifier: did:aroha identifiers and web addresses through one resolver.
+resolve_key = create_mandate_key_resolver(
+    web=create_web_identity_resolver(allow_host=lambda hostname: hostname.endswith(".example.com")),
+)
+result = verify_mandate_chain(token, resolve_key, expected_root="https://accounts.example.com/people/kiri")
+```
+
+No redirects, HTTP 200 only, a 5 kB cap, a 5 s timeout, keys reused for at
+most 5 minutes. The token format is unchanged. The governed profile still
+needs a `did:aroha:E…` person root. Checked against the same vectors as the
+TypeScript SDK (`tests/test_web_identity.py`).
+
 ## Durable stores
 
 `verify_http_spend_request` and the enrollment helpers keep three kinds of
@@ -458,6 +484,7 @@ signature).
 | E-DIDs / KELs (`aroha.kel`) | Verification ported (inception/rotate/recover/revoke/anchor, controller seals, stale/duplicity store); reproduces the L0-KEL-01 pinned vector. Issuing helpers included |
 | Message types / error codes | All 19 types, all 35 `ArohaErrorCode` values |
 | Task mandates v2 (`aroha.task_mandate`) | Wire-identical; every vector in `packages/aroha-credentials/test-vectors/task-mandate-v2.json` passes (payloads, signatures, verdicts, reasons, narrowing reasons, violation codes and messages); live round trips both ways |
+| Web identities (`aroha.web_identity`, unreleased) | Same accepted and refused addresses and documents; every case in `packages/aroha-credentials/test-vectors/web-identity-v1.json` passes |
 | Not ported | Redemption store (`redeemPaymentMandate`) and ledger allocation when issuing or attenuating (the spending ledger used by `verify_http_spend_request` is ported — see Durable stores), multi-hop task-chain verifier (`verifyTaskMandateChain` in `@aroha-sdk/delegation`), task receipts |
 
 Timestamps are parsed as ISO 8601 only; an offset-less timestamp is read as

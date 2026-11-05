@@ -96,6 +96,16 @@ export interface ArohaMcpConfigFile {
     expectedRoot?: string;
     trustedRoots?: string[];
   };
+  /**
+   * Let verify_mandate accept mandates whose grantor is a web identity: an
+   * `https://` URL that publishes the signing key (spec §4.7). Off by default,
+   * because resolving one means an HTTPS request to a host named in the token.
+   */
+  webIdentities?: {
+    enabled?: boolean;
+    /** Fetch only these hosts (lower-case hostnames). Default: any public host. */
+    allowedHosts?: string[];
+  };
   /** Verify every agent response envelope in aroha_call. Default true. */
   verifyResponses?: boolean;
   /** DEVELOPMENT ONLY: let aroha_call reach private, loopback and link-local agent endpoints. */
@@ -157,6 +167,11 @@ export interface ResolvedConfig {
   governed?: {
     expectedRoot?: string;
     trustedRoots?: string[];
+  };
+  /** Present when verify_mandate resolves web identities (spec §4.7). */
+  webIdentities?: {
+    /** When set, only these hosts are fetched. */
+    allowedHosts?: string[];
   };
   verifyResponses: boolean;
   allowPrivateEndpoints: boolean;
@@ -341,6 +356,13 @@ export function loadConfig(
     governed = { expectedRoot, trustedRoots };
   }
 
+  const webOn = bool(env.AROHA_MCP_WEB_IDENTITIES) ?? file.webIdentities?.enabled ?? false;
+  let webIdentities: ResolvedConfig["webIdentities"];
+  if (webOn) {
+    const allowedHosts = (list(env.AROHA_MCP_WEB_IDENTITY_HOSTS) ?? file.webIdentities?.allowedHosts)?.map((h) => h.toLowerCase());
+    webIdentities = allowedHosts && allowedHosts.length > 0 ? { allowedHosts } : {};
+  }
+
   const tasksOn = bool(env.AROHA_MCP_TASKS) ?? file.tasks?.enabled ?? true;
   let tasks: ResolvedConfig["tasks"];
   if (tasksOn) {
@@ -383,6 +405,7 @@ export function loadConfig(
       keys: registryKeys,
     },
     governed,
+    webIdentities,
     verifyResponses: bool(env.AROHA_MCP_VERIFY_RESPONSES) ?? file.verifyResponses ?? true,
     allowPrivateEndpoints: bool(env.AROHA_ALLOW_PRIVATE_ENDPOINTS) ?? file.allowPrivateEndpoints ?? false,
     tasks,

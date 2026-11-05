@@ -66,6 +66,7 @@ from aroha.identity import from_multibase, to_multibase
 from aroha.jcs import canonicalize_jcs, format_es_number, js_stringify_sorted
 from aroha.kel import KelSource, KelState, KelStore, is_inception_did, kel_key_resolver, resolve_kel_state
 from aroha.timeutil import iso_ms, now_ms, parse_iso_ms, to_ms
+from aroha.web_identity import create_web_identity_resolver, looks_like_web_identity
 
 __all__ = [
     "MANDATE_TOKEN_VERSION",
@@ -296,14 +297,26 @@ def create_mandate_key_resolver(
     *,
     kel_source: Optional[KelSource] = None,
     kel_store: Optional[KelStore] = None,
+    web: Union[bool, Callable[[str], Optional[bytes]], None] = None,
     fallback: Optional[KeyResolver] = None,
 ) -> Callable[[str], Optional[bytes]]:
-    """Resolver covering all ``did:aroha:`` forms: ``E…`` via verified KEL, ``z…`` derived, else ``fallback``.
+    """Resolver covering all ``did:aroha:`` forms and, when ``web`` is set, web identities.
+
+    ``E…`` via verified KEL, ``z…`` derived, ``https://…`` (web identity,
+    spec §4.7) from the key published at that URL, else ``fallback``.
 
     Self-certifying forms never fall through to ``fallback`` (a registry must
     not be able to answer for a DID that carries its own proof).
+
+    ``web`` is off unless set: resolving a web identity makes an HTTPS request
+    to a host named inside the token being verified, which a verifier must opt
+    into. Pass ``True`` for the defaults, or a resolver made by
+    ``aroha.web_identity.create_web_identity_resolver`` to set the fetch,
+    limits, cache and ``allow_host``. When set, EVERY http(s) identifier goes
+    to it and never to ``fallback``.
     """
     kel = kel_key_resolver(kel_source, store=kel_store) if kel_source is not None else None
+    web_resolver = create_web_identity_resolver() if web is True else (web or None)
 
     def resolve(did: str) -> Optional[bytes]:
         if is_inception_did(did):
@@ -311,6 +324,8 @@ def create_mandate_key_resolver(
         derived = resolve_content_addressed_key(did)
         if derived is not None:
             return derived
+        if web_resolver is not None and looks_like_web_identity(did):
+            return _key_bytes(web_resolver(did))
         return _key_bytes(fallback(did)) if fallback is not None else None
 
     return resolve

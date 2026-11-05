@@ -119,6 +119,7 @@ Full detail: [SDK feature matrix](sdks/feature-matrix.md).
 | Conversation profile (rooms, consent, turns) verification | ✅ | ✅ | ✅ | ✅ |
 | Registry client | ✅ | ✅ | ✅ | ✅ |
 | Durable stores: nonces, enrollment, spending ledger (Postgres, Redis; one shared layout) | ✅ (unreleased) | ✅ (unreleased) | ❌ | ❌ |
+| Web identities: an `https://` address as a mandate party (spec §4.7) | ✅ (unreleased) | ✅ (unreleased) | ❌ | ❌ |
 | Published | npm 2.0.0 | PyPI 2.0.0 | Not released | Not released (no Maven Central credentials) |
 
 ## Published versions
@@ -172,4 +173,5 @@ Each figure is from a run on the date given; re-run before quoting. Commit hashe
 - Enterprise sign-in (ID-JAG) is tested against a reference IdP, not a production one.
 - MCP Tasks are polling-only and held in memory per process (several instances must route on `Mcp-Name`).
 - Multi-hop task-chain verification and task receipts are TypeScript-only.
+- Web identities (spec §4.7) are unreleased, TypeScript and Python only, and not tested against any hosted assistant. The reference registry does not resolve them, so registry-backed revocation does not cover a chain that contains one.
 - Pre-built provider agents are published to npm (1.0.0, 2026-06-23), but their source and tests are not in this repository.

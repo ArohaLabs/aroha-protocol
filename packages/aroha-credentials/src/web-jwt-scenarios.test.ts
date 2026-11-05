@@ -50,7 +50,7 @@ beforeAll(async () => {
   server = createServer((req, res) => {
     hits.push(req.url ?? "");
     const h = routes.get(req.url ?? "");
-    if (h) return h(res);
+    if (typeof h === "function") return h(res);
     res.writeHead(404).end();
   });
   await new Promise<void>((r) => server.listen(0, "127.0.0.1", r));

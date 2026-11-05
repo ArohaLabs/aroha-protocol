@@ -120,21 +120,25 @@ const { payload } = await jwtVerify(link, createRemoteJWKSet(new URL(jwksUri)), 
 const limit = payload.authorization_details[0].constraints.spendLimitUsd;
 ```
 
-That tells you the link is genuine: the named party signed it and it has not expired.
+That tells you the link is genuine: the named party signed it and its `exp` has not passed.
 
 **It does not tell you the mandate is valid.** A JWT library does not know that:
 
 - a child must narrow its parent. A cart for $5,000 under a $500 intent is a perfectly well-signed JWT;
 - the links have to join into a chain, each granted by the party the one above it named;
 - the chain has to start at a root you trust;
-- any link may have been revoked.
+- any link may have been revoked;
+- `validFrom` and `validUntil` also limit when a mandate is valid. A JWT library does not read them;
+- `kid` does not choose the key. A mandate verifier uses the identity's first eligible key, so a link signed with a second key in the set is refused.
 
 Those are the mandate rules, and `verifyMandateChain` applies them to both forms. Use a JWT library to read a mandate or to pre-check a link. Use `verifyMandateChain` before you act on one.
 
 ## What is strict, and why
 
-- **`typ` is required.** A mandate JWT has `typ: aroha-mandate+jwt`. An access token or an identity token signed by the same key is never read as a mandate, and a mandate is never mistaken for one of those.
-- **Only six claims.** `iss`, `sub`, `jti`, `iat`, `exp`, `authorization_details`. A JWT with any other claim is refused. A claim such as `nbf` or `aud` that a JWT library enforces and the mandate verifier does not would let the two disagree about the same token.
+- **`typ` is required.** A mandate JWT has `typ: aroha-mandate+jwt`, so an access token or an identity token signed by the same key is never read as a mandate. A consumer that accepts other JWTs must check `typ` too, or it could read a mandate as one of those.
+- **Only six claims, and no unknown members.** `iss`, `sub`, `jti`, `iat`, `exp`, `authorization_details`. A JWT with any other claim, or an unknown member in `authorization_details` or its constraints, is refused. A member that one consumer enforces and the mandate verifier ignores would let the two disagree about the same token.
+- **`sub` is the agent, not the user.** It is the party the mandate was granted to. OAuth access tokens usually put the user there, so do not read it that way here.
+- **Portable values.** Nesting stops at 32 levels, numbers stay within 2^53 − 1, and text must be well-formed Unicode with no byte order mark, so every SDK reads a token the same way.
 - **Only `alg`, `typ` and `kid` in the header.** A key carried in the token (`jwk`, `jku`, `x5c`) is refused. The key always comes from the grantor's identity, never from the token.
 - **`alg` is `EdDSA`** (or `Ed25519`, its newer name). Nothing else, including `none`.
 - **One form per chain.** A mandate is issued in one form and its children keep it. The signature covers different bytes in each form, so a token cannot be converted.
@@ -150,4 +154,4 @@ Those are the mandate rules, and `verifyMandateChain` applies them to both forms
 
 ## Conformance
 
-Both SDKs are checked against [`mandate-jwt-v1.json`](https://github.com/ArohaLabs/aroha-protocol/blob/main/packages/aroha-credentials/test-vectors/mandate-jwt-v1.json): 7 links that must decode to a given body, and 53 tokens of which 43 must be refused. The Python SDK also reproduces each JWT byte for byte. The TypeScript tests verify mandates with `jose`, and verify a JWT that `jose` signed.
+Both SDKs are checked against [`mandate-jwt-v1.json`](https://github.com/ArohaLabs/aroha-protocol/blob/main/packages/aroha-credentials/test-vectors/mandate-jwt-v1.json): 7 links that must decode to a given body, and 64 tokens of which 54 must be refused. The Python SDK also reproduces each JWT byte for byte. The TypeScript tests verify mandates with `jose`, and verify a JWT that `jose` signed.

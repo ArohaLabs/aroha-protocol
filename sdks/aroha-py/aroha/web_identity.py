@@ -164,6 +164,9 @@ def _check_url(value: Any, *, loopback_http: bool, identity: bool) -> Optional[s
         return "must have a path other than /"
     if identity and query is not None:
         return "must not contain a query"
+    # A URL parser rewrites "'" in a query, so it is never in normalised form.
+    if query is not None and "'" in query:
+        return "is not in normalised form"
     # An "xn--" label must be decodable Punycode, as the URL parsers of other
     # SDKs require; otherwise the SDKs would disagree on the same string.
     for label in host.split("."):
@@ -364,6 +367,9 @@ class _NoRedirect(urllib.request.HTTPRedirectHandler):
 
 def _default_fetch(url: str, timeout_s: float, max_bytes: int) -> WebIdentityResponse:
     """GET with no redirects, a timeout, and a streamed size cap."""
+    # ``timeout`` bounds one socket operation only, so a host sending a byte at
+    # a time would never trip it. The body is read against one deadline instead.
+    deadline = time.monotonic() + timeout_s
     opener = urllib.request.build_opener(_NoRedirect)
     req = urllib.request.Request(url, headers={"Accept": "application/json"}, method="GET")
     try:
@@ -371,7 +377,15 @@ def _default_fetch(url: str, timeout_s: float, max_bytes: int) -> WebIdentityRes
             declared = resp.headers.get("Content-Length")
             if declared is not None and declared.strip().isdigit() and int(declared) > max_bytes:
                 return WebIdentityResponse(resp.status, b"\0" * (max_bytes + 1))
-            return WebIdentityResponse(resp.status, resp.read(max_bytes + 1), resp.headers.get("Cache-Control"))
+            body = bytearray()
+            while len(body) <= max_bytes:
+                if time.monotonic() >= deadline:
+                    raise TimeoutError(f"GET {url} took longer than {timeout_s} s")
+                chunk = resp.read1(max_bytes + 1 - len(body))
+                if not chunk:
+                    break
+                body += chunk
+            return WebIdentityResponse(resp.status, bytes(body), resp.headers.get("Cache-Control"))
     except urllib.error.HTTPError as e:
         return WebIdentityResponse(e.code, b"")
 

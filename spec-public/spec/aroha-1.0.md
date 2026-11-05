@@ -685,22 +685,25 @@ The mandate body of a link is recovered by reversing that mapping; `issuedAt` an
 
 **Verification.** A verifier MUST reject a link if any of the following holds:
 
-1. It is not three non-empty base64url parts without padding, or its header or its payload is not a JSON object.
+1. It is not three non-empty base64url parts in canonical encoding without padding, or its header or its payload is not a JSON object in UTF-8 with no byte order mark.
 2. Its header has a member other than `alg`, `typ` and `kid`, or its `alg` or `typ` is not one of the values above.
-3. Its claims set has a member other than the six above, or one of the six is missing or of the wrong type.
-4. Its `authorization_details` does not hold exactly one object of a mandate type, or that object has a member named `grantor`, `grantee`, `mandateId`, `issuedAt` or `expiresAt`.
+3. Its claims set has a member other than the six above, or one of the six is missing or of the wrong type, or `iat` or `exp` is above 253402300799 (the end of the year 9999).
+4. Its `authorization_details` does not hold exactly one object of a mandate type, or that object has a member that §6.5 or §6.6 does not define for that type, which includes `grantor`, `grantee`, `mandateId`, `issuedAt` and `expiresAt`. The same applies to the members of `constraints`, `spendingConstraints` and `taskConstraints`.
 5. The recovered body is not a valid body for its type (§6.5, §6.6).
 6. It is a link of a spending mandate token and has the type `aroha_task_mandate`, or it is a task mandate token and has the type `aroha_spending_mandate`.
+7. Its claims set is nested more than 32 levels deep, or holds a string that is not well-formed Unicode, or a number that is not finite or whose magnitude is above 2^53 − 1.
 
 A verifier MUST then apply to the recovered bodies every check that §6.5, for a spending token, or §6.6, for a task token, requires of a v2 token. It resolves each grantor's key as those sections and §4.7 define. A verifier MUST NOT use `kid`, or any key carried in a token, to choose the key a signature is checked against. A verifier MAY refuse a link longer than 16 384 characters.
 
-**Unknown members.** A verifier MUST reject an unknown header member or an unknown claim, and MUST NOT ignore it. A claim such as `nbf` or `aud` that a general JWT library enforces and a mandate verifier does not would let the two reach different verdicts on one token.
+**Unknown members.** A verifier MUST reject an unknown header member, an unknown claim or an unknown member of `authorization_details`, and MUST NOT ignore it. A claim such as `nbf` or `aud` that a general JWT library enforces and a mandate verifier does not would let the two reach different verdicts on one token, and a member such as `locations`, which RFC 9396 defines, could mean something to one consumer and nothing to another.
+
+**General JWT verification.** A receiver MUST NOT authorise an action on the result of general JWT verification alone.
 
 **One form per chain.** A mandate is issued in one form, because its signature covers different bytes in each. An issuer that attenuates a mandate in this form MUST issue the child in this form. A spending mandate token in this form contains only links in this form.
 
 **Presentation.** A token in this form is presented as §6.9 defines, unchanged: it is the `token` member of the presentation, and the `mandateId` in the holder proof is the `jti` of its last link.
 
-**What a JWT library does not check (non-normative).** A general JWT library verifies one link: its signature, its issuer and its expiry. It does not check that a child narrows its parent, that the links join into a chain, or that the chain starts at a root the verifier trusts. Those are the checks of §6.5 and §6.6, and a service that acts on a mandate needs them. This form carries no audience, no key binding inside the token and no status list: the holder is bound by the presentation of §6.9, and revocation is §6.7.
+**What a JWT library does not check (non-normative).** A general JWT library verifies one link: its signature, its issuer and its expiry. It does not check that a child narrows its parent, that the links join into a chain, or that the chain starts at a root the verifier trusts. It also does not read `validFrom` or `validUntil`, may accept an `iat` in the future, and may accept a link signed by any key in the set whose `kid` matches, where a mandate verifier uses only the identity's first eligible key. Those are the checks of §6.5 and §6.6, and a service that acts on a mandate needs them. This form carries no audience, no key binding inside the token and no status list: the holder is bound by the presentation of §6.9, and revocation is §6.7.
 
 The conformance vectors are in `packages/aroha-credentials/test-vectors/mandate-jwt-v1.json` in the reference repository. The reference implementations are `issueIntentMandate` and `issueTaskMandate` with `format: "jwt"`, `verifyMandateChain` and `verifyTaskMandate` in `@aroha-sdk/credentials`, and the same functions in the Python SDK.
 

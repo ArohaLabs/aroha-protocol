@@ -208,6 +208,13 @@ describe("identity documents over real HTTP", () => {
     expect(Date.now() - started).toBeLessThan(2_000);
   });
 
+  it("gives up on a name that never resolves", async () => {
+    const started = Date.now();
+    const r = await resolveWebIdentity("https://agents.example.com/x", { fetch: (async () => new Response("{}")) as typeof fetch, lookup: () => new Promise<string[]>(() => undefined), timeoutMs: 100 });
+    expect(r.ok).toBe(false);
+    expect(Date.now() - started).toBeLessThan(2_000);
+  });
+
   it("refuses invalid UTF-8", async () => {
     routes.set("/latin1", (res) => res.writeHead(200).end(Buffer.from([0x7b, 0xff, 0x7d])));
     expect((await resolveWebIdentity(`${origin}/latin1`, opts)).ok).toBe(false);
@@ -289,6 +296,24 @@ describe("limits", () => {
     const allowedMerchants = Array.from({ length: 2_000 }, (_, i) => `https://merchant-${i}.example.com/checkout`);
     await expect(issueIntentMandate(a.id, b.id, { spendLimitUsd: 1, allowedMerchants }, a.priv, 3_600_000, { format: "jwt" })).rejects.toThrow(/too long|longer than/);
     expect(MANDATE_JWT_MAX_LENGTH).toBe(16 * 1024);
+  });
+
+  it("verifiers return a refusal on crafted values, they do not throw", async () => {
+    const a = await did();
+    const b64 = (v: unknown) => Buffer.from(JSON.stringify(v)).toString("base64url");
+    const now = Math.floor(Date.now() / 1000);
+    const claims = (over: Record<string, unknown>, detail: Record<string, unknown>) => ({ iss: a.id, sub: "b", jti: "j", iat: now, exp: now + 600, authorization_details: [detail], ...over });
+    const signed = async (c: unknown) => {
+      const payload = Buffer.from(JSON.stringify(c).replace('"DEEP"', `${"[".repeat(3000)}1${"]".repeat(3000)}`)).toString("base64url");
+      const input = `${b64({ alg: "EdDSA", typ: "aroha-mandate+jwt" })}.${payload}`;
+      return `${input}.${Buffer.from(await ed.signAsync(new TextEncoder().encode(input), a.priv)).toString("base64url")}`;
+    };
+    const task = { type: "aroha_task_mandate", mandateType: "task", mandateTier: "intent", allowed: ["x"], taskConstraints: {}, parentMandateId: null };
+    for (const c of [claims({ jti: "\ud800" }, task), claims({}, { ...task, invariants: "DEEP" }), claims({}, { ...task, invariants: { a: "\ud800" } })]) {
+      const token = await signed(c);
+      await expect(verifyTaskMandate(token, a.pub)).resolves.toMatchObject({ valid: false });
+      await expect(verifyMandateChain(token, undefined, { isRevoked: null })).resolves.toMatchObject({ valid: false });
+    }
   });
 
   it("an eight-link JWT chain fits in an HTTP presentation", async () => {

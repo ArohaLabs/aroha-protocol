@@ -494,6 +494,35 @@ def test_default_fetch_over_loopback(loopback: str) -> None:
     assert huge.ok is False and "more than" in (huge.reason or "")
 
 
+def test_default_fetch_gives_up_on_a_host_that_drips(loopback: str) -> None:
+    import time as _time
+
+    identity = f"{loopback}/agents/drip"
+
+    class Drip(_Handler):
+        def do_GET(self) -> None:  # noqa: N802
+            self.send_response(200)
+            self.send_header("Content-Length", "5000")
+            self.end_headers()
+            try:
+                for _ in range(100):
+                    self.wfile.write(b" ")
+                    self.wfile.flush()
+                    _time.sleep(0.1)
+            except OSError:
+                pass
+
+    original = _Handler.do_GET
+    _Handler.do_GET = Drip.do_GET  # type: ignore[method-assign]
+    try:
+        started = _time.monotonic()
+        r = resolve_web_identity(identity, allow_loopback_http=True, timeout_s=0.4)
+        assert r.ok is False
+        assert _time.monotonic() - started < 3
+    finally:
+        _Handler.do_GET = original  # type: ignore[method-assign]
+
+
 # ── Mandates end to end ───────────────────────────────────────────────────────
 
 def test_spending_chain_between_web_identities() -> None:

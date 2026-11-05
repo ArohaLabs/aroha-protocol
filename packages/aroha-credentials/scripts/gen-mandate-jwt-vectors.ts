@@ -159,6 +159,13 @@ async function main() {
   const future: Body = { ...intent, issuedAt: "2027-01-01T00:00:00.000Z", mandateId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb" };
   const tampered = `${parts[0]}.${b64u(JSON.stringify({ ...claims(intent), authorization_details: [{ ...detail(intent), constraints: { spendLimitUsd: 5000, merchantCategory: "4511", currency: "USD" } }] }))}.${parts[2]}`;
 
+  const signBom = async (where: "header" | "payload", c: unknown) => {
+    const bom = (v: unknown) => b64u(Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), Buffer.from(JSON.stringify(v))]));
+    const input = where === "header" ? `${bom(header("human"))}.${b64u(JSON.stringify(c))}` : `${b64u(JSON.stringify(header("human")))}.${bom(c)}`;
+    return `${input}.${b64u(await ed.signAsync(new TextEncoder().encode(input), keys.human.priv))}`;
+  };
+  const nested = (n: number): unknown => (n === 0 ? 1 : { a: nested(n - 1) });
+
   const refuse: { name: string; kind: string; token: string; signer?: string }[] = [
     { name: "child widens its parent's limit", kind: "spending", token: [jwt.intent, await sign("spending", widened, "agent")].join("~") },
     { name: "child outlives its parent", kind: "spending", token: [jwt.intent, await sign("spending", outlives, "agent")].join("~") },
@@ -200,6 +207,17 @@ async function main() {
     { name: "two parts instead of three", kind: "spending", token: `${parts[0]}.${parts[1]}` },
     { name: "four parts", kind: "spending", token: `${jwt.intent}.${parts[2]}` },
     { name: "signature too short", kind: "spending", token: `${parts[0]}.${parts[1]}.${parts[2].slice(0, 40)}` },
+    { name: "unknown member in authorization_details (RFC 9396 locations)", kind: "spending", token: await signRaw(header("human"), { ...claims(intent), authorization_details: [{ ...detail(intent), locations: ["https://other.example"] }] }, "human") },
+    { name: "unknown member in constraints", kind: "spending", token: await signRaw(header("human"), { ...claims(intent), authorization_details: [{ ...detail(intent), constraints: { spendLimitUsd: 500, futureLimit: 1 } }] }, "human") },
+    { name: "task detail carrying a spending member", kind: "task", signer: "human", token: await signRaw(header("human"), { ...mandateBodyToJwtClaims("task", task), authorization_details: [{ ...(mandateBodyToJwtClaims("task", task).authorization_details as Record<string, unknown>[])[0], constraints: { spendLimitUsd: 1 } }] }, "human") },
+    { name: "unknown member in taskConstraints", kind: "task", signer: "human", token: await signRaw(header("human"), { ...mandateBodyToJwtClaims("task", task), authorization_details: [{ ...(mandateBodyToJwtClaims("task", task).authorization_details as Record<string, unknown>[])[0], taskConstraints: { futureLimit: 1 } }] }, "human") },
+    { name: "exp one second past year 9999", kind: "spending", token: await signRaw(header("human"), { ...claims(intent), exp: 253402300800 }, "human") },
+    { name: "header with a byte order mark", kind: "spending", token: await signBom("header", claims(intent)) },
+    { name: "payload with a byte order mark", kind: "spending", token: await signBom("payload", claims(intent)) },
+    { name: "exp before iat, both inside the clock tolerance", kind: "spending", token: await signRaw(header("human"), { ...claims(intent), iat: NOW_MS / 1000 + 20, exp: NOW_MS / 1000 + 10 }, "human") },
+    { name: "lone surrogate in jti", kind: "spending", token: await signRaw(header("human"), { ...claims(intent), jti: "a\ud800" }, "human") },
+    { name: "invariants nested 33 levels deep", kind: "task", signer: "human", token: await signRaw(header("human"), { ...mandateBodyToJwtClaims("task", task), authorization_details: [{ ...(mandateBodyToJwtClaims("task", task).authorization_details as Record<string, unknown>[])[0], invariants: nested(30) }] }, "human") },
+    { name: "amount above 2^53 - 1", kind: "spending", token: await signRaw(header("human"), { ...claims(intent), authorization_details: [{ ...detail(intent), constraints: { spendLimitUsd: 9007199254740992 } }] }, "human") },
     { name: "task mandate signed by a key that is not its grantor's", kind: "task", token: await sign("task", task, "agent"), signer: "human" },
     { name: "a spending mandate presented as a task mandate", kind: "task", token: jwt.intent, signer: "human" },
     { name: "task detail without allowed", kind: "task", token: await signRaw(header("human"), { ...mandateBodyToJwtClaims("task", task), authorization_details: [{ type: "aroha_task_mandate", mandateType: "task", mandateTier: "intent", taskConstraints: {}, parentMandateId: null }] }, "human"), signer: "human" },

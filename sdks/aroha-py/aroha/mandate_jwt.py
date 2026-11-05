@@ -35,7 +35,8 @@ kind signed by the same key is never read as a mandate. Times are whole
 seconds.
 
 A mandate is issued in one form. Its signature covers different bytes in each,
-so a token cannot be converted, and one chain does not mix forms.
+so a token cannot be converted. A spending token holds one form. A task chain
+is a list of tokens, and the verifier takes each on its own.
 """
 
 from __future__ import annotations
@@ -85,8 +86,19 @@ _CLAIM_BACKED = ("grantor", "grantee", "mandateId", "issuedAt", "expiresAt")
 _SEGMENT = re.compile(r"[A-Za-z0-9_-]+")
 #: A 64-byte Ed25519 signature is exactly 86 base64url characters.
 _SIGNATURE = re.compile(r"[A-Za-z0-9_-]{86}")
-#: Latest instant a JavaScript Date can hold, in seconds (keeps every SDK in step).
-_MAX_SECONDS = 8_640_000_000_000
+#: 9999-12-31T23:59:59Z: the last instant the body's date form can write.
+_MAX_SECONDS = 253_402_300_799
+#: Deepest nesting a claims set may have. Every SDK must stop at the same depth.
+_MAX_DEPTH = 32
+#: Largest magnitude every JSON parser reads exactly (RFC 8259 section 6, I-JSON).
+_MAX_NUMBER = 2**53 - 1
+#: Members allowed in a detail, by kind, and in the objects it holds (spec §6.10 rule 4).
+_DETAIL_MEMBERS = {
+    "spending": {"mandateTier", "constraints", "parentMandateId", "actingFor"},
+    "task": {"mandateType", "mandateTier", "allowed", "blocked", "taskConstraints", "spendingConstraints", "invariants", "parentMandateId"},
+}
+_SPENDING_CONSTRAINTS = {"spendLimitUsd", "sessionLimitUsd", "currency", "merchantCategory", "requireHumanApprovalAboveUsd", "allowedMerchants", "validFrom", "validUntil"}
+_TASK_CONSTRAINTS = {"actionLimits", "computeLimit", "dataAccess", "outputHandling", "reversibleOnly", "humanGates", "checkpointIntervalMs", "requireSandbox", "maxDelegationDepth", "onBehalfOf", "roomId"}
 
 
 @dataclass(frozen=True)
@@ -140,6 +152,38 @@ def _decode_json_segment(segment: str) -> Any:
         return _MISSING
 
 
+def _check_portable(value: Any, depth: int = 1) -> Optional[str]:
+    """Why a parsed JSON value could read differently in another SDK, or None."""
+    if depth > _MAX_DEPTH:
+        return f"nested deeper than {_MAX_DEPTH} levels"
+    if isinstance(value, str):
+        try:
+            value.encode("utf-8")
+            return None
+        except UnicodeEncodeError:
+            return "a string is not well-formed Unicode"
+    if isinstance(value, bool) or value is None:
+        return None
+    if isinstance(value, (int, float)):
+        return None if value == value and abs(value) <= _MAX_NUMBER else "a number is outside the exact range"
+    if isinstance(value, list):
+        for v in value:
+            why = _check_portable(v, depth + 1)
+            if why:
+                return why
+    elif isinstance(value, dict):
+        for k, v in value.items():
+            why = _check_portable(k, depth) or _check_portable(v, depth + 1)
+            if why:
+                return why
+    return None
+
+
+def _unknown_member(value: Any, allowed: set[str]) -> Optional[str]:
+    """The first member of ``value`` outside ``allowed``, or None. Leaves type checks to the shape check."""
+    return next((k for k in value if k not in allowed), None) if isinstance(value, dict) else None
+
+
 def _seconds(x: Any) -> Optional[int]:
     """A whole, non-negative number of seconds, or None. 1767225600.0 is accepted as JSON parsers in other SDKs read it."""
     if isinstance(x, bool) or not isinstance(x, (int, float)):
@@ -187,6 +231,9 @@ def jwt_claims_to_mandate_body(claims: Any) -> Union[tuple[str, dict[str, Any]],
     for k in claims:
         if k not in _CLAIMS:
             return f'unknown claim "{k}"'
+    portable = _check_portable(claims)
+    if portable:
+        return portable
     for k in ("iss", "sub", "jti"):
         if not isinstance(claims.get(k), str) or not claims[k]:
             return f"{k} must be a non-empty string"
@@ -206,6 +253,18 @@ def jwt_claims_to_mandate_body(claims: Any) -> Union[tuple[str, dict[str, Any]],
         if k in detail:
             return f"authorization_details must not carry {k}; it is a registered claim"
     body = {k: v for k, v in detail.items() if k != "type"}
+    # Nothing here may be ignored: a member this verifier skips is one a
+    # RAR-aware consumer may enforce, or a limit an older verifier would drop.
+    stray = _unknown_member(body, _DETAIL_MEMBERS[kind])
+    if stray:
+        return f'authorization_details has an unknown member "{stray}"'
+    stray = _unknown_member(detail.get("constraints") if kind == "spending" else detail.get("spendingConstraints"), _SPENDING_CONSTRAINTS)
+    if stray:
+        return f'constraints has an unknown member "{stray}"'
+    if kind == "task":
+        stray = _unknown_member(detail.get("taskConstraints"), _TASK_CONSTRAINTS)
+        if stray:
+            return f'taskConstraints has an unknown member "{stray}"'
     body["grantee"] = claims["sub"]
     body["grantor"] = claims["iss"]
     body["issuedAt"] = iso_ms(iat * 1000)
@@ -267,7 +326,12 @@ def sign_mandate_jwt(kind: str, body: dict[str, Any], private_key: Union[Ed25519
     def encode(value: Any) -> str:
         return _b64u(json.dumps(value, separators=(",", ":"), ensure_ascii=False, allow_nan=False).encode("utf-8"))
 
-    signing_input = f"{encode(header)}.{encode(mandate_body_to_jwt_claims(kind, body))}"
+    claims = mandate_body_to_jwt_claims(kind, body)
+    # Refused here so an issuer never mints what every verifier would reject.
+    mapped = jwt_claims_to_mandate_body(claims)
+    if isinstance(mapped, str):
+        raise ValueError(f"Cannot issue this mandate as a JWT: {mapped}")
+    signing_input = f"{encode(header)}.{encode(claims)}"
     # 87 = "." plus an 86-character signature. Refused here so that an issuer
     # never mints a mandate that every verifier would then reject.
     if len(signing_input) + 87 > MANDATE_JWT_MAX_LENGTH:

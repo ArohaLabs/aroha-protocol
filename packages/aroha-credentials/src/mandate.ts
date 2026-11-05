@@ -1239,10 +1239,10 @@ async function checkLinkSignature(link: MandateChainLink, publicKey: Uint8Array)
     // body was swapped after parsing cannot ride on another body's signature.
     const decoded = decodeMandateJwt(link.jwt);
     if (typeof decoded === "string" || decoded.kind !== "spending") return "Invalid signature";
-    if (decoded.signature !== link.signature || canonicalizeJcs(decoded.body) !== canonicalizeJcs(link.mandate)) {
-      return "Mandate does not match its signed JWT";
-    }
     try {
+      if (decoded.signature !== link.signature || canonicalizeJcs(decoded.body) !== canonicalizeJcs(link.mandate)) {
+        return "Mandate does not match its signed JWT";
+      }
       const valid = await ed.verifyAsync(Buffer.from(decoded.signature, "base64url"), new TextEncoder().encode(decoded.signingInput), publicKey);
       return valid ? null : "Invalid signature";
     } catch {
@@ -1708,8 +1708,8 @@ export async function verifyTaskMandateSignature(
     // one its claims decode to (see checkLinkSignature for spending links).
     const decoded = decodeMandateJwt(signed.jwt);
     if (typeof decoded === "string" || decoded.kind !== "task") return false;
-    if (decoded.signature !== signed.signature || canonicalizeJcs(decoded.body) !== canonicalizeJcs(signed.mandate)) return false;
     try {
+      if (decoded.signature !== signed.signature || canonicalizeJcs(decoded.body) !== canonicalizeJcs(signed.mandate)) return false;
       return await ed.verifyAsync(Buffer.from(decoded.signature, "base64url"), new TextEncoder().encode(decoded.signingInput), publicKey);
     } catch {
       return false;

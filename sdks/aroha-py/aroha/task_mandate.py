@@ -660,7 +660,7 @@ def check_task_mandate_shape(m: Any) -> Optional[str]:
         if not isinstance(tc["dataAccess"], dict):
             return "taskConstraints.dataAccess must be an object"
         for res, a in tc["dataAccess"].items():
-            if a not in _DATA_ACCESS_RIGHTS:
+            if not isinstance(a, str) or a not in _DATA_ACCESS_RIGHTS:
                 return f'taskConstraints.dataAccess["{res}"] is invalid'
     if "reversibleOnly" in tc and not isinstance(tc["reversibleOnly"], bool):
         return "taskConstraints.reversibleOnly must be a boolean"

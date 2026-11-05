@@ -793,6 +793,9 @@ def _check_time_window(m: dict[str, Any], now: int, tolerance: int) -> Optional[
     """Expiry checks are strict; not-before checks get ``tolerance`` ms of slack."""
     if _lt(parse_iso_ms(m.get("expiresAt")), now):
         return "Mandate expired"
+    # Checked after "expired", as in TypeScript, so a stale token keeps its reason.
+    if _lt(parse_iso_ms(m.get("expiresAt")), parse_iso_ms(m.get("issuedAt"))):
+        return "Mandate expires before it was issued"
     if _lt(now + tolerance, parse_iso_ms(m.get("issuedAt"))):
         return f"Mandate issuedAt {m.get('issuedAt')} is in the future"
     c = m["constraints"]

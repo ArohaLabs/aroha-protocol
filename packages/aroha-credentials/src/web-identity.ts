@@ -225,8 +225,9 @@ export type WebIdentityKeySelection =
  * Choose the signing key from a JWK Set: the FIRST key that
  * jwkToEd25519PublicKey accepts.
  *
- * WHY the first and not "any": a mandate token carries no key id, and the
- * resolver contract returns one key. One rule that every implementation
+ * WHY the first and not "any": a native mandate token carries no key id, the
+ * JWT form's `kid` must not choose the key (spec §6.10), and the resolver
+ * contract returns one key. One rule that every implementation
  * applies the same way matters more than flexibility. To rotate, publish the
  * new key first; mandates signed by the old key then stop verifying and are
  * re-issued, which is the rule a `did:aroha:E…` rotation already follows.
@@ -589,10 +590,18 @@ async function refusal(url: string, options: WebIdentityResolverOptions): Promis
   const lookup = options.lookup ?? (options.fetch ? null : await platformLookup());
   if (!lookup) return null;
   let addresses: string[];
+  let timer: ReturnType<typeof setTimeout> | undefined;
   try {
-    addresses = await lookup(hostname);
+    addresses = await Promise.race([
+      lookup(hostname),
+      new Promise<never>((_resolve, reject) => {
+        timer = setTimeout(() => reject(new Error("lookup timed out")), options.timeoutMs ?? WEB_IDENTITY_FETCH_TIMEOUT_MS);
+      }),
+    ]);
   } catch {
     return `Host of ${url} could not be resolved`;
+  } finally {
+    clearTimeout(timer);
   }
   if (!Array.isArray(addresses) || addresses.length === 0) return `Host of ${url} could not be resolved`;
   return addresses.some((a) => isSpecialUseAddress(a)) ? `Host of ${url} resolves to a special-use address` : null;

@@ -38,10 +38,13 @@
  * security considerations, applied here to both the document and a
  * `jwks_uri`): HTTPS only, no redirects followed, HTTP 200 only, a size cap,
  * a timeout, successful results cached for a bounded time, failures never
- * cached. NOT covered: a hostname whose DNS answer is a private or loopback
- * address. `fetch` exposes no hook between name resolution and connect, so a
- * verifier that can reach internal services must also set `allowHost` or run
- * behind an egress policy that denies special-use address ranges.
+ * cached. Before each request the host name is resolved and the request is
+ * refused if any of its addresses is special-use (loopback, private,
+ * link-local, …) — on Node.js by default, elsewhere when the caller supplies
+ * `lookup`. That check does not pin the connection, and a Cloudflare Worker
+ * or browser has no resolver to ask; see `refusal()` for exactly what is and
+ * is not covered, and use `allowHost`, a pinning `fetch` or an egress policy
+ * where it matters.
  *
  * This module imports only @noble/hashes, so it is exported from the
  * Worker-safe `@aroha-sdk/credentials/mandates` entry too.
@@ -77,7 +80,7 @@ export function looksLikeWebIdentity(id: unknown): id is string {
  *   identity = "https://" host [ ":" port ] path
  *   host     = label 1*( "." label )         ; lower case, the last label a TLD
  *   label    = 1–63 of a-z 0-9 "-", not starting or ending with "-"
- *   tld      = 2–63 letters a-z, or an "xn--" label
+ *   tld      = 2–63 letters a-z, or an "xn--" label; never "localhost"
  *   port     = 1–65535 without leading zeros, and not the scheme's default
  *   path     = 1*( "/" segment ) [ "/" ]     ; so never just "/"
  *   segment  = 1*( unreserved / sub-delims / ":" / "@" / "%" HEX HEX )
@@ -111,6 +114,8 @@ function checkUrl(value: unknown, rules: UrlRules): string | null {
   if (loopback !== (scheme === "http")) return loopback ? "loopback hosts are accepted over http only" : "must use the https scheme";
   if (loopback && !rules.loopbackHttp) return "must not name a loopback host";
   if (host.length > 253) return "host is too long";
+  // RFC 6761: every name under "localhost" is loopback, whatever DNS says.
+  if (host.endsWith(".localhost")) return "must not name a loopback host";
   if (port !== undefined && (Number(port) > 65535 || Number(port) === (scheme === "https" ? 443 : 80))) {
     return "port is out of range or is the default port, which must be omitted";
   }
@@ -338,6 +343,15 @@ export interface WebIdentityResolverOptions extends WebIdentityCheckOptions {
    * verifier that can reach internal services away from them.
    */
   allowHost?: (hostname: string) => boolean;
+  /**
+   * Resolve a host name to its addresses, so a request to a special-use
+   * address (loopback, private, link-local, …; see isSpecialUseAddress) can be
+   * refused before it is made. Default: the platform resolver on Node.js when
+   * the global `fetch` makes the request; none when `fetch` is replaced or
+   * the runtime has no resolver. `false` turns the check off, for a verifier
+   * whose network already denies those ranges.
+   */
+  lookup?: WebIdentityAddressLookup | false;
   /** Told why a resolution failed (the resolver itself only returns null). Never told keys. */
   onFailure?: (identity: string, reason: string) => void;
   /** Override "now" (Unix ms) for cache expiry. For tests. */
@@ -428,8 +442,160 @@ function cacheLifetime(cacheControl: string | null, ceilingMs: number): number {
   return maxAge ? Math.min(ceilingMs, Number(maxAge[1]) * 1000) : ceilingMs;
 }
 
-function hostAllowed(url: string, options: WebIdentityResolverOptions): boolean {
-  return options.allowHost ? options.allowHost(new URL(url).hostname) === true : true;
+// ─── Address check ────────────────────────────────────────────────────────────
+
+/** Parse a dotted-quad IPv4 address to its four octets, or null. */
+function parseIpv4(s: string): number[] | null {
+  // No leading zeros: some resolvers read "010" as octal, so it is not one address.
+  const m = /^(0|[1-9]\d{0,2})\.(0|[1-9]\d{0,2})\.(0|[1-9]\d{0,2})\.(0|[1-9]\d{0,2})$/.exec(s);
+  if (!m) return null;
+  const octets = m.slice(1).map(Number);
+  return octets.every((o) => o <= 255) ? octets : null;
+}
+
+/** Parse an IPv6 address (any textual form, zone id ignored) to eight 16-bit groups, or null. */
+function parseIpv6(input: string): number[] | null {
+  let s = input.split("%")[0];
+  if (s.includes(".")) {
+    // An IPv4 tail ("::ffff:10.0.0.1") is two groups written in decimal.
+    const lastColon = s.lastIndexOf(":");
+    const v4 = lastColon < 0 ? null : parseIpv4(s.slice(lastColon + 1));
+    if (!v4) return null;
+    s = `${s.slice(0, lastColon + 1)}${((v4[0] << 8) | v4[1]).toString(16)}:${((v4[2] << 8) | v4[3]).toString(16)}`;
+  }
+  const halves = s.split("::");
+  if (halves.length > 2) return null;
+  const groups = (part: string): number[] | null => {
+    if (part === "") return [];
+    const out: number[] = [];
+    for (const g of part.split(":")) {
+      if (!/^[0-9a-fA-F]{1,4}$/.test(g)) return null;
+      out.push(parseInt(g, 16));
+    }
+    return out;
+  };
+  const head = groups(halves[0]);
+  const rest = halves.length === 2 ? groups(halves[1]) : [];
+  if (!head || !rest) return null;
+  const known = head.length + rest.length;
+  if (halves.length === 2 ? known > 7 : known !== 8) return null;
+  return [...head, ...new Array<number>(8 - known).fill(0), ...rest];
+}
+
+function isSpecialUseIpv4(o: number[]): boolean {
+  const [a, b, c] = o;
+  return (
+    a === 0 || a === 10 || a === 127 || a >= 224 ||            // this network, private, loopback, multicast and reserved
+    (a === 100 && b >= 64 && b <= 127) ||                      // shared address space (carrier-grade NAT)
+    (a === 169 && b === 254) ||                                // link-local, including cloud metadata services
+    (a === 172 && b >= 16 && b <= 31) ||                       // private
+    (a === 192 && b === 168) ||                                // private
+    (a === 192 && b === 0 && (c === 0 || c === 2)) ||          // IETF protocol assignments, documentation
+    (a === 192 && b === 88 && c === 99) ||                     // deprecated 6to4 relay anycast
+    (a === 198 && (b === 18 || b === 19)) ||                   // benchmarking
+    (a === 198 && b === 51 && c === 100) ||                    // documentation
+    (a === 203 && b === 0 && c === 113)                        // documentation
+  );
+}
+
+/**
+ * True when `address` (an IPv4 or IPv6 address as text) is a special-use
+ * address a verifier must not fetch from (RFC 6890 and its registry):
+ * loopback, private, link-local, shared, documentation, benchmarking,
+ * multicast, reserved and unspecified ranges, IPv6 unique-local and
+ * transition ranges, and IPv4-mapped or NAT64 forms of a special-use IPv4
+ * address. Anything that does not parse as an address is treated as
+ * special-use, so an unexpected resolver answer is refused, not fetched.
+ *
+ * The same list is in every SDK and pinned by `addresses` in
+ * test-vectors/web-identity-v1.json.
+ */
+export function isSpecialUseAddress(address: string): boolean {
+  if (typeof address !== "string") return true;
+  const v4 = parseIpv4(address);
+  if (v4) return isSpecialUseIpv4(v4);
+  const g = parseIpv6(address);
+  if (!g) return true;
+  const embedded = [g[6] >> 8, g[6] & 0xff, g[7] >> 8, g[7] & 0xff];
+  const zeroTo = (n: number) => g.slice(0, n).every((x) => x === 0);
+  if (zeroTo(5) && g[5] === 0xffff) return isSpecialUseIpv4(embedded);                     // ::ffff:0:0/96, IPv4-mapped
+  if (g[0] === 0x64 && g[1] === 0xff9b && g.slice(2, 6).every((x) => x === 0)) return isSpecialUseIpv4(embedded); // 64:ff9b::/96, NAT64
+  return (
+    zeroTo(6) ||                                   // ::/96: unspecified, loopback, deprecated IPv4-compatible
+    (g[0] === 0x64 && g[1] === 0xff9b && g[2] === 1) || // 64:ff9b:1::/48, local-use NAT64
+    (g[0] === 0x100 && g[1] === 0 && g[2] === 0 && g[3] === 0) || // 100::/64, discard only
+    (g[0] === 0x2001 && g[1] < 0x200) ||           // 2001::/23, IETF protocol assignments (Teredo, ORCHID, …)
+    (g[0] === 0x2001 && g[1] === 0xdb8) ||         // 2001:db8::/32, documentation
+    g[0] === 0x2002 ||                             // 2002::/16, 6to4
+    (g[0] & 0xfe00) === 0xfc00 ||                  // fc00::/7, unique local
+    (g[0] & 0xffc0) === 0xfe80 ||                  // fe80::/10, link-local
+    (g[0] & 0xff00) === 0xff00                     // ff00::/8, multicast
+  );
+}
+
+/** Resolve a host name to every address it has. */
+export type WebIdentityAddressLookup = (hostname: string) => Promise<string[]>;
+
+let nodeLookup: WebIdentityAddressLookup | null | undefined;
+
+/**
+ * The platform's resolver, where there is one this module can reach: Node.js
+ * (and runtimes that implement `node:dns`). Null elsewhere — a Cloudflare
+ * Worker or a browser cannot see what a name resolves to.
+ *
+ * The module name is held in a variable so bundlers for those runtimes do
+ * not try to resolve it; this file stays importable everywhere.
+ */
+async function platformLookup(): Promise<WebIdentityAddressLookup | null> {
+  if (nodeLookup !== undefined) return nodeLookup;
+  const g = globalThis as { process?: { versions?: { node?: string } }; navigator?: { userAgent?: string } };
+  if (!g.process?.versions?.node || g.navigator?.userAgent === "Cloudflare-Workers") return (nodeLookup = null);
+  try {
+    const name = "node:dns/promises";
+    type Dns = { lookup(hostname: string, options: { all: true }): Promise<{ address: string }[]> };
+    const mod = (await import(/* @vite-ignore */ name)) as Dns & { default?: Dns };
+    const dns = mod.default ?? mod;
+    nodeLookup = async (hostname) => (await dns.lookup(hostname, { all: true })).map((a) => a.address);
+  } catch {
+    nodeLookup = null;
+  }
+  return nodeLookup;
+}
+
+/**
+ * Why `url` must not be fetched, or null. Two checks, in this order: the
+ * verifier's own `allowHost`, then the addresses the host name resolves to.
+ *
+ * The address check is what keeps a hostile token from pointing a verifier
+ * at its own network: `https://intranet.example.com/x` is a well-formed
+ * identity, and only its DNS answer shows that it is 10.0.0.5. It runs
+ *   - with `options.lookup` when one is given;
+ *   - with the platform resolver when the request will be made by the global
+ *     `fetch` (a custom `options.fetch` owns its own network policy, as the
+ *     reference MCP server's address-pinning fetch does);
+ *   - not at all when `options.lookup` is false, or when the runtime has no
+ *     resolver this module can reach.
+ * It refuses the request if ANY address is special-use, and if the lookup
+ * fails. It does not pin the connection to the vetted address: the request
+ * resolves the name again, so a resolver that changes its answer between the
+ * two can still get through. Deployments that need that closed use a pinning
+ * client (`options.fetch`) or an egress policy.
+ */
+async function refusal(url: string, options: WebIdentityResolverOptions): Promise<string | null> {
+  const { hostname } = new URL(url);
+  if (options.allowHost && options.allowHost(hostname) !== true) return `Host of ${url} is not allowed by this verifier`;
+  if (options.lookup === false) return null;
+  if (options.allowLoopbackHttp === true && (hostname === "localhost" || hostname === "127.0.0.1")) return null;
+  const lookup = options.lookup ?? (options.fetch ? null : await platformLookup());
+  if (!lookup) return null;
+  let addresses: string[];
+  try {
+    addresses = await lookup(hostname);
+  } catch {
+    return `Host of ${url} could not be resolved`;
+  }
+  if (!Array.isArray(addresses) || addresses.length === 0) return `Host of ${url} could not be resolved`;
+  return addresses.some((a) => isSpecialUseAddress(a)) ? `Host of ${url} resolves to a special-use address` : null;
 }
 
 async function resolveUncached(identity: string, options: WebIdentityResolverOptions): Promise<{ result: WebIdentityResolution; lifetimeMs: number }> {
@@ -437,7 +603,8 @@ async function resolveUncached(identity: string, options: WebIdentityResolverOpt
 
   const why = checkWebIdentity(identity, options);
   if (why) return fail(why);
-  if (!hostAllowed(identity, options)) return fail(`Host of ${identity} is not allowed by this verifier`);
+  const refused = await refusal(identity, options);
+  if (refused) return fail(refused);
 
   const fetched = await fetchJson(identity, options.maxDocumentBytes ?? WEB_IDENTITY_MAX_DOCUMENT_BYTES, options);
   if (!fetched.ok) return fail(fetched.reason);
@@ -459,7 +626,8 @@ async function resolveUncached(identity: string, options: WebIdentityResolverOpt
     const uriWhy = checkUrl(doc.jwks_uri, { loopbackHttp: options.allowLoopbackHttp === true, identity: false });
     if (uriWhy) return fail(`Identity document jwks_uri ${uriWhy}`);
     const jwksUri = doc.jwks_uri as string;
-    if (!hostAllowed(jwksUri, options)) return fail(`Host of jwks_uri ${jwksUri} is not allowed by this verifier`);
+    const keysRefused = await refusal(jwksUri, options);
+    if (keysRefused) return fail(keysRefused);
     const keySet = await fetchJson(jwksUri, options.maxJwksBytes ?? WEB_IDENTITY_MAX_JWKS_BYTES, options);
     if (!keySet.ok) return fail(keySet.reason);
     jwks = keySet.json;

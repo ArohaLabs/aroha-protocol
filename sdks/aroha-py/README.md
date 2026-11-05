@@ -316,7 +316,9 @@ result = verify_mandate_chain(token, resolve_key, expected_root="https://account
 ```
 
 No redirects, HTTP 200 only, a 5 kB cap, a 5 s timeout, keys reused for at
-most 5 minutes. The token format is unchanged. The governed profile still
+most 5 minutes. The host name is resolved first and the request is refused if
+any address is loopback, private or otherwise special-use (`lookup=` to
+replace or disable the check; it does not pin the connection). The token format is unchanged. The governed profile still
 needs a `did:aroha:E…` person root. Checked against the same vectors as the
 TypeScript SDK (`tests/test_web_identity.py`).
 

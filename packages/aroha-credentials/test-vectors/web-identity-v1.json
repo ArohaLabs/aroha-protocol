@@ -1,5 +1,5 @@
 {
-  "description": "Web identity conformance vectors (spec section 4.7). `identifiers` are accepted or refused as web identities with default options; `loopbackIdentifiers` with the development-only loopback option. `thumbprints` pin the RFC 7638 key id. Each entry of `documents` lists the HTTP responses a resolver receives (any URL not listed answers 404; `body` is JSON, `bodyText` is sent as is) and either the key it must return or that it must fail. Keys are the public RFC 8032 section 7.1 test keys.",
+  "description": "Web identity conformance vectors (spec section 4.7). `identifiers` are accepted or refused as web identities with default options; `loopbackIdentifiers` with the development-only loopback option. `addresses` are judged special-use (never fetched) or not; text that is not an address counts as special-use. `thumbprints` pin the RFC 7638 key id. Each entry of `documents` lists the HTTP responses a resolver receives (any URL not listed answers 404; `body` is JSON, `bodyText` is sent as is) and either the key it must return or that it must fail. Keys are the public RFC 8032 section 7.1 test keys.",
   "version": 1,
   "identifiers": [
     {
@@ -178,6 +178,16 @@
       "note": "localhost"
     },
     {
+      "id": "https://agents.localhost/a",
+      "valid": false,
+      "note": "a name under localhost"
+    },
+    {
+      "id": "https://agents.corp.internal/a",
+      "valid": true,
+      "note": "a private-use name is still a name; the address check decides"
+    },
+    {
       "id": "https://intranet/a",
       "valid": false,
       "note": "single-label host"
@@ -273,6 +283,323 @@
       "id": "https://agents.example.com/shopper",
       "valid": true,
       "note": "an ordinary identity is still accepted"
+    }
+  ],
+  "addresses": [
+    {
+      "address": "93.184.215.14",
+      "specialUse": false,
+      "note": "public IPv4"
+    },
+    {
+      "address": "8.8.8.8",
+      "specialUse": false,
+      "note": "public IPv4"
+    },
+    {
+      "address": "100.63.255.255",
+      "specialUse": false,
+      "note": "just below the shared address space"
+    },
+    {
+      "address": "100.128.0.0",
+      "specialUse": false,
+      "note": "just above the shared address space"
+    },
+    {
+      "address": "172.15.255.255",
+      "specialUse": false,
+      "note": "just below 172.16/12"
+    },
+    {
+      "address": "172.32.0.0",
+      "specialUse": false,
+      "note": "just above 172.16/12"
+    },
+    {
+      "address": "192.0.1.1",
+      "specialUse": false,
+      "note": "between the 192.0.0/24 and 192.0.2/24 blocks"
+    },
+    {
+      "address": "198.20.0.1",
+      "specialUse": false,
+      "note": "just above the benchmarking block"
+    },
+    {
+      "address": "223.255.255.255",
+      "specialUse": false,
+      "note": "last unicast IPv4 address"
+    },
+    {
+      "address": "2606:4700:4700::1111",
+      "specialUse": false,
+      "note": "public IPv6"
+    },
+    {
+      "address": "2001:4860:4860::8888",
+      "specialUse": false,
+      "note": "public IPv6 above 2001::/23"
+    },
+    {
+      "address": "2001:200::1",
+      "specialUse": false,
+      "note": "first address above 2001::/23"
+    },
+    {
+      "address": "::ffff:8.8.8.8",
+      "specialUse": false,
+      "note": "IPv4-mapped public address"
+    },
+    {
+      "address": "64:ff9b::808:808",
+      "specialUse": false,
+      "note": "NAT64 form of a public address"
+    },
+    {
+      "address": "0.0.0.0",
+      "specialUse": true,
+      "note": "unspecified"
+    },
+    {
+      "address": "0.1.2.3",
+      "specialUse": true,
+      "note": "this network"
+    },
+    {
+      "address": "10.0.0.5",
+      "specialUse": true,
+      "note": "private"
+    },
+    {
+      "address": "100.64.0.1",
+      "specialUse": true,
+      "note": "shared address space"
+    },
+    {
+      "address": "100.127.255.255",
+      "specialUse": true,
+      "note": "end of the shared address space"
+    },
+    {
+      "address": "127.0.0.1",
+      "specialUse": true,
+      "note": "loopback"
+    },
+    {
+      "address": "127.255.255.254",
+      "specialUse": true,
+      "note": "loopback"
+    },
+    {
+      "address": "169.254.169.254",
+      "specialUse": true,
+      "note": "link-local (cloud metadata)"
+    },
+    {
+      "address": "172.16.0.1",
+      "specialUse": true,
+      "note": "private"
+    },
+    {
+      "address": "172.31.255.255",
+      "specialUse": true,
+      "note": "private"
+    },
+    {
+      "address": "192.0.0.8",
+      "specialUse": true,
+      "note": "IETF protocol assignments"
+    },
+    {
+      "address": "192.0.2.1",
+      "specialUse": true,
+      "note": "documentation"
+    },
+    {
+      "address": "192.88.99.1",
+      "specialUse": true,
+      "note": "deprecated 6to4 relay"
+    },
+    {
+      "address": "192.168.1.1",
+      "specialUse": true,
+      "note": "private"
+    },
+    {
+      "address": "198.18.0.1",
+      "specialUse": true,
+      "note": "benchmarking"
+    },
+    {
+      "address": "198.19.255.255",
+      "specialUse": true,
+      "note": "benchmarking"
+    },
+    {
+      "address": "198.51.100.7",
+      "specialUse": true,
+      "note": "documentation"
+    },
+    {
+      "address": "203.0.113.9",
+      "specialUse": true,
+      "note": "documentation"
+    },
+    {
+      "address": "224.0.0.1",
+      "specialUse": true,
+      "note": "multicast"
+    },
+    {
+      "address": "240.0.0.1",
+      "specialUse": true,
+      "note": "reserved"
+    },
+    {
+      "address": "255.255.255.255",
+      "specialUse": true,
+      "note": "broadcast"
+    },
+    {
+      "address": "::",
+      "specialUse": true,
+      "note": "unspecified"
+    },
+    {
+      "address": "::1",
+      "specialUse": true,
+      "note": "loopback"
+    },
+    {
+      "address": "0:0:0:0:0:0:0:1",
+      "specialUse": true,
+      "note": "loopback, written out"
+    },
+    {
+      "address": "::10.0.0.5",
+      "specialUse": true,
+      "note": "deprecated IPv4-compatible form"
+    },
+    {
+      "address": "::ffff:10.0.0.5",
+      "specialUse": true,
+      "note": "IPv4-mapped private address"
+    },
+    {
+      "address": "::ffff:a00:5",
+      "specialUse": true,
+      "note": "IPv4-mapped private address in hexadecimal"
+    },
+    {
+      "address": "::ffff:169.254.169.254",
+      "specialUse": true,
+      "note": "IPv4-mapped link-local address"
+    },
+    {
+      "address": "::FFFF:127.0.0.1",
+      "specialUse": true,
+      "note": "IPv4-mapped loopback, upper case"
+    },
+    {
+      "address": "64:ff9b::a00:5",
+      "specialUse": true,
+      "note": "NAT64 form of a private address"
+    },
+    {
+      "address": "64:ff9b:1::1",
+      "specialUse": true,
+      "note": "local-use NAT64"
+    },
+    {
+      "address": "100::1",
+      "specialUse": true,
+      "note": "discard-only"
+    },
+    {
+      "address": "2001::1",
+      "specialUse": true,
+      "note": "Teredo"
+    },
+    {
+      "address": "2001:db8::1",
+      "specialUse": true,
+      "note": "documentation"
+    },
+    {
+      "address": "2002:a00:5::1",
+      "specialUse": true,
+      "note": "6to4"
+    },
+    {
+      "address": "fc00::1",
+      "specialUse": true,
+      "note": "unique local"
+    },
+    {
+      "address": "fd12:3456:789a::1",
+      "specialUse": true,
+      "note": "unique local"
+    },
+    {
+      "address": "fe80::1",
+      "specialUse": true,
+      "note": "link-local"
+    },
+    {
+      "address": "fe80::1%eth0",
+      "specialUse": true,
+      "note": "link-local with a zone"
+    },
+    {
+      "address": "febf::1",
+      "specialUse": true,
+      "note": "end of link-local"
+    },
+    {
+      "address": "ff02::1",
+      "specialUse": true,
+      "note": "multicast"
+    },
+    {
+      "address": "",
+      "specialUse": true,
+      "note": "empty string"
+    },
+    {
+      "address": "example.com",
+      "specialUse": true,
+      "note": "a name, not an address"
+    },
+    {
+      "address": "10.0.0",
+      "specialUse": true,
+      "note": "too few octets"
+    },
+    {
+      "address": "256.1.1.1",
+      "specialUse": true,
+      "note": "octet out of range"
+    },
+    {
+      "address": "08.8.8.8",
+      "specialUse": true,
+      "note": "octet with a leading zero"
+    },
+    {
+      "address": "1:2:3:4:5:6:7:8:9",
+      "specialUse": true,
+      "note": "too many groups"
+    },
+    {
+      "address": "1::2::3",
+      "specialUse": true,
+      "note": "two compressions"
+    },
+    {
+      "address": "12345::1",
+      "specialUse": true,
+      "note": "group too long"
     }
   ],
   "thumbprints": [

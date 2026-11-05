@@ -42,6 +42,7 @@ from aroha.web_identity import (
     create_web_identity_resolver,
     ed25519_jwk_thumbprint,
     ed25519_public_key_to_jwk,
+    is_special_use_address,
     is_web_identity,
     jwk_to_ed25519_public_key,
     looks_like_web_identity,
@@ -70,7 +71,7 @@ needs_vectors = pytest.mark.skipif(
 V: dict[str, Any] = (
     json.loads(VECTORS_PATH.read_text(encoding="utf-8"))
     if VECTORS_PATH
-    else {"identifiers": [], "loopbackIdentifiers": [], "thumbprints": [], "documents": []}
+    else {"identifiers": [], "loopbackIdentifiers": [], "thumbprints": [], "addresses": [], "documents": []}
 )
 
 ID = "https://agents.example.com/shopper"
@@ -247,6 +248,99 @@ def test_on_failure_reports_the_reason_and_may_raise() -> None:
         raise RuntimeError("logger broke")
 
     assert create_web_identity_resolver(fetch=TableFetch({}), on_failure=broken)(ID) is None
+
+
+# ── Address check ─────────────────────────────────────────────────────────────
+
+@needs_vectors
+@pytest.mark.parametrize("case", V["addresses"], ids=lambda c: f"{c['address']} ({c['note']})")
+def test_vector_addresses(case: dict[str, Any]) -> None:
+    assert is_special_use_address(case["address"]) is case["specialUse"], case["address"]
+
+
+def test_special_use_rejects_non_strings() -> None:
+    for bad in (None, 7, b"10.0.0.5", ["10.0.0.5"]):
+        assert is_special_use_address(bad) is True
+
+
+@pytest.mark.parametrize("answer", [["10.0.0.5"], ["169.254.169.254"], ["::1"], ["93.184.215.14", "127.0.0.1"], ["::ffff:192.168.1.1"], ["not-an-address"]])
+def test_host_resolving_to_a_special_use_address_is_refused_without_a_request(answer: list[str]) -> None:
+    a = Party()
+    fetch = serve({ID: a.pub})
+    r = resolve_web_identity(ID, fetch=fetch, lookup=lambda hostname: answer)
+    assert r.ok is False and "special-use address" in (r.reason or "")
+    assert fetch.calls == []
+
+
+def test_host_whose_lookup_fails_is_refused() -> None:
+    a = Party()
+    fetch = serve({ID: a.pub})
+
+    def failing(hostname: str) -> list[str]:
+        raise OSError("name or service not known")
+
+    r = resolve_web_identity(ID, fetch=fetch, lookup=failing)
+    assert r.ok is False and "could not be resolved" in (r.reason or "")
+    assert resolve_web_identity(ID, fetch=fetch, lookup=lambda hostname: []).ok is False
+    assert fetch.calls == []
+
+
+def test_key_set_host_is_checked_too_and_allow_host_runs_first() -> None:
+    a = Party()
+    keys_url = "https://keys.example.net/jwks.json"
+    table = {
+        ID: {"status": 200, "headers": {}, "body": {"client_id": ID, "jwks_uri": keys_url}},
+        keys_url: {"status": 200, "headers": {}, "body": {"keys": [ed25519_public_key_to_jwk(a.pub)]}},
+    }
+    looked: list[str] = []
+
+    def public(hostname: str) -> list[str]:
+        looked.append(hostname)
+        return ["93.184.215.14"]
+
+    assert resolve_web_identity(ID, fetch=TableFetch(table), lookup=public).ok is True
+    assert looked == ["agents.example.com", "keys.example.net"]
+
+    internal_keys = TableFetch(table)
+    r = resolve_web_identity(ID, fetch=internal_keys, lookup=lambda h: ["10.1.2.3"] if h == "keys.example.net" else ["93.184.215.14"])
+    assert r.ok is False
+    assert internal_keys.calls == [ID]
+
+    looked.clear()
+    resolve_web_identity(ID, fetch=TableFetch(table), allow_host=lambda h: False, lookup=public)
+    assert looked == []
+
+
+def test_no_lookup_with_a_custom_fetch_or_when_turned_off(monkeypatch: pytest.MonkeyPatch) -> None:
+    a = Party()
+
+    def forbidden(*args: Any, **kwargs: Any) -> Any:
+        raise AssertionError("the system resolver must not be used here")
+
+    monkeypatch.setattr("socket.getaddrinfo", forbidden)
+    assert resolve_web_identity(ID, fetch=serve({ID: a.pub})).ok is True
+    assert resolve_web_identity(ID, fetch=serve({ID: a.pub}), lookup=False).ok is True
+
+
+def test_built_in_fetch_uses_the_system_resolver_and_refuses_an_internal_answer(monkeypatch: pytest.MonkeyPatch) -> None:
+    asked: list[str] = []
+
+    def getaddrinfo(host: str, *args: Any, **kwargs: Any) -> list[Any]:
+        asked.append(host)
+        return [(2, 1, 6, "", ("10.0.0.5", 0))]
+
+    monkeypatch.setattr("socket.getaddrinfo", getaddrinfo)
+    # No fetch is passed, so the built-in one would be used; the address check stops it first.
+    r = resolve_web_identity(ID)
+    assert r.ok is False and "special-use address" in (r.reason or "")
+    assert asked == ["agents.example.com"]
+
+    def unresolvable(host: str, *args: Any, **kwargs: Any) -> list[Any]:
+        raise OSError("name or service not known")
+
+    monkeypatch.setattr("socket.getaddrinfo", unresolvable)
+    r = resolve_web_identity(ID)
+    assert r.ok is False and "could not be resolved" in (r.reason or "")
 
 
 # ── Cache ─────────────────────────────────────────────────────────────────────

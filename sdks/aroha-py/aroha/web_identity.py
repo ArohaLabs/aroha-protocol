@@ -32,10 +32,11 @@ Trust model, which differs from ``did:aroha`` on purpose:
 
 Fetch rules (from the OAuth draft, applied to the document and to a
 ``jwks_uri``): HTTPS only, no redirects followed, HTTP 200 only, a size cap, a
-timeout, successes cached for a bounded time, failures never cached. Not
-covered: a hostname whose DNS answer is a private or loopback address. A
-verifier that can reach internal services must also pass ``allow_host`` or run
-behind an egress policy that denies special-use address ranges.
+timeout, successes cached for a bounded time, failures never cached. Before
+each request the host name is resolved and the request is refused if any of
+its addresses is special-use (loopback, private, link-local, ...). That check
+does not pin the connection; see ``_refusal`` for exactly what is covered, and
+use ``allow_host``, a pinning ``fetch`` or an egress policy where it matters.
 
     resolve_key = create_mandate_key_resolver(web=True)
     result = verify_mandate_chain(token, resolve_key, expected_root="https://agents.example.com/shopper")
@@ -46,8 +47,10 @@ from __future__ import annotations
 import base64
 import codecs
 import hashlib
+import ipaddress
 import json
 import re
+import socket
 import threading
 import time
 import urllib.error
@@ -75,6 +78,7 @@ __all__ = [
     "ed25519_public_key_to_jwk",
     "jwk_to_ed25519_public_key",
     "select_web_identity_key",
+    "is_special_use_address",
     "build_web_identity_document",
     "resolve_web_identity",
     "create_web_identity_resolver",
@@ -105,7 +109,7 @@ def looks_like_web_identity(identity: Any) -> bool:
 #   identity = "https://" host [ ":" port ] path
 #   host     = label 1*( "." label )         ; lower case, the last label a TLD
 #   label    = 1-63 of a-z 0-9 "-", not starting or ending with "-"
-#   tld      = 2-63 letters a-z, or an "xn--" label
+#   tld      = 2-63 letters a-z, or an "xn--" label; never "localhost"
 #   port     = 1-65535 without leading zeros, and not the scheme's default
 #   path     = 1*( "/" segment ) [ "/" ]     ; so never just "/"
 #   segment  = 1*( unreserved / sub-delims / ":" / "@" / "%" HEX HEX )
@@ -145,6 +149,9 @@ def _check_url(value: Any, *, loopback_http: bool, identity: bool) -> Optional[s
         return "must not name a loopback host"
     if len(host) > 253:
         return "host is too long"
+    # RFC 6761: every name under "localhost" is loopback, whatever DNS says.
+    if host.endswith(".localhost"):
+        return "must not name a loopback host"
     if port is not None and (int(port) > 65535 or int(port) == (443 if scheme == "https" else 80)):
         return "port is out of range or is the default port, which must be omitted"
     if path == "":
@@ -405,8 +412,102 @@ def _cache_lifetime(cache_control: Optional[str], ceiling_s: float) -> float:
     return ceiling_s
 
 
-def _host_allowed(url: str, allow_host: Optional[Callable[[str], bool]]) -> bool:
-    return True if allow_host is None else allow_host(urlsplit(url).hostname or "") is True
+# ── Address check ─────────────────────────────────────────────────────────────
+
+_SPECIAL_USE_V4 = [ipaddress.ip_network(n) for n in (
+    "0.0.0.0/8", "10.0.0.0/8", "100.64.0.0/10", "127.0.0.0/8", "169.254.0.0/16", "172.16.0.0/12",
+    "192.0.0.0/24", "192.0.2.0/24", "192.88.99.0/24", "192.168.0.0/16", "198.18.0.0/15",
+    "198.51.100.0/24", "203.0.113.0/24", "224.0.0.0/3",
+)]
+_SPECIAL_USE_V6 = [ipaddress.ip_network(n) for n in (
+    "::/96", "64:ff9b:1::/48", "100::/64", "2001::/23", "2001:db8::/32", "2002::/16",
+    "fc00::/7", "fe80::/10", "ff00::/8",
+)]
+_V4_MAPPED = ipaddress.ip_network("::ffff:0:0/96")
+_NAT64 = ipaddress.ip_network("64:ff9b::/96")
+_V4_STRICT = re.compile(r"(0|[1-9]\d{0,2})\.(0|[1-9]\d{0,2})\.(0|[1-9]\d{0,2})\.(0|[1-9]\d{0,2})")
+
+
+def is_special_use_address(address: Any) -> bool:
+    """True when ``address`` is a special-use address a verifier must not fetch from.
+
+    Loopback, private, link-local, shared, documentation, benchmarking,
+    multicast, reserved and unspecified ranges (RFC 6890 and its registry),
+    IPv6 unique-local and transition ranges, and IPv4-mapped or NAT64 forms of
+    a special-use IPv4 address. Text that is not an address counts as
+    special-use, so an unexpected resolver answer is refused, not fetched.
+
+    The same list is in every SDK and pinned by ``addresses`` in
+    ``test-vectors/web-identity-v1.json``.
+    """
+    if not isinstance(address, str):
+        return True
+    text = address.split("%")[0]
+    if ":" not in text and _V4_STRICT.fullmatch(text) is None:
+        return True  # leading zeros, wrong octet count, or not an address at all
+    try:
+        ip = ipaddress.ip_address(text)
+    except ValueError:
+        return True
+    if isinstance(ip, ipaddress.IPv6Address) and (ip in _V4_MAPPED or ip in _NAT64):
+        ip = ipaddress.IPv4Address(int(ip) & 0xFFFFFFFF)
+    nets = _SPECIAL_USE_V4 if isinstance(ip, ipaddress.IPv4Address) else _SPECIAL_USE_V6
+    return any(ip in n for n in nets)
+
+
+#: ``lookup(hostname) -> list of address strings``.
+WebIdentityAddressLookup = Callable[[str], list[str]]
+
+
+def _system_lookup(hostname: str) -> list[str]:
+    """Every address the operating system's resolver returns for ``hostname``."""
+    return sorted({str(info[4][0]) for info in socket.getaddrinfo(hostname, None, type=socket.SOCK_STREAM)})
+
+
+def _refusal(
+    url: str,
+    *,
+    allow_host: Optional[Callable[[str], bool]],
+    lookup: Union[WebIdentityAddressLookup, bool, None],
+    custom_fetch: bool,
+    allow_loopback_http: bool,
+) -> Optional[str]:
+    """Why ``url`` must not be fetched, or None.
+
+    Two checks, in this order: the verifier's own ``allow_host``, then the
+    addresses the host name resolves to. The address check is what keeps a
+    hostile token from pointing a verifier at its own network:
+    ``https://intranet.example.com/x`` is a well-formed identity, and only its
+    DNS answer shows that it is 10.0.0.5. It runs with ``lookup`` when one is
+    given; with the system resolver when the request will be made by the
+    built-in fetch (a custom ``fetch`` owns its own network policy); and not
+    at all when ``lookup`` is False. It refuses the request if ANY address is
+    special-use, and if the lookup fails.
+
+    It does not pin the connection to the vetted address: the request resolves
+    the name again, so a resolver that changes its answer between the two can
+    still get through. Deployments that need that closed use a pinning client
+    (``fetch``) or an egress policy.
+    """
+    hostname = urlsplit(url).hostname or ""
+    if allow_host is not None and allow_host(hostname) is not True:
+        return f"Host of {url} is not allowed by this verifier"
+    if lookup is False:
+        return None
+    if allow_loopback_http and hostname in ("localhost", "127.0.0.1"):
+        return None
+    resolver = lookup if callable(lookup) else (None if custom_fetch else _system_lookup)
+    if resolver is None:
+        return None
+    try:
+        addresses = resolver(hostname)
+    except Exception:
+        return f"Host of {url} could not be resolved"
+    if not isinstance(addresses, (list, tuple)) or len(addresses) == 0:
+        return f"Host of {url} could not be resolved"
+    if any(is_special_use_address(a) for a in addresses):
+        return f"Host of {url} resolves to a special-use address"
+    return None
 
 
 def _resolve_uncached(
@@ -419,6 +520,7 @@ def _resolve_uncached(
     max_cache_s: float,
     allow_loopback_http: bool,
     allow_host: Optional[Callable[[str], bool]],
+    lookup: Union[WebIdentityAddressLookup, bool, None] = None,
 ) -> tuple[WebIdentityResolution, float]:
     def fail(reason: str) -> tuple[WebIdentityResolution, float]:
         return WebIdentityResolution(False, reason=reason), 0.0
@@ -426,8 +528,9 @@ def _resolve_uncached(
     why = check_web_identity(identity, allow_loopback_http=allow_loopback_http)
     if why:
         return fail(why)
-    if not _host_allowed(identity, allow_host):
-        return fail(f"Host of {identity} is not allowed by this verifier")
+    refused = _refusal(identity, allow_host=allow_host, lookup=lookup, custom_fetch=fetch is not None, allow_loopback_http=allow_loopback_http)
+    if refused:
+        return fail(refused)
 
     doc, cache_control, reason = _fetch_json(identity, max_document_bytes, fetch, timeout_s)
     if reason:
@@ -455,8 +558,9 @@ def _resolve_uncached(
         uri_why = _check_url(jwks_uri, loopback_http=allow_loopback_http, identity=False)
         if uri_why:
             return fail(f"Identity document jwks_uri {uri_why}")
-        if not _host_allowed(jwks_uri, allow_host):
-            return fail(f"Host of jwks_uri {jwks_uri} is not allowed by this verifier")
+        keys_refused = _refusal(jwks_uri, allow_host=allow_host, lookup=lookup, custom_fetch=fetch is not None, allow_loopback_http=allow_loopback_http)
+        if keys_refused:
+            return fail(keys_refused)
         jwks, keys_cache_control, reason = _fetch_json(jwks_uri, max_jwks_bytes, fetch, timeout_s)
         if reason:
             return fail(reason)
@@ -477,6 +581,7 @@ def resolve_web_identity(
     max_jwks_bytes: int = WEB_IDENTITY_MAX_JWKS_BYTES,
     allow_loopback_http: bool = False,
     allow_host: Optional[Callable[[str], bool]] = None,
+    lookup: Union[WebIdentityAddressLookup, bool, None] = None,
 ) -> WebIdentityResolution:
     """Resolve a web identity to its current Ed25519 public key, with the reason when it cannot be resolved.
 
@@ -485,7 +590,7 @@ def resolve_web_identity(
     try:
         return _resolve_uncached(
             identity, fetch=fetch, timeout_s=timeout_s, max_document_bytes=max_document_bytes,
-            max_jwks_bytes=max_jwks_bytes, max_cache_s=0.0, allow_loopback_http=allow_loopback_http, allow_host=allow_host,
+            max_jwks_bytes=max_jwks_bytes, max_cache_s=0.0, allow_loopback_http=allow_loopback_http, allow_host=allow_host, lookup=lookup,
         )[0]
     except Exception as e:  # pragma: no cover - defensive: the contract is "never raises"
         return WebIdentityResolution(False, reason=f"Web identity resolution failed: {e}")
@@ -500,6 +605,7 @@ def create_web_identity_resolver(
     max_cache_s: float = WEB_IDENTITY_MAX_CACHE_S,
     allow_loopback_http: bool = False,
     allow_host: Optional[Callable[[str], bool]] = None,
+    lookup: Union[WebIdentityAddressLookup, bool, None] = None,
     on_failure: Optional[Callable[[str, str], None]] = None,
     now: Optional[Callable[[], float]] = None,
 ) -> Callable[[str], Optional[bytes]]:
@@ -513,6 +619,12 @@ def create_web_identity_resolver(
     ``Cache-Control: max-age`` is honoured and ``no-store`` / ``no-cache``
     disable reuse. It is also how long a key removed from the document keeps
     verifying. ``allow_host(hostname)`` is asked before each request.
+
+    ``lookup(hostname)`` returns the addresses a host resolves to, so a
+    request to a special-use address (see :func:`is_special_use_address`) is
+    refused before it is made. Default: the system resolver when the built-in
+    fetch makes the request; none when ``fetch`` is replaced. ``False`` turns
+    the check off, for a verifier whose network already denies those ranges.
     """
     clock = now or time.monotonic
     cache: dict[str, tuple[float, bytes]] = {}
@@ -530,7 +642,7 @@ def create_web_identity_resolver(
         try:
             result, lifetime = _resolve_uncached(
                 identity, fetch=fetch, timeout_s=timeout_s, max_document_bytes=max_document_bytes,
-                max_jwks_bytes=max_jwks_bytes, max_cache_s=max_cache_s, allow_loopback_http=allow_loopback_http, allow_host=allow_host,
+                max_jwks_bytes=max_jwks_bytes, max_cache_s=max_cache_s, allow_loopback_http=allow_loopback_http, allow_host=allow_host, lookup=lookup,
             )
         except Exception as e:
             result, lifetime = WebIdentityResolution(False, reason=f"Web identity resolution failed: {e}"), 0.0

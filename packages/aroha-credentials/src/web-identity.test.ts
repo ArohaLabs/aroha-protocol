@@ -14,6 +14,7 @@ import { describe, it, expect, beforeAll, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { createPublicKey, verify as nodeVerify } from "node:crypto";
+import dnsPromises from "node:dns/promises";
 import * as ed from "@noble/ed25519";
 import { sha512 } from "@noble/hashes/sha2.js";
 import { generateDid } from "@aroha-sdk/core";
@@ -23,6 +24,7 @@ import {
   createWebIdentityResolver,
   ed25519JwkThumbprint,
   ed25519PublicKeyToJwk,
+  isSpecialUseAddress,
   isWebIdentity,
   jwkToEd25519PublicKey,
   looksLikeWebIdentity,
@@ -51,6 +53,7 @@ interface Vectors {
   identifiers: { id: string; valid: boolean; note: string }[];
   loopbackIdentifiers: { id: string; valid: boolean; note: string }[];
   thumbprints: { publicKeyHex: string; x: string; thumbprint: string }[];
+  addresses: { address: string; specialUse: boolean; note: string }[];
   documents: { name: string; identity: string; responses: Record<string, VectorResponse>; expect: { keyHex?: string; kid?: string; error?: true } }[];
 }
 const vectors = JSON.parse(
@@ -278,6 +281,122 @@ describe("web identity resolution: requests and limits", () => {
     expect(await createWebIdentityResolver({ fetch, onFailure: (id, why) => reasons.push(`${id}: ${why}`) })(ID)).toBeNull();
     expect(reasons).toEqual([`${ID}: GET ${ID} did not return HTTP 200`]);
     expect(await createWebIdentityResolver({ fetch, onFailure: () => { throw new Error("logger broke"); } })(ID)).toBeNull();
+  });
+});
+
+// ─── Address check ────────────────────────────────────────────────────────────
+
+describe("web identity vectors: special-use addresses", () => {
+  for (const c of vectors.addresses) {
+    it(`${JSON.stringify(c.address)} is ${c.specialUse ? "special-use" : "fetchable"} (${c.note})`, () => {
+      expect(isSpecialUseAddress(c.address)).toBe(c.specialUse);
+    });
+  }
+
+  it("treats a non-string as special-use", () => {
+    expect(isSpecialUseAddress(undefined as unknown as string)).toBe(true);
+  });
+});
+
+describe("web identity resolution: addresses a host resolves to", () => {
+  const ID = "https://agents.example.com/shopper";
+  const KEYS = "https://keys.example.net/jwks.json";
+
+  it("refuses a host that resolves to a special-use address, without a request", async () => {
+    const a = await party();
+    for (const answer of [["10.0.0.5"], ["169.254.169.254"], ["::1"], ["93.184.215.14", "127.0.0.1"], ["::ffff:192.168.1.1"], ["not-an-address"]]) {
+      const { fetch, calls } = serve({ [ID]: a.pub });
+      const r = await resolveWebIdentity(ID, { fetch, lookup: async () => answer });
+      expect(r.ok, answer.join()).toBe(false);
+      if (!r.ok) expect(r.reason).toMatch(/special-use address/);
+      expect(calls, answer.join()).toHaveLength(0);
+    }
+  });
+
+  it("refuses a host whose lookup fails or returns nothing", async () => {
+    const a = await party();
+    const { fetch, calls } = serve({ [ID]: a.pub });
+    const failing = await resolveWebIdentity(ID, { fetch, lookup: async () => { throw new Error("ENOTFOUND"); } });
+    expect(failing.ok).toBe(false);
+    if (!failing.ok) expect(failing.reason).toMatch(/could not be resolved/);
+    expect((await resolveWebIdentity(ID, { fetch, lookup: async () => [] })).ok).toBe(false);
+    expect(calls).toHaveLength(0);
+  });
+
+  it("checks the key set's host as well as the identity's", async () => {
+    const a = await party();
+    const table = {
+      [ID]: { status: 200, headers: {}, body: { client_id: ID, jwks_uri: KEYS } },
+      [KEYS]: { status: 200, headers: {}, body: { keys: [ed25519PublicKeyToJwk(a.pub)] } },
+    };
+    const looked: string[] = [];
+    const ok = tableFetch(table);
+    const good = await resolveWebIdentity(ID, { fetch: ok.fetch, lookup: async (h) => (looked.push(h), ["93.184.215.14"]) });
+    expect(good.ok).toBe(true);
+    expect(looked).toEqual(["agents.example.com", "keys.example.net"]);
+
+    const internalKeys = tableFetch(table);
+    const bad = await resolveWebIdentity(ID, { fetch: internalKeys.fetch, lookup: async (h) => (h === "keys.example.net" ? ["10.1.2.3"] : ["93.184.215.14"]) });
+    expect(bad.ok).toBe(false);
+    expect(internalKeys.calls.map((c) => c.url)).toEqual([ID]);
+  });
+
+  it("asks allowHost first, so a refused host is never looked up", async () => {
+    const looked: string[] = [];
+    const { fetch } = tableFetch({});
+    await resolveWebIdentity(ID, { fetch, allowHost: () => false, lookup: async (h) => (looked.push(h), ["93.184.215.14"]) });
+    expect(looked).toHaveLength(0);
+  });
+
+  it("does not look up when a custom fetch is given without a lookup, or when lookup is false", async () => {
+    const a = await party();
+    const spy = vi.spyOn(dnsPromises, "lookup");
+    try {
+      const custom = serve({ [ID]: a.pub });
+      expect((await resolveWebIdentity(ID, { fetch: custom.fetch })).ok).toBe(true);
+      const off = serve({ [ID]: a.pub });
+      expect((await resolveWebIdentity(ID, { fetch: off.fetch, lookup: false })).ok).toBe(true);
+      expect(spy).not.toHaveBeenCalled();
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it("with the global fetch, uses the platform resolver by default and refuses an internal answer", async () => {
+    const a = await party();
+    const { fetch, calls } = serve({ [ID]: a.pub });
+    const original = globalThis.fetch;
+    globalThis.fetch = fetch;
+    const spy = vi.spyOn(dnsPromises, "lookup");
+    try {
+      spy.mockResolvedValue([{ address: "10.0.0.5", family: 4 }] as never);
+      const internal = await resolveWebIdentity(ID);
+      expect(internal.ok).toBe(false);
+      if (!internal.ok) expect(internal.reason).toMatch(/special-use address/);
+      expect(spy).toHaveBeenCalledWith("agents.example.com", { all: true });
+      expect(calls).toHaveLength(0);
+
+      spy.mockResolvedValue([{ address: "93.184.215.14", family: 4 }, { address: "2606:4700:4700::1111", family: 6 }] as never);
+      const open = await resolveWebIdentity(ID);
+      expect(open.ok, open.ok ? "" : open.reason).toBe(true);
+      expect(calls).toHaveLength(1);
+
+      spy.mockRejectedValue(new Error("ENOTFOUND"));
+      expect((await resolveWebIdentity(ID)).ok).toBe(false);
+      expect(calls).toHaveLength(1);
+    } finally {
+      spy.mockRestore();
+      globalThis.fetch = original;
+    }
+  });
+
+  it("skips the lookup for a loopback identity in development mode", async () => {
+    const a = await party();
+    const id = "http://localhost:8787/agent";
+    const { fetch } = tableFetch({ [id]: { status: 200, headers: {}, body: buildWebIdentityDocument({ identity: id, publicKey: a.pub, allowLoopbackHttp: true }) } });
+    const lookup = vi.fn(async () => ["127.0.0.1"]);
+    expect((await resolveWebIdentity(id, { fetch, lookup, allowLoopbackHttp: true })).ok).toBe(true);
+    expect(lookup).not.toHaveBeenCalled();
   });
 });
 

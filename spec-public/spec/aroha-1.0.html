@@ -964,7 +964,8 @@ segment  = 1*( unreserved / sub-delims / ":" / "@" / "%" HEXDIG HEXDIG )</pre>
       The following rules also apply. The host is in lower case and at most
       253 characters long, and its last label is either 2 to 63 letters or a
       label beginning <code>xn--</code>. An IP address literal is not a host,
-      and neither is <code>localhost</code>. The port has no leading zero, is
+      and neither is <code>localhost</code> or a name ending in
+      <code>.localhost</code>. The port has no leading zero, is
       at most 65535 and is not 443. No segment is <code>.</code> or
       <code>..</code>, also when a dot is written <code>%2e</code> or
       <code>%2E</code>. A web identity is at most 2048 characters long. It
@@ -1048,10 +1049,14 @@ segment  = 1*( unreserved / sub-delims / ":" / "@" / "%" HEXDIG HEXDIG )</pre>
       the verifier looks. Verifiers that need offline verification, or
       protection against a compromised web host, use DIDs. Pinning the
       expected root grantor (§6.5, rule 2) limits which web identities can
-      start a chain. The reference implementations cannot observe name
-      resolution in every runtime, so fetching rule 3 is met by the
-      deployment: the <code>allowHost</code> option, a network egress policy,
-      or the address-vetting fetch of the reference MCP server.
+      start a chain. For fetching rule 3, the reference implementations resolve
+      the host name before each request and refuse the request if any of its
+      addresses is special-use, on Node.js and in Python. They do not pin the
+      connection to the address they checked, and a runtime with no resolver
+      to ask, such as a Cloudflare Worker or a browser, cannot make the check
+      at all. Such deployments rely on the <code>allowHost</code> option, a
+      network egress policy, or a client that pins the connection, as the
+      address-vetting fetch of the reference MCP server does.
     </p>
     <p>
       The conformance vectors are in

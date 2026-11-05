@@ -32,6 +32,33 @@ async function run(req) {
       const cart = await cred.attenuateToCart(intent, req.providerDid, req.cartConstraints, hex(req.agentPrivHex));
       return { intent: intent.token, cart: cart.token };
     }
+    case "issueJwtChain": {
+      const intent = await cred.issueIntentMandate(req.humanId, req.agentId, req.intentConstraints, hex(req.humanPrivHex), 3_600_000, { format: "jwt" });
+      const cart = await cred.attenuateToCart(intent, req.providerId, req.cartConstraints, hex(req.agentPrivHex));
+      return { intent: intent.token, cart: cart.token };
+    }
+    case "issueTaskJwt": {
+      const root = await cred.issueTaskMandate(req.humanId, req.agentId, req.allowed, req.constraints, hex(req.humanPrivHex), 3_600_000, { format: "jwt" });
+      return { token: root.token };
+    }
+    case "signVectorJwt":
+      return { jwt: await cred.signMandateJwt(req.kind, req.body, hex(req.privHex), req.kid) };
+    case "verifyOverWeb": {
+      const resolveKey = cred.createMandateKeyResolver({ web: { allowLoopbackHttp: true } });
+      const r = await cred.verifyMandateChain(req.token, resolveKey, { expectedRoot: req.expectedRoot, expectedGrantee: req.expectedGrantee, isRevoked: null });
+      return { valid: r.valid, reason: r.reason ?? null, rootGrantor: r.rootGrantor ?? null, limit: r.mandate?.constraints.spendLimitUsd ?? null };
+    }
+    case "webDocument":
+      return { document: cred.buildWebIdentityDocument({ identity: req.identity, publicKey: hex(req.pubHex), name: req.name, allowLoopbackHttp: true }) };
+    case "presentHttp":
+      return await cred.presentMandateHttp({ token: req.token, holderDid: req.holder, holderPrivateKey: hex(req.privHex), audience: req.audience, method: req.method, url: req.url, body: req.body });
+    case "verifyHttp": {
+      const r = await cred.verifyHttpMandateRequest(req.header, {
+        audience: req.audience, method: req.method, url: req.url, body: req.body,
+        nonces: new cred.InMemoryHttpPresentationNonces(), expectedRoot: req.expectedRoot, isRevoked: null,
+      });
+      return { ok: r.ok, reason: r.reason ?? null };
+    }
     case "issueTaskChain": {
       const root = await cred.issueTaskMandate(req.humanDid, req.agentDid, req.allowed, req.constraints,
         hex(req.humanPrivHex), req.ttlMs, req.options);

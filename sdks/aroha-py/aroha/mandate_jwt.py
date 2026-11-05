@@ -268,6 +268,10 @@ def sign_mandate_jwt(kind: str, body: dict[str, Any], private_key: Union[Ed25519
         return _b64u(json.dumps(value, separators=(",", ":"), ensure_ascii=False, allow_nan=False).encode("utf-8"))
 
     signing_input = f"{encode(header)}.{encode(mandate_body_to_jwt_claims(kind, body))}"
+    # 87 = "." plus an 86-character signature. Refused here so that an issuer
+    # never mints a mandate that every verifier would then reject.
+    if len(signing_input) + 87 > MANDATE_JWT_MAX_LENGTH:
+        raise ValueError(f"A mandate JWT cannot be longer than {MANDATE_JWT_MAX_LENGTH} characters")
     return f"{signing_input}.{_b64u(_private_key(private_key).sign(signing_input.encode('ascii')))}"
 
 

@@ -169,6 +169,19 @@ describe("POST /v1/mandates/:id/revoke with web identities", () => {
     expect(requests.some((u) => u.startsWith("https://shop.example.net/"))).toBe(false);
   });
 
+  it("covers an address at the 2048-character limit, in revocation status too", async () => {
+    const human = await party(), assistant = await party();
+    const LONG = `https://accounts.example.com/${"p".repeat(2048 - 29)}`;
+    expect(LONG).toHaveLength(2048);
+    published = { [LONG]: human.pub, [ASSISTANT]: assistant.pub };
+    const intent = await issueIntentMandate(LONG, ASSISTANT, { spendLimitUsd: 10 }, human.priv);
+    const isRevoked = httpRevocationCheck(REG, { fetch: appFetch(), cacheMs: 0 });
+    const resolveKey = createMandateKeyResolver({ web: { fetch: globalThis.fetch, lookup: false } });
+    expect((await verifyMandateChain(intent.token, resolveKey, { isRevoked })).valid).toBe(true);
+    await revokeMandate(REG, intent.token, human.priv, { revokerDid: LONG, fetch: appFetch() });
+    expect((await verifyMandateChain(intent.token, resolveKey, { isRevoked })).valid).toBe(false);
+  });
+
   it("refuses a web identity whose host resolves to an internal address", async () => {
     const c = await webChain();
     vi.mocked(dnsPromises.lookup).mockResolvedValue([{ address: "10.0.0.5", family: 4 }] as never);

@@ -14,7 +14,9 @@ import json
 import os
 import shutil
 import subprocess
+import threading
 from datetime import datetime, timezone
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 import pytest
@@ -29,11 +31,17 @@ from aroha.mandate import (
     SpendingConstraints,
     attenuate_to_cart,
     attenuate_to_payment,
+    create_mandate_key_resolver,
+    decode_mandate_token,
     issue_intent_mandate,
     verify_mandate_chain,
 )
+from aroha.http_mandate import HTTP_MANDATE_HEADER, InMemoryHttpPresentationNonces, present_mandate_http, verify_http_mandate_request
+from aroha.mandate_jwt import sign_mandate_jwt
 from aroha.messages import NonceRegistry, build_envelope, validate_envelope
+from aroha.task_mandate import issue_task_mandate, verify_task_mandate
 from aroha.timeutil import now_ms
+from aroha.web_identity import build_web_identity_document, create_web_identity_resolver
 
 HERE = Path(__file__).resolve().parent
 SCRIPT = HERE / "node" / "interop.mjs"
@@ -82,6 +90,121 @@ class Party:
 
 HUMAN, AGENT, PROVIDER, PAYEE = Party(11), Party(12), Party(13), Party(14)
 MERCHANTS = ["did:aroha:merchant-a", "did:aroha:merchant-ü"]
+
+
+# ── JWT form and web identities ───────────────────────────────────────────────
+
+AWKWARD_INTENT = SpendingConstraints(spend_limit_usd=333.33, allowed_merchants=MERCHANTS, currency="NZD", merchant_category="café – “4511” 😀")
+AWKWARD_CART = SpendingConstraints(spend_limit_usd=0.07, allowed_merchants=MERCHANTS[1:], currency="NZD", merchant_category="café – “4511” 😀")
+
+
+def _wire(c: SpendingConstraints) -> dict:
+    return c.to_wire()
+
+
+def test_python_jwt_chain_verifies_in_typescript():
+    intent = issue_intent_mandate(HUMAN.did, AGENT.did, AWKWARD_INTENT, HUMAN.key, format="jwt")
+    cart = attenuate_to_cart(intent, PROVIDER.did, AWKWARD_CART, AGENT.key)
+    r = ts("verifyMandateChain", token=cart.token)
+    assert r["valid"] is True, r["reason"]
+    assert r["chainVerified"] is True and r["rootGrantor"] == HUMAN.did and r["leafMandateId"] == cart.mandate.mandate_id
+
+
+def test_typescript_jwt_chain_verifies_in_python():
+    out = ts("issueJwtChain", humanId=HUMAN.did, agentId=AGENT.did, providerId=PROVIDER.did,
+             intentConstraints=_wire(AWKWARD_INTENT), cartConstraints=_wire(AWKWARD_CART),
+             humanPrivHex=HUMAN.priv_bytes.hex(), agentPrivHex=AGENT.priv_bytes.hex())
+    r = verify_mandate_chain(out["cart"], expected_root=HUMAN.did, expected_grantee=PROVIDER.did)
+    assert r.valid, r.reason
+    assert r.mandate.constraints.spend_limit_usd == 0.07 and r.mandate.constraints.merchant_category == "café – “4511” 😀"
+
+
+def test_a_chain_started_in_one_language_is_extended_in_the_other():
+    out = ts("issueJwtChain", humanId=HUMAN.did, agentId=AGENT.did, providerId=PROVIDER.did,
+             intentConstraints={"spendLimitUsd": 500}, cartConstraints={"spendLimitUsd": 300},
+             humanPrivHex=HUMAN.priv_bytes.hex(), agentPrivHex=AGENT.priv_bytes.hex())
+    payment = attenuate_to_payment(decode_mandate_token(out["cart"]), PAYEE.did, SpendingConstraints(spend_limit_usd=120.5), PROVIDER.key)
+    assert payment.token.count("~") == 2
+    r = ts("verifyMandateChain", token=payment.token)
+    assert r["valid"] is True, r["reason"]
+    assert verify_mandate_chain(payment.token, expected_root=HUMAN.did, expected_grantee=PAYEE.did).valid
+
+
+def test_python_and_typescript_sign_the_same_jwt_bytes():
+    body = {
+        "mandateTier": "intent", "constraints": {"spendLimitUsd": 333.33, "merchantCategory": "café 😀"},
+        "grantee": AGENT.did, "grantor": HUMAN.did, "issuedAt": "2026-01-01T00:00:00.000Z",
+        "expiresAt": "2030-01-01T00:00:00.000Z", "parentMandateId": None, "mandateId": "m-1",
+    }
+    assert sign_mandate_jwt("spending", body, HUMAN.key, "k1") == ts("signVectorJwt", kind="spending", body=body, privHex=HUMAN.priv_bytes.hex(), kid="k1")["jwt"]
+
+
+def test_task_jwt_crosses_both_ways():
+    py = issue_task_mandate(HUMAN.did, AGENT.did, ["inbox.read"], {"actionLimits": {"inbox.read": 5}}, HUMAN.key, format="jwt")
+    r = ts("verifyTaskMandate", token=py.token, pubHex=HUMAN.pub.hex(), expectedGrantee=AGENT.did)
+    assert r["valid"] is True, r["reason"]
+    out = ts("issueTaskJwt", humanId=HUMAN.did, agentId=AGENT.did, allowed=["inbox.read"], constraints={"actionLimits": {"inbox.read": 5}}, humanPrivHex=HUMAN.priv_bytes.hex())
+    assert verify_task_mandate(out["token"], HUMAN.pub, AGENT.did).valid
+
+
+@pytest.mark.parametrize("fmt", [None, "jwt"])
+def test_http_presentation_crosses_both_ways(fmt):
+    intent = issue_intent_mandate(HUMAN.did, AGENT.did, SpendingConstraints(spend_limit_usd=10), HUMAN.key, 600, format=fmt)
+    req = {"audience": "https://api.example.com", "method": "POST", "body": '{"item":"é"}'}
+    py = present_mandate_http(token=intent.token, holder_did=AGENT.did, holder_private_key=AGENT.key, url="https://api.example.com/v1/orders", **req)
+    r = ts("verifyHttp", header=py[HTTP_MANDATE_HEADER], url="/v1/orders", expectedRoot=HUMAN.did, **req)
+    assert r["ok"] is True, r["reason"]
+    node = ts("presentHttp", token=intent.token, holder=AGENT.did, privHex=AGENT.priv_bytes.hex(), url="https://api.example.com/v1/orders", **req)
+    v = verify_http_mandate_request(node[HTTP_MANDATE_HEADER], url="/v1/orders", nonces=InMemoryHttpPresentationNonces(), expected_root=HUMAN.did, is_revoked=None, **req)
+    assert v.ok, getattr(v, "reason", None)
+
+
+class _Docs(BaseHTTPRequestHandler):
+    docs: dict = {}
+
+    def do_GET(self):  # noqa: N802
+        body = self.docs.get(self.path)
+        self.send_response(200 if body else 404)
+        self.send_header("Content-Length", str(len(body or b"")))
+        self.end_headers()
+        self.wfile.write(body or b"")
+
+    def log_message(self, *a):
+        pass
+
+
+@pytest.fixture()
+def docs_server():
+    server = ThreadingHTTPServer(("127.0.0.1", 0), _Docs)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    _Docs.docs = {}
+    yield f"http://127.0.0.1:{server.server_address[1]}"
+    server.shutdown()
+    server.server_close()
+
+
+@pytest.mark.parametrize("fmt", [None, "jwt"])
+def test_web_identity_documents_cross_both_ways(docs_server, fmt):
+    human, agent, shop = f"{docs_server}/people/kiri", f"{docs_server}/agents/a", f"{docs_server}/agents/s"
+    # Kiri's document is built by TypeScript and read by Python; the agent's by Python, read by TypeScript.
+    _Docs.docs["/people/kiri"] = json.dumps(ts("webDocument", identity=human, pubHex=HUMAN.pub.hex(), name="Kiri ü")["document"], ensure_ascii=False).encode("utf-8")
+    _Docs.docs["/agents/a"] = json.dumps(build_web_identity_document(agent, AGENT.pub, name="Agent ü", allow_loopback_http=True), ensure_ascii=False).encode("utf-8")
+
+    intent = issue_intent_mandate(human, agent, SpendingConstraints(spend_limit_usd=500), HUMAN.key, format=fmt)
+    cart = attenuate_to_cart(intent, shop, SpendingConstraints(spend_limit_usd=300), AGENT.key)
+
+    resolve_key = create_mandate_key_resolver(web=create_web_identity_resolver(allow_loopback_http=True))
+    r = verify_mandate_chain(cart.token, resolve_key, expected_root=human, expected_grantee=shop)
+    assert r.valid, r.reason
+    t = ts("verifyOverWeb", token=cart.token, expectedRoot=human, expectedGrantee=shop)
+    assert t["valid"] is True, t["reason"]
+    assert t["rootGrantor"] == human and t["limit"] == 300
+
+    # Both refuse once the address publishes a different key.
+    _Docs.docs["/agents/a"] = json.dumps(build_web_identity_document(agent, PAYEE.pub, allow_loopback_http=True)).encode("utf-8")
+    assert ts("verifyOverWeb", token=cart.token, expectedRoot=human, expectedGrantee=shop)["valid"] is False
+    fresh = create_mandate_key_resolver(web=create_web_identity_resolver(allow_loopback_http=True))
+    assert verify_mandate_chain(cart.token, fresh, expected_root=human).valid is False
 
 
 # ── Canonicalisation ──────────────────────────────────────────────────────────

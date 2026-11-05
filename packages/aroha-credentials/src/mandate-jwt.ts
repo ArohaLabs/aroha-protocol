@@ -222,6 +222,11 @@ export async function signMandateJwt(kind: MandateJwtKind, body: Record<string, 
   const header = { alg: "EdDSA", typ: MANDATE_JWT_TYP, ...(kid !== undefined ? { kid } : {}) };
   const encode = (value: unknown) => b64u(new TextEncoder().encode(JSON.stringify(value)));
   const signingInput = `${encode(header)}.${encode(mandateBodyToJwtClaims(kind, body))}`;
+  // 87 = "." plus an 86-character signature. Refused here so that an issuer
+  // never mints a mandate that every verifier would then reject.
+  if (signingInput.length + 87 > MANDATE_JWT_MAX_LENGTH) {
+    throw new Error(`A mandate JWT cannot be longer than ${MANDATE_JWT_MAX_LENGTH} characters`);
+  }
   const signature = await ed.signAsync(new TextEncoder().encode(signingInput), privateKey);
   return `${signingInput}.${b64u(signature)}`;
 }

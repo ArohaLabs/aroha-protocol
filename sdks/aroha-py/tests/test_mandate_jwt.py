@@ -266,6 +266,13 @@ def test_body_that_cannot_be_a_jwt_is_refused() -> None:
         mandate_body_to_jwt_claims("spending", {**body, "issuedAt": "2026-01-01T00:00:00.000Z", "type": "x"})
 
 
+def test_issuer_cannot_mint_a_jwt_every_verifier_would_refuse() -> None:
+    a, b = Party(), Party()
+    merchants = [f"https://merchant-{i}.example.com/checkout" for i in range(2000)]
+    with pytest.raises(ValueError, match="longer than"):
+        issue_intent_mandate(a.did, b.did, usd(1, allowed_merchants=merchants), a.priv, format="jwt")
+
+
 # ── Task mandates ─────────────────────────────────────────────────────────────
 
 def test_task_mandate_in_jwt_form() -> None:

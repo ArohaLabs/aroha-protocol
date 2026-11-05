@@ -213,7 +213,8 @@ function mandateIdParam(raw: string | undefined): string {
 
 /** The `grantor` query parameter both GETs require — see IDENTITY above. */
 function grantorQuery(raw: string | undefined): string | null {
-  return typeof raw === "string" && raw.length > 0 && raw.length <= 512 && !raw.includes("#") ? raw : null;
+  // 2048 is the longest web identity (spec §4.7).
+  return typeof raw === "string" && raw.length > 0 && raw.length <= 2048 && !raw.includes("#") ? raw : null;
 }
 
 export const mandateRoutes = new Hono<HonoEnv>();

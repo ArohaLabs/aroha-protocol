@@ -14,9 +14,8 @@
  *   header   { "alg": "EdDSA", "typ": "aroha-mandate+jwt", "kid": <key id> }
  *   claims   { "iss": <grantor>, "sub": <grantee>, "jti": <mandateId>,
  *              "iat": <issuedAt, seconds>, "exp": <expiresAt, seconds>,
- *              "authorization_details": [ { "type": "aroha_spending_mandate"
- *                                           | "aroha_task_mandate", …the rest
- *                                           of the mandate body… } ] }
+ *              "authorization_details": [ { "type": <the mandate's type URI>,
+ *                                           …the rest of the mandate body… } ] }
  *
  * `authorization_details` is the member OAuth Rich Authorization Requests
  * (RFC 9396) uses to say what a token is good for. A spending chain is its
@@ -41,20 +40,22 @@
  * so the claims and the body are the same mandate with nothing rounded away.
  *
  * A mandate is issued in one form. Its signature covers different bytes in
- * each, so a token cannot be converted, and one chain does not mix forms.
+ * each, so a token cannot be converted. A spending token holds one form. A
+ * task chain is a list of tokens, and the verifier takes each on its own.
  */
 
 import * as ed from "@noble/ed25519";
 import { sha512 } from "@noble/hashes/sha2.js";
+import { verifyEd25519 } from "./ed25519-strict.js";
 
 ed.etc.sha512Sync = (...m: Parameters<typeof sha512>) => sha512(...m);
 
 /** The `typ` header of a mandate JWT. */
 export const MANDATE_JWT_TYP = "aroha-mandate+jwt";
 /** `authorization_details[0].type` of a spending mandate link. */
-export const SPENDING_MANDATE_DETAIL_TYPE = "aroha_spending_mandate";
+export const SPENDING_MANDATE_DETAIL_TYPE = "https://aroha-labs.com/mandates/spending";
 /** `authorization_details[0].type` of a task mandate. */
-export const TASK_MANDATE_DETAIL_TYPE = "aroha_task_mandate";
+export const TASK_MANDATE_DETAIL_TYPE = "https://aroha-labs.com/mandates/task";
 /** Joins the link JWTs of a spending chain, root first. */
 export const MANDATE_JWT_SEPARATOR = "~";
 /** Longest single mandate JWT accepted, in characters. */
@@ -70,8 +71,22 @@ const CLAIM_BACKED = ["grantor", "grantee", "mandateId", "issuedAt", "expiresAt"
 const SEGMENT = /^[A-Za-z0-9_-]+$/;
 /** A 64-byte Ed25519 signature is exactly 86 base64url characters. */
 const SIGNATURE = /^[A-Za-z0-9_-]{86}$/;
-/** Latest instant a JavaScript Date can hold, in seconds. */
-const MAX_SECONDS = 8_640_000_000_000;
+/** 9999-12-31T23:59:59Z: the last instant the body's date form can write. */
+const MAX_SECONDS = 253_402_300_799;
+/** Deepest nesting a claims set may have. Every SDK must stop at the same depth. */
+const MAX_DEPTH = 32;
+/** Largest magnitude every JSON parser reads exactly (RFC 8259 §6, I-JSON). */
+const MAX_NUMBER = Number.MAX_SAFE_INTEGER;
+/** RFC 7519 StringOrURI, ASCII only so every SDK reads it alike. */
+const STRING_OR_URI = /^[A-Za-z][A-Za-z0-9+.-]*:[\x21-\x7e]+$/;
+
+/** Members allowed in a detail, by kind, and in the objects it holds (spec §6.10 rule 4). */
+const DETAIL_MEMBERS: Record<MandateJwtKind, ReadonlySet<string>> = {
+  spending: new Set(["mandateTier", "constraints", "parentMandateId", "actingFor"]),
+  task: new Set(["mandateType", "mandateTier", "allowed", "blocked", "taskConstraints", "spendingConstraints", "invariants", "parentMandateId"]),
+};
+const SPENDING_CONSTRAINTS = new Set(["spendLimitUsd", "sessionLimitUsd", "currency", "merchantCategory", "requireHumanApprovalAboveUsd", "allowedMerchants", "validFrom", "validUntil"]);
+const TASK_CONSTRAINTS = new Set(["actionLimits", "computeLimit", "dataAccess", "outputHandling", "reversibleOnly", "humanGates", "checkpointIntervalMs", "requireSandbox", "maxDelegationDepth", "onBehalfOf", "roomId"]);
 
 export interface MandateJwtHeader {
   alg: "EdDSA" | "Ed25519";
@@ -103,16 +118,91 @@ function b64u(bytes: Uint8Array): string {
   return Buffer.from(bytes).toString("base64url");
 }
 
+/**
+ * True when an object in valid JSON text repeats a member name. JSON.parse keeps
+ * the last, so a token could show one value to this verifier and another to a
+ * parser that keeps the first. Scans the text, because the parsed value has
+ * already lost the repeat. Iterative, so deep nesting cannot exhaust the stack.
+ */
+function hasDuplicateMember(text: string): boolean {
+  const stack: (Set<string> | null)[] = [];
+  let expectName = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (ch === '"') {
+      let end = i + 1;
+      while (text[end] !== '"') end += text[end] === "\\" ? 2 : 1;
+      if (expectName) {
+        const name = JSON.parse(text.slice(i, end + 1)) as string;
+        const seen = stack[stack.length - 1] as Set<string>;
+        if (seen.has(name)) return true;
+        seen.add(name);
+        expectName = false;
+      }
+      i = end;
+    } else if (ch === "{") {
+      stack.push(new Set());
+      expectName = true;
+    } else if (ch === "[") {
+      stack.push(null);
+    } else if (ch === "}" || ch === "]") {
+      stack.pop();
+      expectName = false;
+    } else if (ch === ",") {
+      expectName = stack.length > 0 && stack[stack.length - 1] !== null;
+    }
+  }
+  return false;
+}
+
 /** Decode one base64url JSON segment, or null. The encoding must be canonical and the text valid UTF-8. */
 function decodeJsonSegment(segment: string): unknown {
   if (!SEGMENT.test(segment)) return null;
   const bytes = Buffer.from(segment, "base64url");
   if (b64u(bytes) !== segment) return null;
   try {
-    return JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes)) as unknown;
+    // ignoreBOM keeps a byte order mark in the text, so JSON.parse refuses it as
+    // every other SDK does, instead of silently removing it.
+    const text = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(bytes);
+    const value = JSON.parse(text) as unknown;
+    return hasDuplicateMember(text) ? null : value;
   } catch {
     return null;
   }
+}
+
+/** Why a parsed JSON value could read differently in another SDK, or null. */
+function checkPortable(value: unknown, depth = 1): string | null {
+  if (depth > MAX_DEPTH) return `nested deeper than ${MAX_DEPTH} levels`;
+  if (typeof value === "string") return /[\uD800-\uDFFF]/u.test(value) ? "a string is not well-formed Unicode" : null;
+  if (typeof value === "number") return Number.isFinite(value) && Math.abs(value) <= MAX_NUMBER ? null : "a number is outside the exact range";
+  if (Array.isArray(value)) {
+    for (const v of value) {
+      const why = checkPortable(v, depth + 1);
+      if (why) return why;
+    }
+  } else if (isRecord(value)) {
+    for (const [k, v] of Object.entries(value)) {
+      const why = checkPortable(k, depth) ?? checkPortable(v, depth + 1);
+      if (why) return why;
+    }
+  }
+  return null;
+}
+
+/** The first member of `value` outside `allowed`, or null. Leaves type checks to the shape check. */
+function unknownMember(value: unknown, allowed: ReadonlySet<string>): string | null {
+  return isRecord(value) ? Object.keys(value).find((k) => !allowed.has(k)) ?? null : null;
+}
+
+/**
+ * Date parsers disagree on nearly everything else: some forms are local time,
+ * so a verdict could depend on the verifier's time zone. Exactly one form.
+ */
+function isExactInstant(x: unknown): boolean {
+  if (typeof x !== "string" || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(x)) return false;
+  const ms = Date.parse(x);
+  return !Number.isNaN(ms) && new Date(ms).toISOString() === x;
 }
 
 function isSeconds(x: unknown): x is number {
@@ -157,8 +247,15 @@ export function mandateBodyToJwtClaims(kind: MandateJwtKind, body: Record<string
 export function jwtClaimsToMandateBody(claims: unknown): { kind: MandateJwtKind; body: Record<string, unknown> } | string {
   if (!isRecord(claims)) return "claims are not an object";
   for (const k of Object.keys(claims)) if (!CLAIMS.has(k)) return `unknown claim "${k}"`;
+  const portable = checkPortable(claims);
+  if (portable) return portable;
   for (const k of ["iss", "sub", "jti"] as const) {
     if (typeof claims[k] !== "string" || (claims[k] as string).length === 0) return `${k} must be a non-empty string`;
+  }
+  // RFC 7519 StringOrURI: a value with a colon must be a URI.
+  for (const k of ["iss", "sub"] as const) {
+    const v = claims[k] as string;
+    if (v.includes(":") && !STRING_OR_URI.test(v)) return `${k} contains a colon and is not a URI`;
   }
   if (!isSeconds(claims.iat)) return "iat must be a whole number of seconds";
   if (!isSeconds(claims.exp)) return "exp must be a whole number of seconds";
@@ -173,6 +270,22 @@ export function jwtClaimsToMandateBody(claims: unknown): { kind: MandateJwtKind;
     if (k in detail) return `authorization_details must not carry ${k}; it is a registered claim`;
   }
   const { type: _type, ...rest } = detail;
+  // Nothing here may be ignored: a member this verifier skips is one a
+  // RAR-aware consumer may enforce, or a limit an older verifier would drop.
+  const stray = unknownMember(rest, DETAIL_MEMBERS[kind]);
+  if (stray) return `authorization_details has an unknown member "${stray}"`;
+  const constraints = kind === "spending" ? [detail.constraints] : [detail.spendingConstraints];
+  for (const c of constraints) {
+    const k = unknownMember(c, SPENDING_CONSTRAINTS);
+    if (k) return `constraints has an unknown member "${k}"`;
+    if (isRecord(c)) {
+      for (const f of ["validFrom", "validUntil"] as const) {
+        if (c[f] !== undefined && !isExactInstant(c[f])) return `constraints.${f} is not in the form YYYY-MM-DDTHH:mm:ss.sssZ`;
+      }
+    }
+  }
+  const taskStray = kind === "task" ? unknownMember(detail.taskConstraints, TASK_CONSTRAINTS) : null;
+  if (taskStray) return `taskConstraints has an unknown member "${taskStray}"`;
   return {
     kind,
     body: {
@@ -221,7 +334,11 @@ export function decodeMandateJwt(jwt: unknown): DecodedMandateJwt | string {
 export async function signMandateJwt(kind: MandateJwtKind, body: Record<string, unknown>, privateKey: Uint8Array, kid?: string): Promise<string> {
   const header = { alg: "EdDSA", typ: MANDATE_JWT_TYP, ...(kid !== undefined ? { kid } : {}) };
   const encode = (value: unknown) => b64u(new TextEncoder().encode(JSON.stringify(value)));
-  const signingInput = `${encode(header)}.${encode(mandateBodyToJwtClaims(kind, body))}`;
+  const claims = mandateBodyToJwtClaims(kind, body);
+  // Refused here so an issuer never mints what every verifier would reject.
+  const mapped = jwtClaimsToMandateBody(claims);
+  if (typeof mapped === "string") throw new Error(`Cannot issue this mandate as a JWT: ${mapped}`);
+  const signingInput = `${encode(header)}.${encode(claims)}`;
   // 87 = "." plus an 86-character signature. Refused here so that an issuer
   // never mints a mandate that every verifier would then reject.
   if (signingInput.length + 87 > MANDATE_JWT_MAX_LENGTH) {
@@ -236,7 +353,7 @@ export async function verifyMandateJwtSignature(jwt: string, publicKey: Uint8Arr
   const decoded = decodeMandateJwt(jwt);
   if (typeof decoded === "string") return false;
   try {
-    return await ed.verifyAsync(Buffer.from(decoded.signature, "base64url"), new TextEncoder().encode(decoded.signingInput), publicKey);
+    return await verifyEd25519(Buffer.from(decoded.signature, "base64url"), new TextEncoder().encode(decoded.signingInput), publicKey);
   } catch {
     return false;
   }

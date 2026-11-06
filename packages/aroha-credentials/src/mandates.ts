@@ -25,5 +25,6 @@ export * from "./jcs.js";
 export * from "./http-mandate.js";
 export * from "./web-identity.js";
 export * from "./mandate-jwt.js";
+export * from "./ed25519-strict.js";
 export * from "./http-spend.js";
 export * from "./enrollment.js";

@@ -34,6 +34,7 @@ import { type DiscoveredAgent, type CapabilityDefinition, ArohaHttpRegistry } fr
 import {
   verifyMandateChain,
   createMandateKeyResolver,
+  looksLikeWebIdentity,
   redeemPaymentMandate,
   InMemoryRedemptionStore,
   SpendingConstraintViolation,
@@ -933,7 +934,8 @@ async function checkMandate(
   const resolveKey = createMandateKeyResolver({
     kelSource: gate.kelSource,
     kelStore: gate.kelStore,
-    fallback: (d) => gate.resolvePublicKey(d),
+    // An https name is a web identity. A registry row must not answer for it.
+    fallback: (d) => (looksLikeWebIdentity(d) ? Promise.resolve(null) : gate.resolvePublicKey(d)),
   });
   const result = await verifyMandateChain(token, resolveKey, gate.profile
     ? { ...gate.profile, expectedGrantee: callerDID }

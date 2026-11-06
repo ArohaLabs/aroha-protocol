@@ -198,6 +198,21 @@
       "note": "numeric top-level label"
     },
     {
+      "id": "https://a.xn--a/x",
+      "valid": false,
+      "note": "top-level label that is not a valid A-label"
+    },
+    {
+      "id": "https://xn--a.example/x",
+      "valid": false,
+      "note": "label that is not a valid A-label"
+    },
+    {
+      "id": "https://xn--abc.example/x",
+      "valid": false,
+      "note": "label that is not a valid A-label"
+    },
+    {
       "id": "https://example.0x7f/a",
       "valid": false,
       "note": "hexadecimal top-level label"
@@ -545,6 +560,36 @@
       "address": "fe80::1",
       "specialUse": true,
       "note": "link-local"
+    },
+    {
+      "address": "fec0::1",
+      "specialUse": true,
+      "note": "deprecated site-local"
+    },
+    {
+      "address": "3fff::1",
+      "specialUse": true,
+      "note": "documentation"
+    },
+    {
+      "address": "3fff:fff::1",
+      "specialUse": true,
+      "note": "end of 3fff::/20"
+    },
+    {
+      "address": "5f00::1",
+      "specialUse": true,
+      "note": "segment routing"
+    },
+    {
+      "address": "::ffff:0:a00:5",
+      "specialUse": true,
+      "note": "IPv4-translated"
+    },
+    {
+      "address": "3fff:1000::1",
+      "specialUse": false,
+      "note": "just above 3fff::/20"
     },
     {
       "address": "fe80::1%eth0",

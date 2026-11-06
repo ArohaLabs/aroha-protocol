@@ -56,6 +56,7 @@
 
 import * as ed from "@noble/ed25519";
 import { sha512 } from "@noble/hashes/sha2.js";
+import { verifyEd25519 } from "./ed25519-strict.js";
 // Runtime imports come from the ./identity subpath, never the @aroha-sdk/core
 // barrel: the barrel re-exports the Node transport (ws, undici -> fs, http),
 // which a Cloudflare Worker cannot bundle. Keeping this module (and
@@ -660,7 +661,7 @@ export async function verifyMandate(
   const now = options?.now ?? Date.now();
   const tolerance = options?.clockToleranceMs ?? DEFAULT_CLOCK_TOLERANCE_MS;
 
-  const timeProblem = checkTimeWindow(mandate, now, tolerance);
+  const timeProblem = checkTimeWindow(mandate, now, tolerance, leaf.jwt !== undefined);
   if (timeProblem) return { valid: false, reason: timeProblem };
 
   if (expectedGrantee && mandate.grantee !== expectedGrantee) {
@@ -796,6 +797,35 @@ function warnNoRevocationOnce(): void {
   );
 }
 
+/** The first reason a chain fails on its own text, or null. Runs before any key is resolved. */
+function checkLinksBeforeKeys(links: MandateChainLink[], opts: VerifyMandateChainOptions, now: number, tolerance: number): string | null {
+  const root = links[0].mandate;
+  const rootAt = `chain link 0 (${root.mandateTier} ${root.mandateId})`;
+  if (opts.expectedRoot !== undefined && root.grantor !== opts.expectedRoot) {
+    return `${rootAt}: Chain root mismatch: expected ${opts.expectedRoot}, got ${root.grantor}`;
+  }
+  if (opts.trustedRoots !== undefined && !opts.trustedRoots.includes(root.grantor)) {
+    return `${rootAt}: root grantor ${root.grantor} is not a trusted root`;
+  }
+  const leaf = links[links.length - 1].mandate;
+  if (opts.expectedGrantee && leaf.grantee !== opts.expectedGrantee) {
+    return `Mandate grantee mismatch: expected ${opts.expectedGrantee}`;
+  }
+  const seen = new Set<string>();
+  for (let i = 0; i < links.length; i++) {
+    const m = links[i].mandate;
+    const at = `chain link ${i} (${m.mandateTier} ${m.mandateId})`;
+    if (seen.has(m.mandateId)) return `${at}: mandateId repeats within the chain`;
+    seen.add(m.mandateId);
+    if (i > 0 && m.grantor !== links[i - 1].mandate.grantee) {
+      return `${at}: grantor ${m.grantor} is not the parent's grantee ${links[i - 1].mandate.grantee}`;
+    }
+    const timeProblem = checkTimeWindow(m, now, tolerance, links[i].jwt !== undefined);
+    if (timeProblem) return `${at}: ${timeProblem}`;
+  }
+  return null;
+}
+
 async function verifyLinks(
   links: MandateChainLink[],
   resolveKey: MandateKeyResolver,
@@ -820,6 +850,12 @@ async function verifyLinks(
     return { valid: false, reason: "requirePersonRoot needs a kelSource to verify the root person's KEL" };
   }
   const kelStateOf = opts.kelSource ? kelLookup(opts.kelSource, opts.kelStore) : null;
+
+  // Everything that can be decided from the token alone runs first. With web
+  // identities a key lookup is an HTTPS request to a host named in the token,
+  // so a verifier pinned elsewhere must refuse before it fetches anything.
+  const pre = checkLinksBeforeKeys(links, opts, now, tolerance);
+  if (pre) return { valid: false, reason: pre };
 
   const seen = new Set<string>();
   for (let i = 0; i < links.length; i++) {
@@ -904,9 +940,6 @@ async function verifyLinks(
         return fail(`expiresAt ${m.expiresAt} outlives the parent's ${p.expiresAt}`);
       }
     }
-
-    const timeProblem = checkTimeWindow(m, now, tolerance);
-    if (timeProblem) return fail(timeProblem);
 
     const revokedProblem = await checkRevocation(m, opts.isRevoked);
     if (revokedProblem) return fail(revokedProblem);
@@ -1239,11 +1272,11 @@ async function checkLinkSignature(link: MandateChainLink, publicKey: Uint8Array)
     // body was swapped after parsing cannot ride on another body's signature.
     const decoded = decodeMandateJwt(link.jwt);
     if (typeof decoded === "string" || decoded.kind !== "spending") return "Invalid signature";
-    if (decoded.signature !== link.signature || canonicalizeJcs(decoded.body) !== canonicalizeJcs(link.mandate)) {
-      return "Mandate does not match its signed JWT";
-    }
     try {
-      const valid = await ed.verifyAsync(Buffer.from(decoded.signature, "base64url"), new TextEncoder().encode(decoded.signingInput), publicKey);
+      if (decoded.signature !== link.signature || canonicalizeJcs(decoded.body) !== canonicalizeJcs(link.mandate)) {
+        return "Mandate does not match its signed JWT";
+      }
+      const valid = await verifyEd25519(Buffer.from(decoded.signature, "base64url"), new TextEncoder().encode(decoded.signingInput), publicKey);
       return valid ? null : "Invalid signature";
     } catch {
       return "Signature verification error";
@@ -1251,7 +1284,7 @@ async function checkLinkSignature(link: MandateChainLink, publicKey: Uint8Array)
   }
   try {
     const sigBytes = Buffer.from(link.signature, "base64url");
-    const valid = await ed.verifyAsync(sigBytes, signingBytes(link.v, link.mandate), publicKey);
+    const valid = await verifyEd25519(sigBytes, signingBytes(link.v, link.mandate), publicKey);
     return valid ? null : "Invalid signature";
   } catch {
     return "Signature verification error";
@@ -1276,8 +1309,9 @@ async function checkRevocation(
  * checks get `tolerance` ms of slack for issuer/verifier clock skew (see
  * MandateCheckOptions.clockToleranceMs for why the asymmetry).
  */
-function checkTimeWindow(m: ArohaSpendingMandateBody, now: number, tolerance: number): string | null {
-  if (Date.parse(m.expiresAt) < now) return "Mandate expired";
+function checkTimeWindow(m: ArohaSpendingMandateBody, now: number, tolerance: number, jwt = false): string | null {
+  // RFC 7519: a JWT is expired at `exp`, not after it.
+  if (Date.parse(m.expiresAt) < now || (jwt && Date.parse(m.expiresAt) === now)) return "Mandate expired";
   // A body that expires before it was issued is either corrupt or built to
   // confuse the time-window checks; neither is a mandate anyone signed on
   // purpose. Checked after "expired" so an ordinary stale token keeps its
@@ -1379,7 +1413,9 @@ function isIsoDate(x: unknown): x is string {
 }
 
 function isAmount(x: unknown): x is number {
-  return typeof x === "number" && Number.isFinite(x) && x >= 0;
+  // The cap keeps a comparison exact in every SDK: beyond 2^53 - 1, JavaScript
+  // numbers round, and one chain could narrow here and widen in Python.
+  return typeof x === "number" && Number.isFinite(x) && x >= 0 && x <= Number.MAX_SAFE_INTEGER;
 }
 
 /**
@@ -1708,16 +1744,16 @@ export async function verifyTaskMandateSignature(
     // one its claims decode to (see checkLinkSignature for spending links).
     const decoded = decodeMandateJwt(signed.jwt);
     if (typeof decoded === "string" || decoded.kind !== "task") return false;
-    if (decoded.signature !== signed.signature || canonicalizeJcs(decoded.body) !== canonicalizeJcs(signed.mandate)) return false;
     try {
-      return await ed.verifyAsync(Buffer.from(decoded.signature, "base64url"), new TextEncoder().encode(decoded.signingInput), publicKey);
+      if (decoded.signature !== signed.signature || canonicalizeJcs(decoded.body) !== canonicalizeJcs(signed.mandate)) return false;
+      return await verifyEd25519(Buffer.from(decoded.signature, "base64url"), new TextEncoder().encode(decoded.signingInput), publicKey);
     } catch {
       return false;
     }
   }
   try {
     const v: 1 | 2 = signed.v === 2 ? 2 : 1;
-    return await ed.verifyAsync(Buffer.from(signed.signature, "base64url"), taskSigningBytes(v, signed.mandate), publicKey);
+    return await verifyEd25519(Buffer.from(signed.signature, "base64url"), taskSigningBytes(v, signed.mandate), publicKey);
   } catch {
     return false;
   }
@@ -2001,7 +2037,7 @@ export async function verifyTaskMandate(
 
   const now = options.now ?? Date.now();
   const tolerance = options.clockToleranceMs ?? DEFAULT_CLOCK_TOLERANCE_MS;
-  if (Date.parse(mandate.expiresAt) < now) {
+  if (Date.parse(mandate.expiresAt) < now || (jwt !== undefined && Date.parse(mandate.expiresAt) === now)) {
     return { valid: false, reason: "Task mandate expired" };
   }
   if (Date.parse(mandate.issuedAt) > now + tolerance) {
@@ -2143,7 +2179,7 @@ export async function verifySignedInvariants(
     const canonical = JSON.stringify(sortKeys(signed.invariants as unknown as Record<string, unknown>));
     const bytes = new TextEncoder().encode(canonical);
     const sigBytes = Buffer.from(signed.signature, "base64url");
-    return await ed.verifyAsync(sigBytes, bytes, publicKey);
+    return await verifyEd25519(sigBytes, bytes, publicKey);
   } catch {
     return false;
   }

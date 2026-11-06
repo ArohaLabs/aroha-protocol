@@ -13,6 +13,7 @@ limits, the cache, the standard-library fetch and mandates end to end.
 
 from __future__ import annotations
 
+import base64
 import json
 import os
 import threading
@@ -43,6 +44,7 @@ from aroha.web_identity import (
     ed25519_jwk_thumbprint,
     ed25519_public_key_to_jwk,
     is_special_use_address,
+    is_weak_ed25519_key,
     is_web_identity,
     jwk_to_ed25519_public_key,
     looks_like_web_identity,
@@ -394,14 +396,68 @@ def test_cache_can_be_disabled(headers: dict[str, str], max_cache_s: float) -> N
     assert len(fetch.calls) == 2
 
 
-def test_cache_never_holds_a_failure() -> None:
+def test_cache_remembers_a_failure_for_30_seconds() -> None:
+    a, clock = Party(), Clock()
+    fetch = serve({ID: a.pub})
+    doc = fetch.responses.pop(ID)
+    resolver = create_web_identity_resolver(fetch=fetch, now=clock)
+    assert resolver(ID) is None
+    fetch.responses[ID] = doc
+    assert resolver(ID) is None
+    assert len(fetch.calls) == 1
+    clock.t += 30.1
+    assert resolver(ID) == a.pub
+
+
+def test_failure_cache_can_be_off() -> None:
     a = Party()
     fetch = serve({ID: a.pub})
     doc = fetch.responses.pop(ID)
-    resolver = create_web_identity_resolver(fetch=fetch)
+    resolver = create_web_identity_resolver(fetch=fetch, failure_cache_s=0)
     assert resolver(ID) is None
     fetch.responses[ID] = doc
     assert resolver(ID) == a.pub
+
+
+def test_concurrent_lookups_share_one_request() -> None:
+    import threading
+    import time
+
+    a = Party()
+    inner = serve({ID: a.pub})
+
+    def slow(url: str, timeout_s: float, max_bytes: int) -> WebIdentityResponse:
+        time.sleep(0.1)
+        return inner(url, timeout_s, max_bytes)
+
+    resolver = create_web_identity_resolver(fetch=slow)
+    results: list[Any] = []
+    threads = [threading.Thread(target=lambda: results.append(resolver(ID))) for _ in range(20)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    assert results == [a.pub] * 20
+    assert len(inner.calls) == 1
+
+
+def test_small_order_keys_are_refused() -> None:
+    order_8 = bytes.fromhex("c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac037a")
+    x = base64.urlsafe_b64encode(order_8).rstrip(b"=").decode()
+    assert jwk_to_ed25519_public_key({"kty": "OKP", "crv": "Ed25519", "x": x}) is None
+    assert is_weak_ed25519_key(order_8)
+
+
+def test_lookup_that_hangs_is_given_up_on() -> None:
+    import threading
+    import time
+
+    never = threading.Event()
+    a = Party()
+    started = time.monotonic()
+    r = resolve_web_identity(ID, fetch=serve({ID: a.pub}), lookup=lambda hostname: never.wait(30) or [], timeout_s=0.1)
+    assert r.ok is False and time.monotonic() - started < 2
+    never.set()
 
 
 # ── Publishing ────────────────────────────────────────────────────────────────
@@ -492,6 +548,35 @@ def test_default_fetch_over_loopback(loopback: str) -> None:
     assert missing.ok is False and "did not return HTTP 200" in (missing.reason or "")
     huge = resolve_web_identity(f"{loopback}/agents/huge", allow_loopback_http=True)
     assert huge.ok is False and "more than" in (huge.reason or "")
+
+
+def test_default_fetch_gives_up_on_a_host_that_drips(loopback: str) -> None:
+    import time as _time
+
+    identity = f"{loopback}/agents/drip"
+
+    class Drip(_Handler):
+        def do_GET(self) -> None:  # noqa: N802
+            self.send_response(200)
+            self.send_header("Content-Length", "5000")
+            self.end_headers()
+            try:
+                for _ in range(100):
+                    self.wfile.write(b" ")
+                    self.wfile.flush()
+                    _time.sleep(0.1)
+            except OSError:
+                pass
+
+    original = _Handler.do_GET
+    _Handler.do_GET = Drip.do_GET  # type: ignore[method-assign]
+    try:
+        started = _time.monotonic()
+        r = resolve_web_identity(identity, allow_loopback_http=True, timeout_s=0.4)
+        assert r.ok is False
+        assert _time.monotonic() - started < 3
+    finally:
+        _Handler.do_GET = original  # type: ignore[method-assign]
 
 
 # ── Mandates end to end ───────────────────────────────────────────────────────

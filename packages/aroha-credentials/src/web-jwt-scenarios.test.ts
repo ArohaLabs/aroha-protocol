@@ -23,6 +23,8 @@ import {
   decodeMandateToken,
   issueIntentMandate,
   issueTaskMandate,
+  mandateSigningPayloadV2,
+  resolveContentAddressedKey,
   verifyMandate,
   verifyMandateChain,
   verifyTaskMandate,
@@ -30,7 +32,9 @@ import {
 } from "./mandate.js";
 import { governedVerification } from "./governed.js";
 import { MANDATE_JWT_MAX_LENGTH, signMandateJwt } from "./mandate-jwt.js";
-import { buildWebIdentityDocument, createWebIdentityResolver, ed25519PublicKeyToJwk, resolveWebIdentity } from "./web-identity.js";
+import { buildWebIdentityDocument, createWebIdentityResolver, ed25519PublicKeyToJwk, jwkToEd25519PublicKey, resolveWebIdentity } from "./web-identity.js";
+import { verifyEd25519 } from "./ed25519-strict.js";
+import { canonicalizeJcs } from "./jcs.js";
 import { HTTP_MANDATE_HEADER, InMemoryHttpPresentationNonces, presentMandateHttp, verifyHttpMandateRequest } from "./http-mandate.js";
 import { verifyHttpSpendRequest } from "./http-spend.js";
 import { MapSpendingLedger } from "./spending-ledger.js";
@@ -208,6 +212,13 @@ describe("identity documents over real HTTP", () => {
     expect(Date.now() - started).toBeLessThan(2_000);
   });
 
+  it("gives up on a name that never resolves", async () => {
+    const started = Date.now();
+    const r = await resolveWebIdentity("https://agents.example.com/x", { fetch: (async () => new Response("{}")) as typeof fetch, lookup: () => new Promise<string[]>(() => undefined), timeoutMs: 100 });
+    expect(r.ok).toBe(false);
+    expect(Date.now() - started).toBeLessThan(2_000);
+  });
+
   it("refuses invalid UTF-8", async () => {
     routes.set("/latin1", (res) => res.writeHead(200).end(Buffer.from([0x7b, 0xff, 0x7d])));
     expect((await resolveWebIdentity(`${origin}/latin1`, opts)).ok).toBe(false);
@@ -289,6 +300,24 @@ describe("limits", () => {
     const allowedMerchants = Array.from({ length: 2_000 }, (_, i) => `https://merchant-${i}.example.com/checkout`);
     await expect(issueIntentMandate(a.id, b.id, { spendLimitUsd: 1, allowedMerchants }, a.priv, 3_600_000, { format: "jwt" })).rejects.toThrow(/too long|longer than/);
     expect(MANDATE_JWT_MAX_LENGTH).toBe(16 * 1024);
+  });
+
+  it("verifiers return a refusal on crafted values, they do not throw", async () => {
+    const a = await did();
+    const b64 = (v: unknown) => Buffer.from(JSON.stringify(v)).toString("base64url");
+    const now = Math.floor(Date.now() / 1000);
+    const claims = (over: Record<string, unknown>, detail: Record<string, unknown>) => ({ iss: a.id, sub: "b", jti: "j", iat: now, exp: now + 600, authorization_details: [detail], ...over });
+    const signed = async (c: unknown) => {
+      const payload = Buffer.from(JSON.stringify(c).replace('"DEEP"', `${"[".repeat(3000)}1${"]".repeat(3000)}`)).toString("base64url");
+      const input = `${b64({ alg: "EdDSA", typ: "aroha-mandate+jwt" })}.${payload}`;
+      return `${input}.${Buffer.from(await ed.signAsync(new TextEncoder().encode(input), a.priv)).toString("base64url")}`;
+    };
+    const task = { type: "https://aroha-labs.com/mandates/task", mandateType: "task", mandateTier: "intent", allowed: ["x"], taskConstraints: {}, parentMandateId: null };
+    for (const c of [claims({ jti: "\ud800" }, task), claims({}, { ...task, invariants: "DEEP" }), claims({}, { ...task, invariants: { a: "\ud800" } })]) {
+      const token = await signed(c);
+      await expect(verifyTaskMandate(token, a.pub)).resolves.toMatchObject({ valid: false });
+      await expect(verifyMandateChain(token, undefined, { isRevoked: null })).resolves.toMatchObject({ valid: false });
+    }
   });
 
   it("an eight-link JWT chain fits in an HTTP presentation", async () => {
@@ -374,8 +403,85 @@ describe("forms cannot be mixed or swapped", () => {
   });
 });
 
-// ─── The ledger keeps its keys ────────────────────────────────────────────────
+describe("the holder proof covers the token", () => {
+  it("refuses a different token with the same mandate id", async () => {
+    const root = await did(), a = await did(), b = await did(), holder = await did();
+    const small = await issueIntentMandate(root.id, a.id, { spendLimitUsd: 100_000 }, root.priv);
+    const large = await issueIntentMandate(root.id, b.id, { spendLimitUsd: 100_000 }, root.priv);
+    const forId = async (parent: SignedMandate, grantor: Party, limit: number) => {
+      const body = { ...(await attenuateToCart(parent, holder.id, { spendLimitUsd: limit }, grantor.priv)).mandate, mandateId: "same-id" };
+      const signature = Buffer.from(await ed.signAsync(new TextEncoder().encode(mandateSigningPayloadV2(body)), grantor.priv)).toString("base64url");
+      return Buffer.from(JSON.stringify({ v: 2, mandate: body, signature, chain: [{ v: 2, mandate: parent.mandate, signature: parent.signature }] })).toString("base64url");
+    };
+    const oneDollar = await forId(small, a, 1);
+    const bigOne = await forId(large, b, 100_000);
+    const request = { audience: "https://api.example.com", method: "POST", url: "https://api.example.com/pay", body: "{}" };
+    const header = (await presentMandateHttp({ token: oneDollar, holderDid: holder.id, holderPrivateKey: holder.priv, ...request }))[HTTP_MANDATE_HEADER];
+    const verify = (h: string) => verifyHttpMandateRequest(h, { ...request, url: "/pay", nonces: new InMemoryHttpPresentationNonces(), resolvePublicKey: resolveContentAddressedKey, expectedRoot: root.id, isRevoked: null });
+    expect((await verify(header)).ok).toBe(true);
+    const swapped = JSON.parse(Buffer.from(header, "base64url").toString("utf8"));
+    swapped.token = bigOne;
+    const r = await verify(Buffer.from(canonicalizeJcs(swapped)).toString("base64url"));
+    expect(r.ok).toBe(false);
+  });
+});
 
+describe("small-order keys", () => {
+  const ORDER_8 = "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac037a";
+  it("a keyless signature under a small-order key verifies nothing", async () => {
+    const key = new Uint8Array(Buffer.from(ORDER_8, "hex"));
+    const identity = new Uint8Array(32);
+    identity[0] = 1;
+    const sig = new Uint8Array(64);
+    sig[0] = 1;
+    for (const k of [key, identity]) {
+      expect(await verifyEd25519(sig, new TextEncoder().encode("anything"), k)).toBe(false);
+      expect(jwkToEd25519PublicKey({ kty: "OKP", crv: "Ed25519", x: Buffer.from(k).toString("base64url") })).toBeNull();
+    }
+  });
+});
+
+describe("a pinned verifier", () => {
+  it("makes no request for a token it will refuse", async () => {
+    const stranger = await web(), other = await did();
+    const m = await issueIntentMandate(stranger.id, other.id, { spendLimitUsd: 1 }, stranger.priv, 3_600_000, { format: "jwt" });
+    const before = hits.length;
+    const resolveKey = webResolver();
+    expect((await verifyMandateChain(m.token, resolveKey, { expectedRoot: "https://accounts.example.com/kiri", isRevoked: null })).valid).toBe(false);
+    expect((await verifyMandateChain(m.token, resolveKey, { trustedRoots: [], isRevoked: null })).valid).toBe(false);
+    expect((await verifyMandateChain(m.token, resolveKey, { expectedGrantee: "someone-else", isRevoked: null })).valid).toBe(false);
+    expect(hits.length).toBe(before);
+  });
+});
+
+describe("repeated lookups", () => {
+  it("shares one request between concurrent lookups, and remembers a failure", async () => {
+    const a = await web();
+    const resolve = createWebIdentityResolver({ allowLoopbackHttp: true });
+    const before = hits.length;
+    await Promise.all(Array.from({ length: 50 }, () => resolve(a.id)));
+    expect(hits.length - before).toBe(1);
+
+    const dead = `${origin}/dead/${++serial}`;
+    const mark = hits.length;
+    await Promise.all(Array.from({ length: 20 }, () => resolve(dead)));
+    expect(await resolve(dead)).toBeNull();
+    expect(hits.length - mark).toBe(1);
+  });
+
+  it("refuses more requests to one host than the limit", async () => {
+    routes.set("/hold/1", () => undefined);
+    routes.set("/hold/2", () => undefined);
+    const resolve = createWebIdentityResolver({ allowLoopbackHttp: true, maxConcurrentPerHost: 1, timeoutMs: 150 });
+    const why: string[] = [];
+    const limited = createWebIdentityResolver({ allowLoopbackHttp: true, maxConcurrentPerHost: 1, timeoutMs: 150, onFailure: (_i, r) => why.push(r) });
+    await Promise.all([limited(`${origin}/hold/1`), limited(`${origin}/hold/2`)]);
+    expect(why.some((r) => /Too many requests/.test(r))).toBe(true);
+    void resolve;
+  });
+});
+
+// ─── The ledger keeps its keys ────────────────────────────────────────────────
 describe("spending ledger with JWT-form mandates", () => {
   it("issuing against a ledger allocates from the parent the same way", async () => {
     const a = await did(), b = await did(), c = await did();

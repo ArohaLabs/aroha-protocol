@@ -11,9 +11,8 @@ Each link of a mandate chain is one JSON Web Token::
     header   {"alg": "EdDSA", "typ": "aroha-mandate+jwt", "kid": <key id>}
     claims   {"iss": <grantor>, "sub": <grantee>, "jti": <mandateId>,
               "iat": <issuedAt, seconds>, "exp": <expiresAt, seconds>,
-              "authorization_details": [{"type": "aroha_spending_mandate"
-                                         | "aroha_task_mandate", ...the rest
-                                         of the mandate body...}]}
+              "authorization_details": [{"type": <the mandate's type URI>,
+                                         ...the rest of the mandate body...}]}
 
 ``authorization_details`` is the member OAuth Rich Authorization Requests
 (RFC 9396) uses to say what a token is good for. A spending chain is its link
@@ -35,7 +34,8 @@ kind signed by the same key is never read as a mandate. Times are whole
 seconds.
 
 A mandate is issued in one form. Its signature covers different bytes in each,
-so a token cannot be converted, and one chain does not mix forms.
+so a token cannot be converted. A spending token holds one form. A task chain
+is a list of tokens, and the verifier takes each on its own.
 """
 
 from __future__ import annotations
@@ -48,8 +48,28 @@ from typing import Any, Optional, Union
 
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey, Ed25519PublicKey
+from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
 
 from aroha.timeutil import iso_ms, parse_iso_ms
+
+#: Small-order Ed25519 points and their non-canonical spellings. No real key is
+#: one, and with such a key a signature can verify for many messages.
+_WEAK_KEYS_HEX = frozenset({
+    "0000000000000000000000000000000000000000000000000000000000000000",
+    "0000000000000000000000000000000000000000000000000000000000000080",
+    "0100000000000000000000000000000000000000000000000000000000000000",
+    "0100000000000000000000000000000000000000000000000000000000000080",
+    "26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc05",
+    "26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc85",
+    "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac037a",
+    "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac03fa",
+    "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f",
+    "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    "edffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f",
+    "edffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    "eeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f",
+    "eeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+})
 
 __all__ = [
     "MANDATE_JWT_TYP",
@@ -71,8 +91,8 @@ __all__ = [
 ]
 
 MANDATE_JWT_TYP = "aroha-mandate+jwt"
-SPENDING_MANDATE_DETAIL_TYPE = "aroha_spending_mandate"
-TASK_MANDATE_DETAIL_TYPE = "aroha_task_mandate"
+SPENDING_MANDATE_DETAIL_TYPE = "https://aroha-labs.com/mandates/spending"
+TASK_MANDATE_DETAIL_TYPE = "https://aroha-labs.com/mandates/task"
 MANDATE_JWT_SEPARATOR = "~"
 #: Longest single mandate JWT accepted, in characters.
 MANDATE_JWT_MAX_LENGTH = 16 * 1024
@@ -85,8 +105,22 @@ _CLAIM_BACKED = ("grantor", "grantee", "mandateId", "issuedAt", "expiresAt")
 _SEGMENT = re.compile(r"[A-Za-z0-9_-]+")
 #: A 64-byte Ed25519 signature is exactly 86 base64url characters.
 _SIGNATURE = re.compile(r"[A-Za-z0-9_-]{86}")
-#: Latest instant a JavaScript Date can hold, in seconds (keeps every SDK in step).
-_MAX_SECONDS = 8_640_000_000_000
+#: 9999-12-31T23:59:59Z: the last instant the body's date form can write.
+_MAX_SECONDS = 253_402_300_799
+#: Deepest nesting a claims set may have. Every SDK must stop at the same depth.
+_MAX_DEPTH = 32
+#: Largest magnitude every JSON parser reads exactly (RFC 8259 section 6, I-JSON).
+_MAX_NUMBER = 2**53 - 1
+#: RFC 7519 StringOrURI, ASCII only so every SDK reads it alike.
+_STRING_OR_URI = re.compile(r"[A-Za-z][A-Za-z0-9+.-]*:[\x21-\x7e]+")
+_EXACT_INSTANT = re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z")
+#: Members allowed in a detail, by kind, and in the objects it holds (spec §6.10 rule 4).
+_DETAIL_MEMBERS = {
+    "spending": {"mandateTier", "constraints", "parentMandateId", "actingFor"},
+    "task": {"mandateType", "mandateTier", "allowed", "blocked", "taskConstraints", "spendingConstraints", "invariants", "parentMandateId"},
+}
+_SPENDING_CONSTRAINTS = {"spendLimitUsd", "sessionLimitUsd", "currency", "merchantCategory", "requireHumanApprovalAboveUsd", "allowedMerchants", "validFrom", "validUntil"}
+_TASK_CONSTRAINTS = {"actionLimits", "computeLimit", "dataAccess", "outputHandling", "reversibleOnly", "humanGates", "checkpointIntervalMs", "requireSandbox", "maxDelegationDepth", "onBehalfOf", "roomId"}
 
 
 @dataclass(frozen=True)
@@ -127,6 +161,16 @@ def _reject_constant(name: str) -> Any:
 _MISSING = object()
 
 
+def _no_duplicates(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    """Refuse a repeated member name: parsers disagree on which value wins."""
+    out: dict[str, Any] = {}
+    for k, v in pairs:
+        if k in out:
+            raise ValueError(f"duplicate member {k}")
+        out[k] = v
+    return out
+
+
 def _decode_json_segment(segment: str) -> Any:
     """Decode one base64url JSON segment, or _MISSING. The encoding must be canonical and the text UTF-8."""
     if _SEGMENT.fullmatch(segment) is None:
@@ -135,9 +179,49 @@ def _decode_json_segment(segment: str) -> Any:
         raw = _unb64u(segment)
         if _b64u(raw) != segment:
             return _MISSING
-        return json.loads(raw.decode("utf-8"), parse_constant=_reject_constant)
+        return json.loads(raw.decode("utf-8"), parse_constant=_reject_constant, object_pairs_hook=_no_duplicates)
     except Exception:
         return _MISSING
+
+
+def _check_portable(value: Any, depth: int = 1) -> Optional[str]:
+    """Why a parsed JSON value could read differently in another SDK, or None."""
+    if depth > _MAX_DEPTH:
+        return f"nested deeper than {_MAX_DEPTH} levels"
+    if isinstance(value, str):
+        try:
+            value.encode("utf-8")
+            return None
+        except UnicodeEncodeError:
+            return "a string is not well-formed Unicode"
+    if isinstance(value, bool) or value is None:
+        return None
+    if isinstance(value, (int, float)):
+        return None if value == value and abs(value) <= _MAX_NUMBER else "a number is outside the exact range"
+    if isinstance(value, list):
+        for v in value:
+            why = _check_portable(v, depth + 1)
+            if why:
+                return why
+    elif isinstance(value, dict):
+        for k, v in value.items():
+            why = _check_portable(k, depth) or _check_portable(v, depth + 1)
+            if why:
+                return why
+    return None
+
+
+def _is_exact_instant(x: Any) -> bool:
+    """Date parsers disagree on nearly every other form, and some are local time."""
+    if not isinstance(x, str) or _EXACT_INSTANT.fullmatch(x) is None:
+        return False
+    ms = parse_iso_ms(x)
+    return ms is not None and iso_ms(ms) == x
+
+
+def _unknown_member(value: Any, allowed: set[str]) -> Optional[str]:
+    """The first member of ``value`` outside ``allowed``, or None. Leaves type checks to the shape check."""
+    return next((k for k in value if k not in allowed), None) if isinstance(value, dict) else None
 
 
 def _seconds(x: Any) -> Optional[int]:
@@ -187,9 +271,16 @@ def jwt_claims_to_mandate_body(claims: Any) -> Union[tuple[str, dict[str, Any]],
     for k in claims:
         if k not in _CLAIMS:
             return f'unknown claim "{k}"'
+    portable = _check_portable(claims)
+    if portable:
+        return portable
     for k in ("iss", "sub", "jti"):
         if not isinstance(claims.get(k), str) or not claims[k]:
             return f"{k} must be a non-empty string"
+    # RFC 7519 StringOrURI: a value with a colon must be a URI.
+    for k in ("iss", "sub"):
+        if ":" in claims[k] and _STRING_OR_URI.fullmatch(claims[k]) is None:
+            return f"{k} contains a colon and is not a URI"
     iat, exp = _seconds(claims.get("iat")), _seconds(claims.get("exp"))
     if iat is None:
         return "iat must be a whole number of seconds"
@@ -206,6 +297,23 @@ def jwt_claims_to_mandate_body(claims: Any) -> Union[tuple[str, dict[str, Any]],
         if k in detail:
             return f"authorization_details must not carry {k}; it is a registered claim"
     body = {k: v for k, v in detail.items() if k != "type"}
+    # Nothing here may be ignored: a member this verifier skips is one a
+    # RAR-aware consumer may enforce, or a limit an older verifier would drop.
+    stray = _unknown_member(body, _DETAIL_MEMBERS[kind])
+    if stray:
+        return f'authorization_details has an unknown member "{stray}"'
+    constraints = detail.get("constraints") if kind == "spending" else detail.get("spendingConstraints")
+    stray = _unknown_member(constraints, _SPENDING_CONSTRAINTS)
+    if stray:
+        return f'constraints has an unknown member "{stray}"'
+    if isinstance(constraints, dict):
+        for f in ("validFrom", "validUntil"):
+            if f in constraints and not _is_exact_instant(constraints[f]):
+                return f"constraints.{f} is not in the form YYYY-MM-DDTHH:mm:ss.sssZ"
+    if kind == "task":
+        stray = _unknown_member(detail.get("taskConstraints"), _TASK_CONSTRAINTS)
+        if stray:
+            return f'taskConstraints has an unknown member "{stray}"'
     body["grantee"] = claims["sub"]
     body["grantor"] = claims["iss"]
     body["issuedAt"] = iso_ms(iat * 1000)
@@ -267,7 +375,12 @@ def sign_mandate_jwt(kind: str, body: dict[str, Any], private_key: Union[Ed25519
     def encode(value: Any) -> str:
         return _b64u(json.dumps(value, separators=(",", ":"), ensure_ascii=False, allow_nan=False).encode("utf-8"))
 
-    signing_input = f"{encode(header)}.{encode(mandate_body_to_jwt_claims(kind, body))}"
+    claims = mandate_body_to_jwt_claims(kind, body)
+    # Refused here so an issuer never mints what every verifier would reject.
+    mapped = jwt_claims_to_mandate_body(claims)
+    if isinstance(mapped, str):
+        raise ValueError(f"Cannot issue this mandate as a JWT: {mapped}")
+    signing_input = f"{encode(header)}.{encode(claims)}"
     # 87 = "." plus an 86-character signature. Refused here so that an issuer
     # never mints a mandate that every verifier would then reject.
     if len(signing_input) + 87 > MANDATE_JWT_MAX_LENGTH:
@@ -282,6 +395,8 @@ def verify_mandate_jwt_signature(jwt: str, public_key: Union[Ed25519PublicKey, b
         return False
     try:
         key = public_key if isinstance(public_key, Ed25519PublicKey) else Ed25519PublicKey.from_public_bytes(bytes(public_key))
+        if key.public_bytes(Encoding.Raw, PublicFormat.Raw).hex() in _WEAK_KEYS_HEX:
+            return False
         key.verify(_unb64u(decoded.signature), decoded.signing_input.encode("ascii"))
         return True
     except (InvalidSignature, Exception):

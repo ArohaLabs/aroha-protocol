@@ -30,6 +30,7 @@ import {
   httpBodySha256,
   httpMethodForProof,
   httpPresentationSigningPayload,
+  mandateTokenSha256,
   httpRequestTarget,
   presentMandateHttp,
   verifyHttpMandateRequest,
@@ -141,6 +142,7 @@ async function main() {
       signingPayload: httpPresentationSigningPayload({
         audience: AUDIENCE, method: httpMethodForProof(c.present.method), target: httpRequestTarget(c.present.url),
         bodySha256: httpBodySha256(unb64u(c.present.body)), mandateId: JSON.parse(Buffer.from(tokens[c.present.token], "base64url").toString("utf8")).mandate.mandateId,
+        tokenSha256: mandateTokenSha256(tokens[c.present.token]),
         holder: keys[c.present.holder].did, nonce: c.present.nonce, expires: decoded.expires,
       }),
       proof: decoded.proof,
@@ -167,7 +169,7 @@ async function main() {
     const mandateId = JSON.parse(Buffer.from(token, "base64url").toString("utf8")).mandate.mandateId;
     const payload = httpPresentationSigningPayload({
       audience: AUDIENCE, method: "POST", target: "/v1/orders?limit=5", bodySha256: httpBodySha256('{"item":"widget","qty":2}'),
-      mandateId, holder, nonce, expires,
+      mandateId, tokenSha256: mandateTokenSha256(token), holder, nonce, expires,
     });
     const proof = b64u(await ed.signAsync(new TextEncoder().encode(payload), keys[over.signer].priv));
     return enc({ token, holder, nonce, expires, proof });

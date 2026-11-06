@@ -19,9 +19,10 @@ Wire format (spec §6.9.2)::
 ``proof`` is the holder's Ed25519 signature (base64url, no padding) over the
 UTF-8 bytes of the RFC 8785 JCS canonicalisation of::
 
-    {purpose: "aroha.http-mandate-presentation/v1", audience, method (ASCII
+    {purpose: "aroha.http-mandate-presentation/v2", audience, method (ASCII
      upper-case), target (path + query exactly as sent), bodySha256 (lower-case
-     hex SHA-256 of the exact body bytes), mandateId, holder, nonce, expires}
+     hex SHA-256 of the exact body bytes), mandateId, tokenSha256 (lower-case hex
+    SHA-256 of the exact token string), holder, nonce, expires}
 
 Client::
 
@@ -68,6 +69,7 @@ from aroha.mandate import (
 )
 from aroha.mandate_jwt import looks_like_mandate_jwt, peek_mandate_token
 from aroha.spending_ledger import BudgetExhaustedError, SpendingLedger
+from aroha.web_identity import is_weak_ed25519_key
 from aroha.timeutil import iso_ms, now_ms, parse_iso_ms
 
 __all__ = [
@@ -84,6 +86,7 @@ __all__ = [
     "http_method_for_proof",
     "http_body_sha256",
     "http_presentation_signing_payload",
+    "mandate_token_sha256",
     "present_mandate_http",
     "verify_http_presentation",
     "verify_http_mandate_request",
@@ -91,7 +94,9 @@ __all__ = [
 ]
 
 HTTP_MANDATE_HEADER = "Aroha-Mandate"
-HTTP_MANDATE_PRESENTATION_PURPOSE = "aroha.http-mandate-presentation/v1"
+# v2 added tokenSha256: a mandateId is chosen by its minter, so the proof must
+# cover the token itself, not only the id.
+HTTP_MANDATE_PRESENTATION_PURPOSE = "aroha.http-mandate-presentation/v2"
 HTTP_PRESENTATION_MAX_TTL_MS = 5 * 60_000
 HTTP_PRESENTATION_CLOCK_SKEW_MS = 30_000
 HTTP_PRESENTATION_MAX_HEADER_LENGTH = 32_768
@@ -219,9 +224,9 @@ def http_body_sha256(body: Body) -> str:
 
 
 def http_presentation_signing_payload(
-    *, audience: str, method: str, target: str, body_sha256: str, mandate_id: str, holder: str, nonce: str, expires: str
+    *, audience: str, method: str, target: str, body_sha256: str, mandate_id: str, token_sha256: str, holder: str, nonce: str, expires: str
 ) -> str:
-    """The exact string the proof signs (JCS of the nine fields)."""
+    """The exact string the proof signs (JCS of the ten fields)."""
     return canonicalize_jcs({
         "purpose": HTTP_MANDATE_PRESENTATION_PURPOSE,
         "audience": audience,
@@ -229,10 +234,16 @@ def http_presentation_signing_payload(
         "target": target,
         "bodySha256": body_sha256,
         "mandateId": mandate_id,
+        "tokenSha256": token_sha256,
         "holder": holder,
         "nonce": nonce,
         "expires": expires,
     })
+
+
+def mandate_token_sha256(token: str) -> str:
+    """Lower-case hex SHA-256 of the exact token string, as a holder proof signs it."""
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
 
 def _b64url(b: bytes) -> str:
@@ -313,7 +324,7 @@ def present_mandate_http(
     expires = iso_ms(t + int(min(ttl_ms, HTTP_PRESENTATION_MAX_TTL_MS)))
     payload = http_presentation_signing_payload(
         audience=audience, method=m, target=target, body_sha256=http_body_sha256(body),
-        mandate_id=mandate_id, holder=holder_did, nonce=nonce, expires=expires,
+        mandate_id=mandate_id, token_sha256=mandate_token_sha256(token), holder=holder_did, nonce=nonce, expires=expires,
     )
     proof = _b64url(priv.sign(payload.encode("utf-8")))
     value = _b64url(canonicalize_jcs({
@@ -421,9 +432,11 @@ def _check_presentation(
         sig = _unb64url(proof)
         if len(sig) != 64:
             raise InvalidSignature()
+        if is_weak_ed25519_key(key):
+            raise InvalidSignature()
         Ed25519PublicKey.from_public_bytes(key).verify(sig, http_presentation_signing_payload(
             audience=audience, method=m, target=target, body_sha256=body_sha,
-            mandate_id=mandate_id, holder=holder, nonce=nonce, expires=expires,
+            mandate_id=mandate_id, token_sha256=mandate_token_sha256(token), holder=holder, nonce=nonce, expires=expires,
         ).encode("utf-8"))
     except Exception:
         return _fail("BAD_PROOF", "Mandate presentation proof does not verify for this server, method, target and body")

@@ -74,7 +74,7 @@ from aroha.mandate import (
 )
 from aroha.mandate_jwt import decode_mandate_jwt, looks_like_mandate_jwt, mandate_jwt_instant, sign_mandate_jwt
 from aroha.timeutil import iso_ms, now_ms, parse_iso_ms
-from aroha.web_identity import ed25519_jwk_thumbprint
+from aroha.web_identity import ed25519_jwk_thumbprint, is_weak_ed25519_key
 
 __all__ = [
     "TASK_MANDATE_TOKEN_VERSION",
@@ -333,6 +333,8 @@ def _signing_bytes(v: int, body: dict[str, Any]) -> bytes:
 def _verify_signature(
     v: int, body: dict[str, Any], signature: str, public_key: Optional[bytes], jwt: Optional[str] = None
 ) -> bool:
+    if public_key is not None and is_weak_ed25519_key(public_key):
+        return False
     if jwt is not None:
         # JWT form: verify the JWT's own text, and refuse a body that is not
         # the one its claims decode to.
@@ -577,7 +579,7 @@ def verify_task_mandate(
 
     t = _now_value(now)
     expires, issued = parse_iso_ms(m["expiresAt"]), parse_iso_ms(m["issuedAt"])
-    if expires < t:  # type: ignore[operator]  (shape guarantees both parse)
+    if expires < t or (jwt is not None and expires == t):  # type: ignore[operator]  (shape guarantees both parse)
         return TaskMandateVerificationResult(False, reason="Task mandate expired")
     if issued > t + clock_tolerance_ms:  # type: ignore[operator]
         return TaskMandateVerificationResult(False, reason=f"Task mandate issuedAt {m['issuedAt']} is in the future")
@@ -660,7 +662,7 @@ def check_task_mandate_shape(m: Any) -> Optional[str]:
         if not isinstance(tc["dataAccess"], dict):
             return "taskConstraints.dataAccess must be an object"
         for res, a in tc["dataAccess"].items():
-            if a not in _DATA_ACCESS_RIGHTS:
+            if not isinstance(a, str) or a not in _DATA_ACCESS_RIGHTS:
                 return f'taskConstraints.dataAccess["{res}"] is invalid'
     if "reversibleOnly" in tc and not isinstance(tc["reversibleOnly"], bool):
         return "taskConstraints.reversibleOnly must be a boolean"

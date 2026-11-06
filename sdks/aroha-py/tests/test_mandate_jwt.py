@@ -24,6 +24,7 @@ from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
 
 from aroha.http_mandate import HTTP_MANDATE_HEADER, InMemoryHttpPresentationNonces, present_mandate_http, verify_http_mandate_request
 from aroha.identity import to_multibase
+from aroha.jcs import canonicalize_jcs
 from aroha.mandate import (
     SpendingConstraints,
     attenuate_to_cart,
@@ -31,6 +32,7 @@ from aroha.mandate import (
     create_mandate_key_resolver,
     decode_mandate_token,
     issue_intent_mandate,
+    mandate_signing_payload_v2,
     verify_mandate,
     verify_mandate_chain,
 )
@@ -168,7 +170,7 @@ def test_issue_attenuate_and_verify_a_chain_of_jwts() -> None:
     assert sorted(claims) == ["authorization_details", "exp", "iat", "iss", "jti", "sub"]
     assert (claims["iss"], claims["sub"], claims["jti"]) == (assistant.did, shop.did, cart.mandate.mandate_id)
     assert claims["authorization_details"] == [{
-        "type": "aroha_spending_mandate", "mandateTier": "cart",
+        "type": "https://aroha-labs.com/mandates/spending", "mandateTier": "cart",
         "constraints": {"spendLimitUsd": 300, "merchantCategory": "4511"}, "parentMandateId": intent.mandate.mandate_id,
     }]
 
@@ -283,7 +285,7 @@ def test_task_mandate_in_jwt_form() -> None:
     assert root.token == root.jwt
     assert _segment(root.jwt, 0) == {"alg": "EdDSA", "typ": MANDATE_JWT_TYP, "kid": ed25519_jwk_thumbprint(human.pub)}  # type: ignore[arg-type]
     detail = _segment(root.jwt, 1)["authorization_details"][0]  # type: ignore[arg-type]
-    assert detail["type"] == "aroha_task_mandate" and detail["allowed"] == ["inbox.read", "inbox.archive"] and detail["blocked"] == ["inbox.delete"]
+    assert detail["type"] == "https://aroha-labs.com/mandates/task" and detail["allowed"] == ["inbox.read", "inbox.archive"] and detail["blocked"] == ["inbox.delete"]
 
     assert verify_task_mandate(root.token, human.pub, assistant.did).valid
     assert verify_task_mandate(root.token, assistant.pub, assistant.did).valid is False
@@ -303,6 +305,41 @@ def test_task_mandate_in_jwt_form() -> None:
     rebuilt = decode_task_mandate_token(root.token)
     assert rebuilt.wire == root.wire and rebuilt.jwt == root.token
     assert looks_like_mandate_jwt(attenuate_task_mandate(rebuilt, worker.did, ["inbox.read"], {"actionLimits": {}, "maxDelegationDepth": 1}, assistant.priv).token)
+
+
+def test_pinned_verifier_makes_no_request_for_a_token_it_refuses() -> None:
+    a, b = Party(), Party()
+    calls: list[str] = []
+
+    def resolve(identity: str) -> Optional[bytes]:
+        calls.append(identity)
+        return a.pub
+
+    m = issue_intent_mandate(a.did, b.did, usd(1), a.priv, format="jwt")
+    assert verify_mandate_chain(m.token, resolve, expected_root="https://accounts.example.com/kiri").valid is False
+    assert verify_mandate_chain(m.token, resolve, expected_grantee="someone-else").valid is False
+    assert calls == []
+
+
+def test_holder_proof_refuses_a_different_token_with_the_same_id() -> None:
+    root, a, b, holder = Party(), Party(), Party(), Party()
+    small = issue_intent_mandate(root.did, holder.did, usd(1), root.priv, 600)
+    large = issue_intent_mandate(root.did, holder.did, usd(100_000), root.priv, 600)
+    request = dict(audience="https://api.example.com", method="POST", url="https://api.example.com/pay", body="{}")
+    header = present_mandate_http(token=small.token, holder_did=holder.did, holder_private_key=holder.priv, **request)[HTTP_MANDATE_HEADER]
+
+    def verify(h: str):
+        return verify_http_mandate_request(h, audience=request["audience"], method="POST", url="/pay", body="{}",
+                                           nonces=InMemoryHttpPresentationNonces(), expected_root=root.did, is_revoked=None)
+
+    assert verify(header).ok
+    decoded = json.loads(base64.urlsafe_b64decode(header + "=" * (-len(header) % 4)))
+    # The minter chooses the id, so give the larger mandate the smaller one's.
+    wire = {**(large.wire or {}), "mandateId": small.mandate.mandate_id}
+    sig = base64.urlsafe_b64encode(root.priv.sign(mandate_signing_payload_v2(wire).encode())).rstrip(b"=").decode()
+    decoded["token"] = base64.urlsafe_b64encode(json.dumps({"v": 2, "mandate": wire, "signature": sig, "chain": []}).encode()).rstrip(b"=").decode()
+    swapped = base64.urlsafe_b64encode(canonicalize_jcs(decoded).encode()).rstrip(b"=").decode()
+    assert verify(swapped).ok is False
 
 
 # ── With the rest of the SDK ──────────────────────────────────────────────────

@@ -25,6 +25,7 @@ import {
   httpMethodForProof,
   httpPresentationSigningPayload,
   httpRequestTarget,
+  mandateTokenSha256,
   type HttpRequestBody,
   type PresentMandateHttpInput,
 } from "./http-mandate.js";
@@ -100,7 +101,7 @@ export async function buildHttpPresentationHeader(input: BuildHttpPresentationIn
   if (mandateId === null) throw new TypeError("buildHttpPresentationHeader: the token is not decodable; pass mandateId");
 
   const payload = httpPresentationSigningPayload({
-    audience: input.audience, method: input.method, target, bodySha256, mandateId, holder: input.holder, nonce, expires,
+    audience: input.audience, method: input.method, target, bodySha256, mandateId, tokenSha256: mandateTokenSha256(input.token), holder: input.holder, nonce, expires,
   });
   const proof = input.proof ?? b64u(await ed.signAsync(new TextEncoder().encode(payload), input.signerPrivateKey));
   const members: Record<string, unknown> = { token: input.token, holder: input.holder, nonce, expires, proof, ...input.extraMembers };

@@ -37,8 +37,8 @@
  * FETCH RULES (from the OAuth draft, §"Client ID Metadata Document" and its
  * security considerations, applied here to both the document and a
  * `jwks_uri`): HTTPS only, no redirects followed, HTTP 200 only, a size cap,
- * a timeout, successful results cached for a bounded time, failures never
- * cached. Before each request the host name is resolved and the request is
+ * a timeout, successful results cached for a bounded time, failures
+ * remembered for 30 seconds at most. Before each request the host name is resolved and the request is
  * refused if any of its addresses is special-use (loopback, private,
  * link-local, …) — on Node.js by default, elsewhere when the caller supplies
  * `lookup`. That check does not pin the connection, and a Cloudflare Worker
@@ -51,6 +51,7 @@
  */
 
 import { sha256 } from "@noble/hashes/sha2.js";
+import { isWeakEd25519Key } from "./ed25519-strict.js";
 import type { MandateKeyResolver } from "./mandate.js";
 
 // ─── Identifier ───────────────────────────────────────────────────────────────
@@ -81,6 +82,7 @@ export function looksLikeWebIdentity(id: unknown): id is string {
  *   host     = label 1*( "." label )         ; lower case, the last label a TLD
  *   label    = 1–63 of a-z 0-9 "-", not starting or ending with "-"
  *   tld      = 2–63 letters a-z, or an "xn--" label; never "localhost"
+ *   xn--     = a valid A-label: decoding and re-encoding gives the same label
  *   port     = 1–65535 without leading zeros, and not the scheme's default
  *   path     = 1*( "/" segment ) [ "/" ]     ; so never just "/"
  *   segment  = 1*( unreserved / sub-delims / ":" / "@" / "%" HEX HEX )
@@ -214,7 +216,7 @@ export function jwkToEd25519PublicKey(jwk: unknown): Uint8Array | null {
   // Round-trip: 43 base64url characters can spell 32 bytes more than one way
   // (the last character carries two unused bits). Only the canonical spelling
   // is a key, so two documents never name one key by different strings.
-  return key.length === 32 && b64u(key) === jwk.x ? key : null;
+  return key.length === 32 && b64u(key) === jwk.x && !isWeakEd25519Key(key) ? key : null;
 }
 
 export type WebIdentityKeySelection =
@@ -225,8 +227,9 @@ export type WebIdentityKeySelection =
  * Choose the signing key from a JWK Set: the FIRST key that
  * jwkToEd25519PublicKey accepts.
  *
- * WHY the first and not "any": a mandate token carries no key id, and the
- * resolver contract returns one key. One rule that every implementation
+ * WHY the first and not "any": a native mandate token carries no key id, the
+ * JWT form's `kid` must not choose the key (spec §6.10), and the resolver
+ * contract returns one key. One rule that every implementation
  * applies the same way matters more than flexibility. To rotate, publish the
  * new key first; mandates signed by the old key then stop verifying and are
  * re-issued, which is the rule a `did:aroha:E…` rotation already follows.
@@ -317,6 +320,8 @@ export const WEB_IDENTITY_MAX_JWKS_BYTES = 16 * 1024;
 export const WEB_IDENTITY_MAX_CACHE_MS = 5 * 60_000;
 /** Default timeout for each HTTPS request. */
 export const WEB_IDENTITY_FETCH_TIMEOUT_MS = 5_000;
+/** Default time a failed resolution is remembered: 30 seconds. */
+export const WEB_IDENTITY_FAILURE_CACHE_MS = 30_000;
 const CACHE_MAX_ENTRIES = 500;
 
 export interface WebIdentityResolverOptions extends WebIdentityCheckOptions {
@@ -352,6 +357,14 @@ export interface WebIdentityResolverOptions extends WebIdentityCheckOptions {
    * whose network already denies those ranges.
    */
   lookup?: WebIdentityAddressLookup | false;
+  /**
+   * How long a failed resolution is remembered, ms, so a token naming a dead or
+   * slow host cannot force a request per verification. Default 30 000, never
+   * more than `maxCacheMs`.
+   */
+  failureCacheMs?: number;
+  /** Most requests in flight to one host at a time; more are refused. Default 8. */
+  maxConcurrentPerHost?: number;
   /** Told why a resolution failed (the resolver itself only returns null). Never told keys. */
   onFailure?: (identity: string, reason: string) => void;
   /** Override "now" (Unix ms) for cache expiry. For tests. */
@@ -529,6 +542,10 @@ export function isSpecialUseAddress(address: string): boolean {
     g[0] === 0x2002 ||                             // 2002::/16, 6to4
     (g[0] & 0xfe00) === 0xfc00 ||                  // fc00::/7, unique local
     (g[0] & 0xffc0) === 0xfe80 ||                  // fe80::/10, link-local
+    (g[0] & 0xffc0) === 0xfec0 ||                  // fec0::/10, deprecated site-local
+    (zeroTo(4) && g[4] === 0xffff && g[5] === 0) || // ::ffff:0:0:0/96, IPv4-translated
+    (g[0] === 0x3fff && g[1] < 0x1000) ||          // 3fff::/20, documentation
+    g[0] === 0x5f00 ||                             // 5f00::/16, segment routing
     (g[0] & 0xff00) === 0xff00                     // ff00::/8, multicast
   );
 }
@@ -589,10 +606,18 @@ async function refusal(url: string, options: WebIdentityResolverOptions): Promis
   const lookup = options.lookup ?? (options.fetch ? null : await platformLookup());
   if (!lookup) return null;
   let addresses: string[];
+  let timer: ReturnType<typeof setTimeout> | undefined;
   try {
-    addresses = await lookup(hostname);
+    addresses = await Promise.race([
+      lookup(hostname),
+      new Promise<never>((_resolve, reject) => {
+        timer = setTimeout(() => reject(new Error("lookup timed out")), options.timeoutMs ?? WEB_IDENTITY_FETCH_TIMEOUT_MS);
+      }),
+    ]);
   } catch {
     return `Host of ${url} could not be resolved`;
+  } finally {
+    clearTimeout(timer);
   }
   if (!Array.isArray(addresses) || addresses.length === 0) return `Host of ${url} could not be resolved`;
   return addresses.some((a) => isSpecialUseAddress(a)) ? `Host of ${url} resolves to a special-use address` : null;
@@ -666,14 +691,23 @@ export async function resolveWebIdentity(identity: string, options: WebIdentityR
  */
 export function createWebIdentityResolver(options: WebIdentityResolverOptions = {}): MandateKeyResolver {
   const cache = new Map<string, CacheEntry>();
+  // Separate from `cache`, so junk identities cannot push out good keys.
+  const failures = new Map<string, number>();
+  const inFlight = new Map<string, Promise<Uint8Array | null>>();
+  const perHost = new Map<string, number>();
   const now = options.now ?? Date.now;
-  return async (identity) => {
-    if (!looksLikeWebIdentity(identity)) return null;
-    const hit = cache.get(identity);
-    if (hit) {
-      if (hit.expires > now()) return hit.value.key;
-      cache.delete(identity);
+  const failureMs = Math.min(options.failureCacheMs ?? WEB_IDENTITY_FAILURE_CACHE_MS, options.maxCacheMs ?? WEB_IDENTITY_MAX_CACHE_MS);
+  const maxPerHost = options.maxConcurrentPerHost ?? 8;
+
+  const report = (identity: string, reason: string) => {
+    try {
+      options.onFailure?.(identity, reason);
+    } catch {
+      // A logging hook that throws must not change the outcome.
     }
+  };
+
+  const fetchKey = async (identity: string): Promise<Uint8Array | null> => {
     let resolved: { result: WebIdentityResolution; lifetimeMs: number };
     try {
       resolved = await resolveUncached(identity, options);
@@ -681,13 +715,11 @@ export function createWebIdentityResolver(options: WebIdentityResolverOptions = 
       resolved = { result: { ok: false, reason: `Web identity resolution failed: ${(e as Error).message}` }, lifetimeMs: 0 };
     }
     if (!resolved.result.ok) {
-      // Failures are never cached: a document that was briefly unreachable or
-      // malformed must not lock an identity out for the cache lifetime.
-      try {
-        options.onFailure?.(identity, resolved.result.reason);
-      } catch {
-        // A logging hook that throws must not change the outcome.
+      if (failureMs > 0) {
+        if (failures.size >= CACHE_MAX_ENTRIES) failures.delete(failures.keys().next().value as string);
+        failures.set(identity, now() + failureMs);
       }
+      report(identity, resolved.result.reason);
       return null;
     }
     if (resolved.lifetimeMs > 0) {
@@ -695,5 +727,42 @@ export function createWebIdentityResolver(options: WebIdentityResolverOptions = 
       cache.set(identity, { expires: now() + resolved.lifetimeMs, value: resolved.result });
     }
     return resolved.result.key;
+  };
+
+  return async (identity) => {
+    if (!looksLikeWebIdentity(identity)) return null;
+    const hit = cache.get(identity);
+    if (hit) {
+      if (hit.expires > now()) return hit.value.key;
+      cache.delete(identity);
+    }
+    const failedUntil = failures.get(identity);
+    if (failedUntil !== undefined) {
+      if (failedUntil > now()) return null;
+      failures.delete(identity);
+    }
+    // Concurrent verifications of one identity share one request.
+    const pending = inFlight.get(identity);
+    if (pending) return pending;
+    let host: string;
+    try {
+      host = new URL(identity).hostname;
+    } catch {
+      host = identity;
+    }
+    const count = perHost.get(host) ?? 0;
+    if (count >= maxPerHost) {
+      report(identity, `Too many requests in flight to ${host}`);
+      return null;
+    }
+    perHost.set(host, count + 1);
+    const request = fetchKey(identity).finally(() => {
+      inFlight.delete(identity);
+      const left = (perHost.get(host) ?? 1) - 1;
+      if (left > 0) perHost.set(host, left);
+      else perHost.delete(host);
+    });
+    inFlight.set(identity, request);
+    return request;
   };
 }

@@ -74,7 +74,7 @@ from aroha.mandate_jwt import (
     sign_mandate_jwt,
     split_mandate_jwt_chain,
 )
-from aroha.web_identity import create_web_identity_resolver, ed25519_jwk_thumbprint, looks_like_web_identity
+from aroha.web_identity import create_web_identity_resolver, ed25519_jwk_thumbprint, is_weak_ed25519_key, looks_like_web_identity
 
 __all__ = [
     "MANDATE_TOKEN_VERSION",
@@ -746,6 +746,8 @@ def _unb64url(s: str) -> bytes:
 
 
 def _check_link_signature(link: _Link, public_key: Optional[bytes]) -> Optional[str]:
+    if public_key is not None and is_weak_ed25519_key(public_key):
+        return "Invalid signature"
     if link.jwt is not None:
         # JWT form: the signature covers the JWT's own text. Decode it again
         # here instead of trusting ``wire`` and ``signature``, so a link whose
@@ -789,10 +791,14 @@ def _lt(a: Optional[int], b: Optional[int]) -> bool:
     return a is not None and b is not None and a < b
 
 
-def _check_time_window(m: dict[str, Any], now: int, tolerance: int) -> Optional[str]:
+def _check_time_window(m: dict[str, Any], now: int, tolerance: int, jwt: bool = False) -> Optional[str]:
     """Expiry checks are strict; not-before checks get ``tolerance`` ms of slack."""
-    if _lt(parse_iso_ms(m.get("expiresAt")), now):
+    # RFC 7519: a JWT is expired at ``exp``, not after it.
+    if _lt(parse_iso_ms(m.get("expiresAt")), now) or (jwt and parse_iso_ms(m.get("expiresAt")) == now):
         return "Mandate expired"
+    # Checked after "expired", as in TypeScript, so a stale token keeps its reason.
+    if _lt(parse_iso_ms(m.get("expiresAt")), parse_iso_ms(m.get("issuedAt"))):
+        return "Mandate expires before it was issued"
     if _lt(now + tolerance, parse_iso_ms(m.get("issuedAt"))):
         return f"Mandate issuedAt {m.get('issuedAt')} is in the future"
     c = m["constraints"]
@@ -839,6 +845,32 @@ def _verify_links(
             False, reason="requirePersonRoot needs a kelSource to verify the root person's KEL"
         )
     kel_state_of = _kel_lookup(kel_source, kel_store) if kel_source is not None else None
+
+    # Everything that can be decided from the token alone runs first. With web
+    # identities a key lookup is an HTTPS request to a host named in the token,
+    # so a verifier pinned elsewhere must refuse before it fetches anything.
+    root = links[0].wire
+    if expected_root is not None and root["grantor"] != expected_root:
+        return MandateVerificationResult(
+            False, reason=f"chain link 0 ({root['mandateTier']} {root['mandateId']}): "
+            f"Chain root mismatch: expected {expected_root}, got {root['grantor']}",
+        )
+    if expected_grantee and links[-1].wire["grantee"] != expected_grantee:
+        return MandateVerificationResult(False, reason=f"Mandate grantee mismatch: expected {expected_grantee}")
+    ids: set[str] = set()
+    for i, link in enumerate(links):
+        m = link.wire
+        at = f"chain link {i} ({m['mandateTier']} {m['mandateId']})"
+        if m["mandateId"] in ids:
+            return MandateVerificationResult(False, reason=f"{at}: mandateId repeats within the chain")
+        ids.add(m["mandateId"])
+        if i > 0 and m["grantor"] != links[i - 1].wire["grantee"]:
+            return MandateVerificationResult(
+                False, reason=f"{at}: grantor {m['grantor']} is not the parent's grantee {links[i - 1].wire['grantee']}"
+            )
+        time_problem = _check_time_window(m, now, tolerance, link.jwt is not None)
+        if time_problem:
+            return MandateVerificationResult(False, reason=f"{at}: {time_problem}")
 
     seen: set[str] = set()
     for i, link in enumerate(links):
@@ -1078,7 +1110,7 @@ def _is_iso_date(x: Any) -> bool:
 def _is_amount(x: Any) -> bool:
     return (
         isinstance(x, (int, float)) and not isinstance(x, bool) and not (isinstance(x, float) and not math.isfinite(x))
-        and x >= 0
+        and 0 <= x <= _MAX_SAFE_INTEGER
     )
 
 

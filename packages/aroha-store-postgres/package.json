@@ -40,7 +40,7 @@
     "@types/pg": "^8.15.0",
     "pg": "^8.16.0",
     "typescript": "^7.0.2",
-    "vitest": "^5.0.5"
+    "vitest": "^5.1.0"
   },
   "keywords": ["aroha", "postgres", "nonce", "replay-protection", "spending-ledger", "enrollment"],
   "license": "Apache-2.0",

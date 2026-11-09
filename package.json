@@ -33,7 +33,7 @@
     "eslint": "^9.5.0",
     "nodemailer": "^10.3.1",
     "typescript": "^7.0.2",
-    "vitest": "^5.0.5"
+    "vitest": "^5.1.0"
   },
   "overrides": {
     "tmp": "^0.2.6",

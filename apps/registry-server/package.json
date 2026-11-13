@@ -20,7 +20,7 @@
     "@aroha-sdk/registry": "^2.0.0",
     "@aroha-sdk/trust": "^0.1.1",
     "@noble/hashes": "^2.4.0",
-    "hono": "^4.13.14"
+    "hono": "^4.13.18"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20261030.1",

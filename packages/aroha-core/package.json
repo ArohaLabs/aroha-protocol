@@ -71,13 +71,13 @@
     "@noble/ed25519": "^2.1.0",
     "@noble/hashes": "^2.4.0",
     "undici": "^6.29.1",
-    "ws": "^8.22.0"
+    "ws": "^8.23.0"
   },
   "devDependencies": {
     "@types/node": "^22.20.5",
     "@types/ws": "^8.18.2",
     "typescript": "^7.0.2",
-    "vitest": "^5.0.5"
+    "vitest": "^5.1.0"
   },
   "license": "Apache-2.0",
   "homepage": "https://github.com/ArohaLabs/aroha-protocol/tree/main/packages/aroha-core#readme",

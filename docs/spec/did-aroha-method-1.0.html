@@ -375,14 +375,60 @@ did:aroha:hedge-fund-analyst-v2</pre>
     registry instance; the DID's <code>didHash</code> (keccak-256 of the DID
     string) is registry-independent.
   </p>
-  <p class="note">
-    The Create, Update and Deactivate operations and the registry-based key
-    rotation in this section apply to the named form
-    (<a href="#status-of-other-forms"></a>). An E-form identifier is created by
-    its inception event and changes key by appending events to its
-    <a>Key Event Log</a> (<a href="#rotatable-identifiers"></a>). A z-form
-    identifier's key is the identifier itself.
-  </p>
+  <section id="operations-by-form">
+    <h3>Operations by form</h3>
+    <p>
+      Create, Read, Update and Deactivate below are written for the named form.
+      The E-form and the z-form need no registry, and their operations are
+      defined in other sections of this document. This table brings the three
+      together:
+    </p>
+    <table class="simple">
+      <thead>
+        <tr><th>Operation</th><th>Named form</th><th>E-form</th><th>z-form</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Create</td>
+          <td>Register the DID with an Aroha Registry (<a href="#create">Create</a>)</td>
+          <td>Generate a key and a pre-committed next key, and sign an
+              <code>inception</code> event. The DID is the event digest of that
+              event (<a href="#kel-identifier">Identifier</a>). No registry is
+              involved; the KEL can be published to one with
+              <code>POST /v1/kel/{did}</code></td>
+          <td>Generate an Ed25519 key pair. The DID is the encoded public key.
+              No registry is involved</td>
+        </tr>
+        <tr>
+          <td>Read</td>
+          <td>Registry record, then manifest, then DID Document
+              (<a href="#read">Read (Resolve)</a>)</td>
+          <td>Obtain the KEL and verify it. The current key comes from the
+              verified state (<a href="#kel-resolution">Resolution</a>)</td>
+          <td>Decode the public key from the DID, with no network access</td>
+        </tr>
+        <tr>
+          <td>Update</td>
+          <td>Replace the manifest, or rotate the key through the registry
+              (<a href="#update">Update</a>)</td>
+          <td>Append a <code>rotate</code> event signed by the pre-committed
+              next key. For an agent with a controller, the controller can also
+              append <code>recover</code> (<a href="#kel-events">Events</a>)</td>
+          <td>Not supported: the key is the identifier. The holder migrates to
+              the E-form (<a href="#migration-from-z-form">Migration from the
+              z-form</a>)</td>
+        </tr>
+        <tr>
+          <td>Deactivate</td>
+          <td><code>DELETE /v1/agents/{didHash}</code>
+              (<a href="#deactivate">Deactivate</a>)</td>
+          <td>Append a <code>revoke</code> event, authorised by the next key or
+              by the controller. After it, no key of the identity is valid</td>
+          <td>Not supported. The holder migrates to the E-form</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
 
   <section id="create">
     <h3>Create</h3>
@@ -432,9 +478,10 @@ Authorization: Bearer &lt;registry API key&gt;
 6. Verify document.id === did
 7. Return DID Document</pre>
       <p>
-        For an E-form DID, the current key is derived from the identifier's
-        verified Key Event Log, not from a registry record; see
-        <a href="#kel-verification"></a>.
+        This algorithm is for the named form. For an E-form DID the current key
+        comes from the identifier's verified Key Event Log, not from a registry
+        record; see <a href="#kel-resolution"></a>. A z-form DID's key is
+        decoded from the identifier.
       </p>
     </section>
   </section>
@@ -710,6 +757,43 @@ const identity = await generateDID("my-agent", "https://my-agent.example.com/aro
       <strong>current</strong> key as derived from the newest verified KEL
       available to the verifier. An identity that is revoked, or an agent whose
       controller has revoked itself, has no valid key.
+    </p>
+  </section>
+
+  <section id="kel-resolution">
+    <h3>Resolution</h3>
+    <p>
+      An E-form DID is the event digest of its inception event. It commits to
+      the identifier's KEL, but it does not contain the KEL or say where it is
+      stored. A resolver obtains the KEL in one or both of these ways:
+    </p>
+    <ol>
+      <li><strong>From the party presenting the DID.</strong> The inception
+          event or the full KEL sent with first contact, or the
+          <code>kel</code> member of a Signed Agent Record (see
+          <a href="#derived-data"></a>).</li>
+      <li><strong>From a KEL source the resolver is configured with.</strong>
+          For example, an Aroha Registry instance answers
+          <code>GET /v1/kel/{did}</code> with the stored events, with
+          <code>404</code> when it holds none, and with <code>409</code> when it
+          has recorded duplicity for the identifier or knows that its stored
+          log is behind the controller's seals.</li>
+    </ol>
+    <p>
+      In terms of DID Resolution, the KEL, or the source to fetch it from, is
+      an input to the resolver. It is not derived from the DID string.
+    </p>
+    <p>
+      Whatever its source, the resolver verifies the KEL as described in
+      <a href="#kel-verification"></a> before using it, including the
+      controller's KEL when the agent has a controller. The source is not
+      trusted: it can withhold events or serve an older prefix, but it cannot
+      forge a log, and <a href="#stale-logs-and-duplicity"></a> covers the
+      first two cases. The result of resolution is the verified state: the
+      current key, whether the identity or its controller is revoked, and the
+      last sequence number. If no KEL can be obtained, or the KEL does not
+      verify, the DID does not resolve to a key. This version does not define a
+      DID Document representation of that state.
     </p>
   </section>
 

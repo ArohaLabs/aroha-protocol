@@ -101,6 +101,19 @@ records bind each DID to an Ed25519 public key and a content-addressed
 (IPFS) capability manifest. Any party may operate a registry instance;
 the DID's `didHash` (keccak-256 of the DID string) is registry-independent.
 
+### Operations by form
+
+Create, Read, Update and Deactivate below are written for the named form. The
+E-form and the z-form need no registry, and their operations are defined in
+other sections of this document. This table brings the three together:
+
+| Operation | Named form | E-form | z-form |
+|-----------|------------|--------|--------|
+| Create | Register the DID with an Aroha Registry ([Create](#create)) | Generate a key and a pre-committed next key, and sign an `inception` event. The DID is the event digest of that event ([Identifier](#identifier)). No registry is involved; the KEL can be published to one with `POST /v1/kel/{did}` | Generate an Ed25519 key pair. The DID is the encoded public key. No registry is involved |
+| Read | Registry record, then manifest, then DID Document ([Read (Resolve)](#read-resolve)) | Obtain the KEL and verify it. The current key comes from the verified state ([Resolution](#resolution)) | Decode the public key from the DID, with no network access |
+| Update | Replace the manifest, or rotate the key through the registry ([Update](#update)) | Append a `rotate` event signed by the pre-committed next key. For an agent with a controller, the controller can also append `recover` ([Events](#events)) | Not supported: the key is the identifier. The holder migrates to the E-form ([Migration from the z-form](#migration-from-the-z-form)) |
+| Deactivate | `DELETE /v1/agents/{didHash}` ([Deactivate](#deactivate)) | Append a `revoke` event, authorised by the next key or by the controller. After it, no key of the identity is valid | Not supported. The holder migrates to the E-form |
+
 ### Create
 
 A DID is created by generating an Ed25519 keypair, choosing a unique DID
@@ -144,6 +157,10 @@ The endpoint is extracted from:
 6. Verify document.id === did
 7. Return DID Document
 ```
+
+This algorithm is for the named form. For an E-form DID the current key comes
+from the identifier's verified Key Event Log, not from a registry record; see
+[Resolution](#resolution). A z-form DID's key is decoded from the identifier.
 
 ### Update
 
@@ -318,6 +335,34 @@ A signature by an E-form identity MUST be verified against the identity's
 **current** key as derived from the newest verified KEL available to the
 verifier. An identity that is revoked, or an agent whose controller has
 revoked itself, has no valid key.
+
+### Resolution
+
+An E-form DID is the event digest of its inception event. It commits to the
+identifier's KEL, but it does not contain the KEL or say where it is stored.
+A resolver obtains the KEL in one or both of these ways:
+
+1. **From the party presenting the DID.** The inception event or the full
+   KEL sent with first contact, or the `kel` member of a Signed Agent Record
+   (see Derived data).
+2. **From a KEL source the resolver is configured with.** For example, an
+   Aroha Registry instance answers `GET /v1/kel/{did}` with the stored
+   events, with `404` when it holds none, and with `409` when it has recorded
+   duplicity for the identifier or knows that its stored log is behind the
+   controller's seals.
+
+In terms of DID Resolution, the KEL, or the source to fetch it from, is an
+input to the resolver. It is not derived from the DID string.
+
+Whatever its source, the resolver verifies the KEL as described in
+Verification before using it, including the controller's KEL when the agent
+has a controller. The source is not trusted: it can withhold events or serve
+an older prefix, but it cannot forge a log, and Stale logs and duplicity
+covers the first two cases. The result of resolution is the verified state:
+the current key, whether the identity or its controller is revoked, and the
+last sequence number. If no KEL can be obtained, or the KEL does not verify,
+the DID does not resolve to a key. This version does not define a DID
+Document representation of that state.
 
 ### Persons and controllers
 

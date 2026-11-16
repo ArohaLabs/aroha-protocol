@@ -101,7 +101,7 @@ Async capabilities MUST use WebSocket at:
 wss://<domain>/aroha/stream?cid=<correlationId>
 ```
 
-Frames are ArohaStream envelopes (JSON).
+The `cid` parameter is the correlation ID of the saga or session. Frames are ArohaStream envelopes (JSON).
 
 ### 3.4 Security
 
@@ -545,7 +545,7 @@ The first 15 types are shared by every reference SDK; the last four are implemen
 
 ### 6.5 Spending Mandate Token Format (v2)
 
-A spending mandate is a signed, narrowing grant of spending authority from a grantor to a grantee. Mandates form a chain: a human (or organisation) issues a root `intent` mandate, and each delegate may issue a narrower `cart` or `payment` mandate to the next agent. This section defines the wire format that every implementation MUST produce and accept; the conformance vectors are in `packages/aroha-credentials/test-vectors/mandate-v2.json` in the reference repository.
+A spending mandate (`ArohaSpendingMandate`) is a signed, narrowing grant of spending authority from a grantor to a grantee. Mandates form a chain: a human (or organisation) issues a root `intent` mandate, and each delegate may issue a narrower `cart` or `payment` mandate to the next agent. This section defines the wire format that every implementation MUST produce and accept; the conformance vectors are in `packages/aroha-credentials/test-vectors/mandate-v2.json` in the reference repository.
 
 **Mandate body.** Each link's body has the fields `mandateTier` (`intent` | `cart` | `payment`), `constraints`, `grantee`, `grantor`, `issuedAt`, `expiresAt`, `parentMandateId` (null for a root) and `mandateId`. `issuedAt` is REQUIRED. A body that carries `mandateType` is a task mandate and MUST be rejected as a spending mandate.
 
@@ -927,7 +927,7 @@ An `ArohaDisclosure` states that a message comes from an AI agent and names the 
 | `Aroha_DELEGATION_DEPTH_EXCEEDED` | 403 | Delegation chain deeper than allowed |
 | `Aroha_CAPABILITY_NOT_PERMITTED` | 403 | Capability not in the mandate's allowed list |
 | `Aroha_SETTLEMENT_RAIL_MISMATCH` | 409 | Requester's and provider's settlement rails have nothing in common |
-| `Aroha_COMMIT_DISPUTED` | 409 | Commit result disputed in the challenge window, or resolved against the provider |
+| `Aroha_COMMIT_DISPUTED` | 409 | Commit result disputed in the challenge window (`ArohaDispute`), or resolved against the provider (`ArohaDisputeResolution`) |
 | `Aroha_NO_MANDATE` | 400 | No delegation envelope, and the receiver requires a mandate chain (added 2026-10-26) |
 | `Aroha_CHAIN_INVALID` | 400 | Root mandate token of the delegation envelope is malformed (added 2026-10-26) |
 | `Aroha_UNTRUSTED_ROOT` | 403 | Root grantor of the mandate chain is not a trusted issuer (added 2026-10-26) |

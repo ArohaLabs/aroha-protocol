@@ -406,7 +406,7 @@
         as a provider, orchestrator, or both.</dd>
 
     <dt><dfn>provider agent</dfn></dt>
-    <dd>An agent that offers capabilities to other agents. It accepts
+    <dd>An <a>agent</a> that offers capabilities to other agents. It accepts
         <a>ArohaRequest</a> messages and responds with results.</dd>
 
     <dt><dfn>orchestrator agent</dfn></dt>
@@ -480,7 +480,7 @@
         within the message's validity window, preventing replay attacks.</dd>
 
     <dt><dfn>registry</dfn></dt>
-    <dd>The Layer 2 service that records agent registrations and capability
+    <dd>The Layer 2 service that records agent registrations and <a>capability</a>
         indexes: an HTTP registry (the reference deployment) or, optionally, an
         on-chain smart contract system that additionally records stakes and
         reputation scores (see <a href="#layer-2-registry"></a>).</dd>
@@ -537,7 +537,8 @@ Body: ArohaEnvelope (see <a href="#layer-3-messaging"></a>)</pre>
     </p>
     <pre class="json">wss://&lt;domain&gt;/aroha/stream?cid=&lt;correlationId&gt;</pre>
     <p>
-      Frames are <a>ArohaStream</a> envelopes (JSON): each WebSocket frame is a
+      The <code>cid</code> parameter is the <a>correlation ID</a> of the saga
+      or session. Frames are <a>ArohaStream</a> envelopes (JSON): each WebSocket frame is a
       complete message envelope serialized as UTF-8 JSON.
     </p>
   </section>
@@ -699,7 +700,7 @@ Body: ArohaEnvelope (see <a href="#layer-3-messaging"></a>)</pre>
       <li><strong>E-form</strong>
           <code>did:aroha:E&lt;base58btc(sha256(inception))&gt;</code> —
           self-certifying and rotatable; the current key is derived from the
-          identifier's <a>Key Event Log</a>. A person is an E-form identity of
+          identifier's <a>Key Event Log</a>. A <a>person</a> is an E-form identity of
           kind <code>person</code>; an agent MAY name a person as its
           controller, who can recover or revoke it. New identities SHOULD use
           this form.</li>
@@ -933,7 +934,7 @@ Body: ArohaEnvelope (see <a href="#layer-3-messaging"></a>)</pre>
       hold mandates under that URL, with no <code>did:aroha</code> identifier.
       That draft defines the document for OAuth clients only; using it to name
       a mandate party is defined here, and no OAuth flow is involved. Support
-      for this section is OPTIONAL. A verifier that does not support it, and has not pinned a key for that identity itself, cannot resolve a key for a web identity and therefore rejects the mandate.
+      for this section is OPTIONAL. A verifier that does not support it, and has not pinned a key for that identity itself, cannot resolve a key for a <a>web identity</a> and therefore rejects the mandate.
     </p>
     <p>
       <strong>Where it may appear.</strong> A web identity MAY be the
@@ -1668,7 +1669,8 @@ signal values:
   <section id="spending-mandate-token-v2">
     <h3>Spending Mandate Token Format (v2)</h3>
     <p>
-      A spending mandate is a signed, narrowing grant of spending authority
+      A spending mandate (<a><code>ArohaSpendingMandate</code></a>) is a
+      signed, narrowing grant of spending authority
       from a grantor to a grantee. Mandates form a chain: a human (or
       organisation) issues a root <code>intent</code> mandate, and each
       delegate may issue a narrower <code>cart</code> or <code>payment</code>
@@ -1804,7 +1806,7 @@ signal values:
   </section>
 <section id="sec-task-mandate-token-format-v2">
 <h3>Task Mandate Token Format (v2)</h3>
-<p>A task mandate (<code>ArohaTaskMandate</code>, §6.4) grants non-monetary authority: which capabilities a grantee may invoke and under which task constraints. It narrows along a chain the same way as a spending mandate.</p>
+<p>A task mandate (<a><code>ArohaTaskMandate</code></a>, §6.4) grants non-monetary authority: which capabilities a grantee may invoke and under which task constraints. It narrows along a chain the same way as a spending mandate.</p>
 <p><strong>Signature.</strong> A v2 task-mandate signature is the Ed25519 signature, by the mandate's grantor, over the UTF-8 bytes of the JCS canonicalisation of <code>{"mandate": &lt;body&gt;, "purpose": "aroha.task-mandate/v2", "v": 2}</code>, encoded as base64url without padding. The purpose tag keeps a task-mandate signature from verifying as any other Aroha object.</p>
 <p><strong>Token.</strong> A token is base64url(JSON) of <code>{ "v": 2, "mandate": &lt;body&gt;, "signature": &lt;sig&gt; }</code>. A token without <code>v</code> is a legacy v1 token, signed over the key-sorted JSON of the body. A verifier MUST reject any other value of <code>v</code>.</p>
 <p><strong>Body.</strong> <code>mandateType</code> (<code>task</code> | <code>hybrid</code>), <code>mandateTier</code> (<code>intent</code> | <code>cart</code> | <code>execution</code>), <code>allowed</code> (capability ids), <code>blocked?</code>, <code>taskConstraints</code>, <code>spendingConstraints?</code> (REQUIRED when <code>mandateType</code> is <code>hybrid</code>), <code>invariants?</code>, <code>grantee</code>, <code>grantor</code>, <code>issuedAt</code>, <code>expiresAt</code>, <code>parentMandateId</code>, <code>mandateId</code>. <code>taskConstraints</code> has the optional members <code>actionLimits</code>, <code>computeLimit</code>, <code>dataAccess</code>, <code>outputHandling</code>, <code>reversibleOnly</code>, <code>humanGates</code>, <code>checkpointIntervalMs</code>, <code>requireSandbox</code>, <code>maxDelegationDepth</code>, <code>onBehalfOf</code> and <code>roomId</code>.</p>
@@ -1974,7 +1976,7 @@ claims   { "iss": &lt;grantor&gt;, "sub": &lt;grantee&gt;, "jti": &lt;mandateId&
               be a person (an unrevoked E-form identity of kind
               <code>person</code>).</td></tr>
       <tr><td>Key Event Log freshness</td>
-          <td>Verifiers SHOULD retain the longest verified KEL per identifier,
+          <td>Verifiers SHOULD retain the longest verified <a>KEL</a> per identifier,
               MUST NOT accept a shorter one as current, and MUST treat two
               different events at one sequence number as duplicity.</td></tr>
     </tbody>
@@ -2436,7 +2438,7 @@ claims   { "iss": &lt;grantor&gt;, "sub": &lt;grantee&gt;, "jti": &lt;mandateId&
       <tr><td><code>Aroha_UNKNOWN_CAPABILITY</code></td><td>400</td>
           <td>Capability ID not recognized</td></tr>
       <tr><td><code>Aroha_TRUST_LEVEL_INSUFFICIENT</code></td><td>403</td>
-          <td>Sender's trust level too low for this operation</td></tr>
+          <td>Sender's <a>trust level</a> too low for this operation</td></tr>
       <tr><td><code>Aroha_RESERVATION_FAILED</code></td><td>409</td>
           <td>Could not reserve the resource</td></tr>
       <tr><td><code>Aroha_RESERVATION_EXPIRED</code></td><td>410</td>
@@ -2446,7 +2448,7 @@ claims   { "iss": &lt;grantor&gt;, "sub": &lt;grantee&gt;, "jti": &lt;mandateId&
       <tr><td><code>Aroha_CANCEL_FAILED</code></td><td>409</td>
           <td>Could not cancel (operation non-reversible)</td></tr>
       <tr><td><code>Aroha_INVALID_TOKEN</code></td><td>404</td>
-          <td>Unknown reservation token</td></tr>
+          <td>Unknown <a>reservation token</a></td></tr>
       <tr><td><code>Aroha_NO_INVENTORY</code></td><td>409</td>
           <td>Resource not available</td></tr>
       <tr><td><code>Aroha_CAPACITY_EXCEEDED</code></td><td>503</td>
@@ -2479,7 +2481,7 @@ claims   { "iss": &lt;grantor&gt;, "sub": &lt;grantee&gt;, "jti": &lt;mandateId&
       <tr><td><code>Aroha_SETTLEMENT_RAIL_MISMATCH</code></td><td>409</td>
           <td>Requester's and provider's settlement rails have nothing in common</td></tr>
       <tr><td><code>Aroha_COMMIT_DISPUTED</code></td><td>409</td>
-          <td>Commit result disputed in the challenge window, or resolved against the provider</td></tr>
+          <td>Commit result disputed in the challenge window (<a>ArohaDispute</a>), or resolved against the provider (<a>ArohaDisputeResolution</a>)</td></tr>
       <tr><td><code>Aroha_NO_MANDATE</code></td><td>400</td>
           <td>No delegation envelope, and the receiver requires a mandate chain (added 2026-10-26)</td></tr>
       <tr><td><code>Aroha_CHAIN_INVALID</code></td><td>400</td>

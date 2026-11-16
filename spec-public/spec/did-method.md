@@ -32,7 +32,7 @@ did:aroha:hedge-fund-analyst-v2
 
 ### Forms
 
-Three forms share the method and are distinguished by syntax alone:
+Three forms share the method and are distinguished by the syntax of the method-specific identifier alone:
 
 | Form | Suffix | Key comes from | Rotatable | Trust |
 |------|--------|----------------|-----------|-------|
@@ -135,7 +135,7 @@ discovery for a 48-hour cooldown as an anti-squatting and anti-spam measure.
 
 ### Read (Resolve)
 
-A `did:aroha:` DID resolves by fetching the DID Document over HTTPS:
+A `did:aroha:` DID resolves by fetching its well-known DID Document over HTTPS:
 
 ```
 GET https://<agent-domain>/.well-known/aroha-agent.json

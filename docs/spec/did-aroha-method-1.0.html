@@ -209,12 +209,12 @@
         in <a href="#syntax"></a>, whose key binding is registry-trusted.</dd>
 
     <dt><dfn>Key Event Log</dfn> (<dfn>KEL</dfn>)</dt>
-    <dd>The append-only, hash-chained list of signed key events of an E-form
+    <dd>The append-only, hash-chained list of signed key events of an <a>E-form</a>
         identifier. See <a href="#rotatable-identifiers"></a>.</dd>
 
     <dt><dfn>seal</dfn></dt>
     <dd>A <code>{ did, seq, digest }</code> entry in a person's
-        <code>anchor</code> event, authorising an event in another KEL.</dd>
+        <code>anchor</code> event, authorising an event in another <a>KEL</a>.</dd>
 
     <dt><dfn>person</dfn></dt>
     <dd>An E-form identity with <code>kind: "person"</code> and no
@@ -270,7 +270,8 @@ did:aroha:hedge-fund-analyst-v2</pre>
 
   <section id="forms">
     <h3>Forms</h3>
-    <p>Three forms share the method and are distinguished by syntax alone:</p>
+    <p>Three forms share the method and are distinguished by the syntax of
+    the <a>method-specific identifier</a> alone:</p>
     <table class="simple">
       <thead>
         <tr><th>Form</th><th>Suffix</th><th>Key comes from</th>
@@ -283,7 +284,7 @@ did:aroha:hedge-fund-analyst-v2</pre>
             <td>the identifier's verified Key Event Log</td>
             <td>Yes (pre-rotation; controller recovery for agents)</td>
             <td>Self-certifying</td></tr>
-        <tr><td><strong>z-form</strong> (legacy)</td>
+        <tr><td><strong><a>z-form</a></strong> (legacy)</td>
             <td><code>z</code> + base58btc of a 32-byte Ed25519 public key</td>
             <td>the identifier itself</td>
             <td><strong>No</strong></td>
@@ -296,7 +297,7 @@ did:aroha:hedge-fund-analyst-v2</pre>
       </tbody>
     </table>
     <p>
-      The constraints above apply to the named form. A named DID MUST NOT have a
+      The constraints above apply to the <a>named form</a>. A named DID MUST NOT have a
       suffix that parses as the E-form or the z-form. See
       <a href="#rotatable-identifiers"></a>.
     </p>
@@ -368,11 +369,11 @@ did:aroha:hedge-fund-analyst-v2</pre>
     This section defines the four operations required by
     <a href="https://www.w3.org/TR/did-1.1/#method-operations">DID Core §8.2</a>:
     Create, Read (Resolve), Update, and Deactivate. The verifiable data
-    registry for <code>did:aroha</code> is the Aroha Registry — an HTTPS service
+    registry for <code>did:aroha</code> is the <a>Aroha Registry</a> — an HTTPS service
     (reference deployment: <code>aroha-registry.aroha-labs.workers.dev</code>)
     whose records bind each DID to an Ed25519 public key and a
     content-addressed (IPFS) capability manifest. Any party may operate a
-    registry instance; the DID's <code>didHash</code> (keccak-256 of the DID
+    registry instance; the DID's <a><code>didHash</code></a> (keccak-256 of the DID
     string) is registry-independent.
   </p>
   <section id="operations-by-form">
@@ -455,8 +456,8 @@ Authorization: Bearer &lt;registry API key&gt;
   <section id="read">
     <h3>Read (Resolve)</h3>
     <p>
-      A <code>did:aroha:</code> DID resolves by fetching the DID Document over
-      HTTPS:
+      A <code>did:aroha:</code> DID resolves by fetching its
+      <a>well-known DID Document</a> over HTTPS:
     </p>
     <pre class="algo">GET https://&lt;agent-domain&gt;/.well-known/aroha-agent.json</pre>
     <p>The endpoint is extracted from:</p>
@@ -572,7 +573,7 @@ const identity = await generateDID("my-agent", "https://my-agent.example.com/aro
           code</li>
     </ul>
     <p>
-      For E-form identities, a person's recovery mechanism is the pre-committed
+      For E-form identities, a <a>person</a>'s recovery mechanism is the pre-committed
       next key, and a person can recover an agent it controls; see
       <a href="#persons-and-controllers"></a>.
     </p>
@@ -680,7 +681,7 @@ const identity = await generateDID("my-agent", "https://my-agent.example.com/aro
         <tr><td><code>recover</code></td>
             <td><code>auth: "controller"</code>, <code>keys</code>,
                 <code>nextKeyDigest</code> (no <code>sig</code>)</td>
-            <td>a seal in the controller's KEL (agents with a controller
+            <td>a <a>seal</a> in the controller's KEL (agents with a controller
                 only)</td></tr>
         <tr><td><code>revoke</code></td>
             <td><code>auth: "controller"</code>, optional <code>reason</code>

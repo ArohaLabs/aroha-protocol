@@ -13,6 +13,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/). Version
 
 ### Changed
 
+- **`did:aroha` is listed in the W3C DID Extensions registry** ([w3c/did-extensions#766](https://github.com/w3c/did-extensions/pull/766), merged 2026-11-14). The trust page, the charter, both specifications and the registration notes now say so. A registry listing is not a W3C standard or an endorsement.
 - **Holder proofs cover the token (wire change):** the HTTP and MCP presentation proofs now sign `tokenSha256`, the SHA-256 of the presented token, under the purposes `aroha.http-mandate-presentation/v2` and `aroha.mcp-mandate-presentation/v2`. Before, they signed only the leaf `mandateId`, which the minter chooses, so a token with the same id could stand in for the one the holder signed. A v1 proof no longer verifies, so clients and servers must upgrade together. TypeScript and Python; Go and Java do not implement presentations.
 - **Stricter signature checks:** mandate signatures use RFC 8032 strict verification, and small-order public keys are refused.
 - **Verifiers refuse from the token alone first:** root pins, grantee, linkage and time windows run before any key is resolved, so a pinned verifier makes no request for a token it will refuse.

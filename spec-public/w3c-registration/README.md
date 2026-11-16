@@ -1,13 +1,13 @@
 <!-- Copyright (c) 2026 Aroha Labs
      SPDX-License-Identifier: Apache-2.0 -->
 
-# DID method registration — submitted, under review
+# DID method registration — accepted 2026-11-14
 
 This directory holds the material for registering `did:aroha` in the W3C DID Extensions
 registry (`w3c/did-extensions`). It was submitted on 2026-10-27 as
-[w3c/did-extensions#766](https://github.com/w3c/did-extensions/pull/766), which is **awaiting
-review by the registry editors**. Until that pull request is merged, `did:aroha` is not
-registered and does not appear in the registry.
+[w3c/did-extensions#766](https://github.com/w3c/did-extensions/pull/766) and merged on 2026-11-14,
+so `did:aroha` is listed in the registry as `methods/aroha.json`. A listing is not a W3C
+standard or an endorsement.
 
 `aroha.json` matches the entry in the pull request, including the 2026-10-28 revision of
 `verifiableDataRegistry` (no registry for the E-form and z-form; the named form resolves
@@ -23,8 +23,8 @@ pull request was written from.
 ## About `"status": "registered"` in `aroha.json`
 
 `"registered"` is the value the DID Extensions registry expects in the `status` field of a new
-entry — it is the field's initial value for *every* method entry, not a claim that registration
-has happened. It becomes true only once the registry editors merge the pull request.
+entry. It is the field's initial value for every method entry. The registry editors merged
+the pull request on 2026-11-14.
 
 ## URLs in these files
 

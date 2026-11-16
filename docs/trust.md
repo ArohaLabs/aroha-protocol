@@ -54,7 +54,7 @@ Repository access: five accounts hold access (three admin, two write); only one 
 | Protocol specification | ✅ v1.0 published (draft-quality; changes go through the spec process) | [aroha-1.0.md](spec/aroha-1.0.md) |
 | W3C Community Group | ⬜ Not yet proposed | [CHARTER.md](https://github.com/ArohaLabs/aroha-protocol/blob/main/CHARTER.md) is a draft; nothing has been submitted to W3C |
 | W3C Agent Identity Registry Protocol CG | ⬜ Not joined — **owner to join** | An existing CG (proposed 2026-04-24) whose scope covers an agent DID method, agent credentials and revocation. Joining it, and submitting `did:aroha` and the KEL as input, replaces proposing a separate CG. Owner: @projectmed99. Target: 2026-11-30. |
-| `did:aroha` DID method | 🔄 Specified; registration requested on 2026-10-27 ([w3c/did-extensions#766](https://github.com/w3c/did-extensions/pull/766)), under review — **not registered** until it is merged | [did-method.md](spec/did-method.md) |
+| `did:aroha` DID method | ✅ Listed in the W3C DID Extensions registry since 2026-11-14 ([w3c/did-extensions#766](https://github.com/w3c/did-extensions/pull/766), merged). A registry listing is not a W3C standard or an endorsement | [did-method.md](spec/did-method.md) |
 | Mandates as JWTs (spec §6.10) | 🔄 Specified and implemented (2026-11-05) in the TypeScript and Python SDKs, the reference MCP server (verification) and the registry server; **unreleased**, not in Go or Java, and not tested against any hosted assistant. An Aroha profile of JWS/JWT with RFC 9396 `authorization_details`; not an IETF or OAuth standard, and no authorization server issues it | [mandate-jwt.md](integrations/mandate-jwt.md) |
 | Web identities (spec §4.7) | 🔄 Specified and implemented (2026-11-05) in the TypeScript and Python SDKs, the reference MCP server and the registry server (opt-in, and the public reference registry has not been redeployed); **unreleased**, not in Go or Java, and not tested against any hosted assistant (runbook written, not run). Uses the document format of an IETF OAuth draft (Client ID Metadata Document) for a purpose that draft does not define | [web-identities.md](integrations/web-identities.md) |
 | CNCF Sandbox proposal | ⬜ Draft only, not submitted | [cncf-sandbox-proposal.md](spec/cncf-sandbox-proposal.md) |
@@ -194,4 +194,4 @@ GTM PDFs and third-party PDFs were removed from the working tree before the repo
 
 ---
 
-*Last updated: 2026-10-26. Maintained by the core maintainer. Update this page whenever any status row changes.*
+*Last updated: 2026-11-16 (`did:aroha` row; other rows as of 2026-10-26). Maintained by the core maintainer. Update this page whenever any status row changes.*
